@@ -9,11 +9,11 @@ import {
   KeyboardAvoidingView,
   Platform,
   ScrollView,
-  ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
-import { Truck, Shield } from 'lucide-react-native';
+import { Truck } from 'lucide-react-native';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -40,7 +40,10 @@ export default function LoginScreen() {
         }, 100);
       } else {
         console.log('Login failed:', result.error);
-        Alert.alert('Login Failed', result.error || 'Invalid email or password');
+        Alert.alert(
+          'Login Failed',
+          result.error || 'Invalid email or password'
+        );
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -51,8 +54,8 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
+    <KeyboardAvoidingView
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -61,12 +64,14 @@ export default function LoginScreen() {
             <Truck size={48} color="#2563eb" strokeWidth={2} />
             <Text style={styles.title}>RigSnap</Text>
           </View>
-          <Text style={styles.subtitle}>Connect truckers with reliable service providers</Text>
+          <Text style={styles.subtitle}>
+            Connect truckers with reliable service providers
+          </Text>
         </View>
 
         <View style={styles.form}>
           <Text style={styles.formTitle}>Welcome Back</Text>
-          
+
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Email</Text>
             <TextInput
@@ -92,8 +97,8 @@ export default function LoginScreen() {
             />
           </View>
 
-          <TouchableOpacity 
-            style={[styles.loginButton, isLoading && styles.buttonDisabled]} 
+          <TouchableOpacity
+            style={[styles.loginButton, isLoading && styles.buttonDisabled]}
             onPress={handleLogin}
             disabled={isLoading}
           >
@@ -105,7 +110,7 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Don't have an account? </Text>
+            <Text style={styles.footerText}>Dont have an account? </Text>
             <Link href="/(auth)/signup" style={styles.link}>
               <Text style={styles.linkText}>Sign Up</Text>
             </Link>

@@ -1,8 +1,8 @@
-import { useEffect } from 'react';
+import * as React from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from '@/context/AuthContext';
-import { AppProvider } from '@/context/AppContext'
+import { AppProvider } from '@/context/AppContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';

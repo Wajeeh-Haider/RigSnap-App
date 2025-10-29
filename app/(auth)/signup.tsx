@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import * as React from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -10,28 +11,47 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
-  Modal
+  Modal,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { Truck, Wrench, Settings, MapPin, TriangleAlert as AlertTriangle, CircleDot, Droplets, Zap, Navigation, Crosshair, Camera, Image as ImageIcon, X, Plus, MapPinned, ChevronDown, Globe, Check, Shield, User, Mail, Phone } from 'lucide-react-native';
+import {
+  Truck,
+  Wrench,
+  Settings,
+  MapPin,
+  TriangleAlert as AlertTriangle,
+  CircleDot,
+  Droplets,
+  Zap,
+  Image as ImageIcon,
+  ChevronDown,
+  Globe,
+  Check,
+  Shield,
+  User,
+  Mail,
+  Phone,
+} from 'lucide-react-native';
 
 const roles = [
   {
     id: 'trucker',
     title: 'Trucker',
-    description: 'Request help when you need towing, repairs, or mobile mechanic services',
+    description:
+      'Request help when you need towing, repairs, or mobile mechanic services',
     icon: Truck,
-    color: '#2563eb'
+    color: '#2563eb',
   },
   {
     id: 'provider',
     title: 'Service Provider',
-    description: 'Provide towing, repair, and mechanic services to truckers in need',
+    description:
+      'Provide towing, repair, and mechanic services to truckers in need',
     icon: Shield,
-    color: '#ea580c'
-  }
+    color: '#ea580c',
+  },
 ];
 
 const serviceTypes = [
@@ -40,43 +60,43 @@ const serviceTypes = [
     name: 'Towing Service',
     description: 'Vehicle breakdown and accident towing',
     icon: Truck,
-    color: '#2563eb'
+    color: '#2563eb',
   },
   {
     id: 'repair',
     name: 'Road Service',
     description: 'On-site mechanical repairs and diagnostics',
     icon: Wrench,
-    color: '#059669'
+    color: '#059669',
   },
   {
     id: 'mechanic',
     name: 'Mechanic Service',
     description: 'Professional diagnostic and repair services',
     icon: Settings,
-    color: '#7c3aed'
+    color: '#7c3aed',
   },
   {
     id: 'tire_repair',
     name: 'Mobile Tire Repair',
     description: 'Tire replacement, patching, and roadside tire services',
     icon: CircleDot,
-    color: '#dc2626'
+    color: '#dc2626',
   },
   {
     id: 'truck_wash',
     name: 'Mobile Truck Wash',
     description: 'Professional mobile truck cleaning and detailing',
     icon: Droplets,
-    color: '#0891b2'
+    color: '#0891b2',
   },
   {
     id: 'hose_repair',
     name: 'Hose Repair',
     description: 'Hydraulic and air hose repair and replacement',
     icon: Zap,
-    color: '#ea580c'
-  }
+    color: '#ea580c',
+  },
 ];
 
 export default function SignupScreen() {
@@ -96,7 +116,7 @@ export default function SignupScreen() {
     // Provider specific
     services: [] as string[],
     serviceRadius: '25',
-    certifications: ''
+    certifications: '',
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
@@ -104,22 +124,41 @@ export default function SignupScreen() {
   const { languages, currentLanguage, setLanguage } = useLanguage();
 
   const handleInputChange = (field: string, value: string) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const toggleService = (serviceId: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       services: prev.services.includes(serviceId)
-        ? prev.services.filter(s => s !== serviceId)
-        : [...prev.services, serviceId]
+        ? prev.services.filter((s) => s !== serviceId)
+        : [...prev.services, serviceId],
     }));
   };
 
   const validateForm = () => {
-    const { firstName, lastName, email, phone, password, confirmPassword, location, role, language } = formData;
-    
-    if (!firstName || !lastName || !email || !phone || !password || !location || !role || !language) {
+    const {
+      firstName,
+      lastName,
+      email,
+      phone,
+      password,
+      confirmPassword,
+      location,
+      role,
+      language,
+    } = formData;
+
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !phone ||
+      !password ||
+      !location ||
+      !role ||
+      !language
+    ) {
       Alert.alert('Error', 'Please fill in all fields');
       return false;
     }
@@ -141,7 +180,10 @@ export default function SignupScreen() {
     }
 
     // Role-specific validation
-    if (role === 'trucker' && (!formData.truckType || !formData.licenseNumber)) {
+    if (
+      role === 'trucker' &&
+      (!formData.truckType || !formData.licenseNumber)
+    ) {
       Alert.alert('Error', 'Please fill in all trucker details');
       return false;
     }
@@ -168,22 +210,32 @@ export default function SignupScreen() {
         location: formData.location,
         role: formData.role,
         language: formData.language,
-        ...(formData.role === 'trucker' ? {
-          truckType: formData.truckType,
-          licenseNumber: formData.licenseNumber,
-        } : {}),
-        ...(formData.role === 'provider' ? {
-          services: formData.services,
-          serviceRadius: parseInt(formData.serviceRadius),
-          certifications: formData.certifications.split(',').map(c => c.trim()).filter(c => c)
-        } : {})
+        ...(formData.role === 'trucker'
+          ? {
+              truckType: formData.truckType,
+              licenseNumber: formData.licenseNumber,
+            }
+          : {}),
+        ...(formData.role === 'provider'
+          ? {
+              services: formData.services,
+              serviceRadius: parseInt(formData.serviceRadius),
+              certifications: formData.certifications
+                .split(',')
+                .map((c) => c.trim())
+                .filter((c) => c),
+            }
+          : {}),
       };
 
       const result = await signup(userData);
       if (result.success) {
         router.replace('/(tabs)');
       } else {
-        Alert.alert('Signup Failed', result.error || 'Account creation failed. Please try again.');
+        Alert.alert(
+          'Signup Failed',
+          result.error || 'Account creation failed. Please try again.'
+        );
       }
     } catch (error) {
       Alert.alert('Error', 'An unexpected error occurred. Please try again.');
@@ -192,11 +244,13 @@ export default function SignupScreen() {
     }
   };
 
-  const selectedLanguage = languages.find(lang => lang.code === currentLanguage);
+  const selectedLanguage = languages.find(
+    (lang) => lang.code === currentLanguage
+  );
 
   return (
-    <KeyboardAvoidingView 
-      style={styles.container} 
+    <KeyboardAvoidingView
+      style={styles.container}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -205,18 +259,20 @@ export default function SignupScreen() {
             <Truck size={40} color="#2563eb" strokeWidth={2} />
             <Text style={styles.title}>Join RigSnap</Text>
           </View>
-          <Text style={styles.subtitle}>Create your account to get started</Text>
+          <Text style={styles.subtitle}>
+            Create your account to get started
+          </Text>
         </View>
 
         <View style={styles.form}>
           {/* Language Selection */}
           <View style={styles.inputGroup}>
             <Text style={styles.label}>Language</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={styles.languageSelector}
               onPress={() => {
                 // Update form data to match current language when opening modal
-                setFormData(prev => ({ ...prev, language: currentLanguage }));
+                setFormData((prev) => ({ ...prev, language: currentLanguage }));
                 setShowLanguageModal(true);
               }}
             >
@@ -237,23 +293,23 @@ export default function SignupScreen() {
               {roles.map((role) => {
                 const Icon = role.icon;
                 const isSelected = formData.role === role.id;
-                
+
                 return (
                   <TouchableOpacity
                     key={role.id}
                     style={[
                       styles.roleCard,
-                      isSelected && { 
+                      isSelected && {
                         borderColor: role.color,
-                        backgroundColor: role.color + '10'
-                      }
+                        backgroundColor: role.color + '10',
+                      },
                     ]}
                     onPress={() => handleInputChange('role', role.id)}
                   >
                     <View style={styles.roleHeader}>
-                      <Icon 
-                        size={24} 
-                        color={isSelected ? role.color : '#6b7280'} 
+                      <Icon
+                        size={24}
+                        color={isSelected ? role.color : '#6b7280'}
                       />
                       {isSelected && (
                         <View style={styles.checkmark}>
@@ -261,10 +317,12 @@ export default function SignupScreen() {
                         </View>
                       )}
                     </View>
-                    <Text style={[
-                      styles.roleTitle,
-                      isSelected && { color: role.color }
-                    ]}>
+                    <Text
+                      style={[
+                        styles.roleTitle,
+                        isSelected && { color: role.color },
+                      ]}
+                    >
                       {role.title}
                     </Text>
                     <Text style={styles.roleDescription}>
@@ -284,7 +342,9 @@ export default function SignupScreen() {
                 <TextInput
                   style={styles.inputWithIcon}
                   value={formData.firstName}
-                  onChangeText={(value) => handleInputChange('firstName', value)}
+                  onChangeText={(value) =>
+                    handleInputChange('firstName', value)
+                  }
                   placeholder="John"
                   autoCapitalize="words"
                 />
@@ -359,7 +419,9 @@ export default function SignupScreen() {
                 <TextInput
                   style={styles.input}
                   value={formData.truckType}
-                  onChangeText={(value) => handleInputChange('truckType', value)}
+                  onChangeText={(value) =>
+                    handleInputChange('truckType', value)
+                  }
                   placeholder="e.g., Semi-Trailer, Box Truck, Flatbed"
                 />
               </View>
@@ -369,7 +431,9 @@ export default function SignupScreen() {
                 <TextInput
                   style={styles.input}
                   value={formData.licenseNumber}
-                  onChangeText={(value) => handleInputChange('licenseNumber', value)}
+                  onChangeText={(value) =>
+                    handleInputChange('licenseNumber', value)
+                  }
                   placeholder="e.g., CDL-TX-123456"
                   autoCapitalize="characters"
                 />
@@ -382,39 +446,48 @@ export default function SignupScreen() {
             <>
               <View style={styles.inputGroup}>
                 <Text style={styles.label}>Services Offered</Text>
-                <Text style={styles.helperText}>Select all services you provide</Text>
+                <Text style={styles.helperText}>
+                  Select all services you provide
+                </Text>
                 <View style={styles.servicesGrid}>
                   {serviceTypes.map((service) => {
                     const Icon = service.icon;
                     const isSelected = formData.services.includes(service.id);
-                    
+
                     return (
                       <TouchableOpacity
                         key={service.id}
                         style={[
                           styles.serviceCard,
-                          isSelected && { 
+                          isSelected && {
                             borderColor: service.color,
-                            backgroundColor: service.color + '10'
-                          }
+                            backgroundColor: service.color + '10',
+                          },
                         ]}
                         onPress={() => toggleService(service.id)}
                       >
                         <View style={styles.serviceHeader}>
-                          <Icon 
-                            size={20} 
-                            color={isSelected ? service.color : '#6b7280'} 
+                          <Icon
+                            size={20}
+                            color={isSelected ? service.color : '#6b7280'}
                           />
                           {isSelected && (
-                            <View style={[styles.serviceCheckmark, { backgroundColor: service.color }]}>
+                            <View
+                              style={[
+                                styles.serviceCheckmark,
+                                { backgroundColor: service.color },
+                              ]}
+                            >
                               <Check size={12} color="white" />
                             </View>
                           )}
                         </View>
-                        <Text style={[
-                          styles.serviceName,
-                          isSelected && { color: service.color }
-                        ]}>
+                        <Text
+                          style={[
+                            styles.serviceName,
+                            isSelected && { color: service.color },
+                          ]}
+                        >
                           {service.name}
                         </Text>
                         <Text style={styles.serviceDescription}>
@@ -431,7 +504,9 @@ export default function SignupScreen() {
                 <TextInput
                   style={styles.input}
                   value={formData.serviceRadius}
-                  onChangeText={(value) => handleInputChange('serviceRadius', value)}
+                  onChangeText={(value) =>
+                    handleInputChange('serviceRadius', value)
+                  }
                   placeholder="25"
                   keyboardType="numeric"
                 />
@@ -442,11 +517,15 @@ export default function SignupScreen() {
                 <TextInput
                   style={styles.input}
                   value={formData.certifications}
-                  onChangeText={(value) => handleInputChange('certifications', value)}
+                  onChangeText={(value) =>
+                    handleInputChange('certifications', value)
+                  }
                   placeholder="e.g., ASE Certified, DOT Inspector"
                   multiline
                 />
-                <Text style={styles.helperText}>Separate multiple certifications with commas</Text>
+                <Text style={styles.helperText}>
+                  Separate multiple certifications with commas
+                </Text>
               </View>
             </>
           )}
@@ -468,15 +547,17 @@ export default function SignupScreen() {
             <TextInput
               style={styles.input}
               value={formData.confirmPassword}
-              onChangeText={(value) => handleInputChange('confirmPassword', value)}
+              onChangeText={(value) =>
+                handleInputChange('confirmPassword', value)
+              }
               placeholder="Re-enter your password"
               secureTextEntry
               autoComplete="new-password"
             />
           </View>
 
-          <TouchableOpacity 
-            style={[styles.signupButton, isLoading && styles.buttonDisabled]} 
+          <TouchableOpacity
+            style={[styles.signupButton, isLoading && styles.buttonDisabled]}
             onPress={handleSignup}
             disabled={isLoading}
           >
@@ -506,21 +587,22 @@ export default function SignupScreen() {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Select Language</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => setShowLanguageModal(false)}
               style={styles.closeButton}
             >
               <Text style={styles.closeButtonText}>✕</Text>
             </TouchableOpacity>
           </View>
-          
+
           <ScrollView style={styles.languageList}>
             {languages.map((language) => (
               <TouchableOpacity
                 key={language.code}
                 style={[
                   styles.languageOption,
-                  currentLanguage === language.code && styles.selectedLanguageOption
+                  currentLanguage === language.code &&
+                    styles.selectedLanguageOption,
                 ]}
                 onPress={() => {
                   setLanguage(language.code);
@@ -531,10 +613,13 @@ export default function SignupScreen() {
                 <View style={styles.languageOptionContent}>
                   <Text style={styles.languageFlag}>{language.flag}</Text>
                   <View style={styles.languageNames}>
-                    <Text style={[
-                      styles.languageName,
-                      currentLanguage === language.code && styles.selectedLanguageName
-                    ]}>
+                    <Text
+                      style={[
+                        styles.languageName,
+                        currentLanguage === language.code &&
+                          styles.selectedLanguageName,
+                      ]}
+                    >
                       {language.name}
                     </Text>
                     <Text style={styles.languageNativeName}>

@@ -4,29 +4,45 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity
+  TouchableOpacity,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { DollarSign, Clock, CircleCheck as CheckCircle, Circle as XCircle, TrendingUp, Calendar, Filter, RefreshCw, TriangleAlert as AlertTriangle } from 'lucide-react-native';
+import {
+  DollarSign,
+  Clock,
+  CircleCheck as CheckCircle,
+  CircleX as CloseCircle,
+  TrendingUp,
+  RefreshCw,
+  TriangleAlert as AlertTriangle,
+} from 'lucide-react-native';
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'charged': return '#10b981';
-    case 'pending': return '#f59e0b';
-    case 'refunded': return '#ef4444';
-    default: return '#6b7280';
+    case 'charged':
+      return '#10b981';
+    case 'pending':
+      return '#f59e0b';
+    case 'refunded':
+      return '#ef4444';
+    default:
+      return '#6b7280';
   }
 };
 
 const getStatusIcon = (status: string) => {
   switch (status) {
-    case 'charged': return CheckCircle;
-    case 'pending': return Clock;
-    case 'refunded': return RefreshCw;
-    default: return Clock;
+    case 'charged':
+      return CheckCircle;
+    case 'pending':
+      return Clock;
+    case 'refunded':
+      return RefreshCw;
+    default:
+      return Clock;
   }
 };
 
@@ -47,155 +63,263 @@ export default function LeadsScreen() {
   const { leads } = useApp();
   const { colors } = useTheme();
   const { t } = useLanguage();
-  const [filter, setFilter] = useState<'all' | 'charged' | 'pending' | 'refunded'>('all');
+  const [filter, setFilter] = useState<
+    'all' | 'charged' | 'pending' | 'refunded'
+  >('all');
 
   if (!user) return null;
 
-  const userLeads = leads.filter(lead => lead.userId === user.id);
-  const filteredLeads = filter === 'all' 
-    ? userLeads 
-    : userLeads.filter(lead => lead.status === filter);
+  const userLeads = leads.filter((lead) => lead.userId === user.id);
+  const filteredLeads =
+    filter === 'all'
+      ? userLeads
+      : userLeads.filter((lead) => lead.status === filter);
 
   const stats = {
-    totalSpent: userLeads.filter(l => l.status === 'charged' && l.amount > 0).reduce((sum, l) => sum + l.amount, 0),
-    totalRefunded: Math.abs(userLeads.filter(l => l.status === 'charged' && l.amount < 0).reduce((sum, l) => sum + l.amount, 0)),
-    pendingAmount: userLeads.filter(l => l.status === 'pending').reduce((sum, l) => sum + l.amount, 0),
-    totalLeads: userLeads.filter(l => !l.description.includes('penalty') && !l.description.includes('refund')).length,
-    penalties: userLeads.filter(l => l.description.includes('penalty')).length,
-    thisMonth: userLeads.filter(l => {
+    totalSpent: userLeads
+      .filter((l) => l.status === 'charged' && l.amount > 0)
+      .reduce((sum, l) => sum + l.amount, 0),
+    totalRefunded: Math.abs(
+      userLeads
+        .filter((l) => l.status === 'charged' && l.amount < 0)
+        .reduce((sum, l) => sum + l.amount, 0)
+    ),
+    pendingAmount: userLeads
+      .filter((l) => l.status === 'pending')
+      .reduce((sum, l) => sum + l.amount, 0),
+    totalLeads: userLeads.filter(
+      (l) =>
+        !l.description.includes('penalty') && !l.description.includes('refund')
+    ).length,
+    penalties: userLeads.filter((l) => l.description.includes('penalty'))
+      .length,
+    thisMonth: userLeads.filter((l) => {
       const leadDate = new Date(l.createdAt);
       const now = new Date();
-      return leadDate.getMonth() === now.getMonth() && leadDate.getFullYear() === now.getFullYear();
-    }).length
+      return (
+        leadDate.getMonth() === now.getMonth() &&
+        leadDate.getFullYear() === now.getFullYear()
+      );
+    }).length,
   };
 
   const netSpent = stats.totalSpent - stats.totalRefunded;
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>{t('leads.title')}</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>{t('leads.monitorLeadFees')}</Text>
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
+        <Text style={[styles.title, { color: colors.text }]}>
+          {t('leads.title')}
+        </Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          {t('leads.monitorLeadFees')}
+        </Text>
       </View>
 
       <View style={styles.statsContainer}>
-        <View style={[styles.statCard, styles.totalCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.statCard,
+            styles.totalCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <View style={styles.statIcon}>
             <DollarSign size={24} color="#10b981" />
           </View>
           <View style={styles.statInfo}>
-            <Text style={[styles.statAmount, { color: colors.text }]}>${netSpent}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('leads.netSpent')}</Text>
+            <Text style={[styles.statAmount, { color: colors.text }]}>
+              ${netSpent}
+            </Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+              {t('leads.netSpent')}
+            </Text>
           </View>
         </View>
 
         <View style={styles.statRow}>
-          <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-            <Text style={[styles.statNumber, { color: colors.text }]}>{stats.totalLeads}</Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('leads.totalLeads')}</Text>
+          <View
+            style={[
+              styles.statCard,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
+            <Text style={[styles.statNumber, { color: colors.text }]}>
+              {stats.totalLeads}
+            </Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+              {t('leads.totalLeads')}
+            </Text>
           </View>
-          
-          <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+
+          <View
+            style={[
+              styles.statCard,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <Text style={[styles.statNumber, { color: '#10b981' }]}>
               ${stats.totalRefunded}
             </Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('leads.refunded')}</Text>
+            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+              {t('leads.refunded')}
+            </Text>
           </View>
-          
+
           {user.role === 'provider' && (
-            <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
               <Text style={[styles.statNumber, { color: '#ef4444' }]}>
                 {stats.penalties}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('leads.penalties')}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                {t('leads.penalties')}
+              </Text>
             </View>
           )}
-          
+
           {user.role === 'trucker' && (
-            <View style={[styles.statCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
               <Text style={[styles.statNumber, { color: '#f59e0b' }]}>
                 ${stats.pendingAmount}
               </Text>
-              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>{t('leads.pending')}</Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                {t('leads.pending')}
+              </Text>
             </View>
           )}
         </View>
       </View>
 
-      <View style={[styles.filterContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+      <View
+        style={[
+          styles.filterContainer,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScroll}
+        >
           {['all', 'charged', 'pending', 'refunded'].map((filterType) => (
             <TouchableOpacity
               key={filterType}
               style={[
                 styles.filterButton,
                 { backgroundColor: colors.card, borderColor: colors.border },
-                filter === filterType && { backgroundColor: colors.primary, borderColor: colors.primary }
+                filter === filterType && {
+                  backgroundColor: colors.primary,
+                  borderColor: colors.primary,
+                },
               ]}
               onPress={() => setFilter(filterType as any)}
             >
-              <Text style={[
-                styles.filterText,
-                { color: colors.textSecondary },
-                filter === filterType && { color: 'white' }
-              ]}>
-                {filterType === 'all' ? 'All' : t(`leads.${filterType}`) || filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+              <Text
+                style={[
+                  styles.filterText,
+                  { color: colors.textSecondary },
+                  filter === filterType && { color: 'white' },
+                ]}
+              >
+                {filterType === 'all'
+                  ? 'All'
+                  : t(`leads.${filterType}`) ||
+                    filterType.charAt(0).toUpperCase() + filterType.slice(1)}
               </Text>
             </TouchableOpacity>
           ))}
         </ScrollView>
       </View>
 
-      <ScrollView style={[styles.content, { backgroundColor: colors.background }]}>
+      <ScrollView
+        style={[styles.content, { backgroundColor: colors.background }]}
+      >
         {filteredLeads.length === 0 ? (
           <View style={styles.emptyState}>
             <DollarSign size={48} color="#9ca3af" />
-            <Text style={[styles.emptyStateText, { color: colors.text }]}>{t('leads.noLeadFeesYet')}</Text>
-            <Text style={[styles.emptyStateSubtext, { color: colors.textSecondary }]}>
-              {user.role === 'trucker' 
+            <Text style={[styles.emptyStateText, { color: colors.text }]}>
+              {t('leads.noLeadFeesYet')}
+            </Text>
+            <Text
+              style={[
+                styles.emptyStateSubtext,
+                { color: colors.textSecondary },
+              ]}
+            >
+              {user.role === 'trucker'
                 ? t('leads.leadFeesWillAppear')
-                : t('leads.leadFeesWillAppearProvider')
-              }
+                : t('leads.leadFeesWillAppearProvider')}
             </Text>
           </View>
         ) : (
           <View style={styles.leadsContainer}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('leads.transactionHistory')}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('leads.transactionHistory')}
+            </Text>
             {filteredLeads.map((lead) => {
               const StatusIcon = getStatusIcon(lead.status);
               const LeadTypeIcon = getLeadTypeIcon(lead.description);
               const leadTypeColor = getLeadTypeColor(lead.description);
               const isRefund = lead.amount < 0;
               const isPenalty = lead.description.includes('penalty');
-              
+
               return (
-                <View key={lead.id} style={[styles.leadCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <View
+                  key={lead.id}
+                  style={[
+                    styles.leadCard,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                    },
+                  ]}
+                >
                   <View style={styles.leadHeader}>
                     <View style={styles.leadInfo}>
                       <View style={styles.leadTypeContainer}>
-                        <LeadTypeIcon 
-                          size={16} 
-                          color={leadTypeColor} 
-                        />
+                        <LeadTypeIcon size={16} color={leadTypeColor} />
                         <View style={styles.statusContainer}>
-                          <StatusIcon 
-                            size={14} 
-                            color={getStatusColor(lead.status)} 
+                          <StatusIcon
+                            size={14}
+                            color={getStatusColor(lead.status)}
                           />
-                          <Text style={[
-                            styles.statusText,
-                            { color: getStatusColor(lead.status) }
-                          ]}>
+                          <Text
+                            style={[
+                              styles.statusText,
+                              { color: getStatusColor(lead.status) },
+                            ]}
+                          >
                             {lead.status.toUpperCase()}
                           </Text>
                         </View>
                       </View>
-                      <Text style={[
-                        styles.leadAmount,
-                        { 
-                          color: isRefund ? '#10b981' : isPenalty ? '#ef4444' : '#1e293b'
-                        }
-                      ]}>
+                      <Text
+                        style={[
+                          styles.leadAmount,
+                          {
+                            color: isRefund
+                              ? '#10b981'
+                              : isPenalty
+                              ? '#ef4444'
+                              : '#1e293b',
+                          },
+                        ]}
+                      >
                         {isRefund ? '+' : ''}${Math.abs(lead.amount).toFixed(2)}
                       </Text>
                     </View>
@@ -203,29 +327,53 @@ export default function LeadsScreen() {
                       {new Date(lead.createdAt).toLocaleDateString()}
                     </Text>
                   </View>
-                  
-                  <Text style={[styles.leadDescription, { color: colors.text }]}>
+
+                  <Text
+                    style={[styles.leadDescription, { color: colors.text }]}
+                  >
                     {lead.description}
                   </Text>
-                  
+
                   <View style={styles.leadFooter}>
-                    <Text style={[styles.requestId, { color: colors.textSecondary }]}>
+                    <Text
+                      style={[
+                        styles.requestId,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
                       Request #{lead.requestId.slice(-8)}
                     </Text>
-                    <View style={[
-                      styles.roleIndicator,
-                      { 
-                        backgroundColor: isRefund ? '#dcfce7' : isPenalty ? '#fef2f2' : '#f1f5f9'
-                      }
-                    ]}>
-                      <Text style={[
-                        styles.roleText,
-                        { 
-                          color: isRefund ? '#166534' : isPenalty ? '#dc2626' : '#475569'
-                        }
-                      ]}>
-                        {isRefund ? 'Refund' : isPenalty ? 'Penalty' : 
-                         lead.userRole === 'trucker' ? 'Trucker Fee' : 'Provider Fee'}
+                    <View
+                      style={[
+                        styles.roleIndicator,
+                        {
+                          backgroundColor: isRefund
+                            ? '#dcfce7'
+                            : isPenalty
+                            ? '#fef2f2'
+                            : '#f1f5f9',
+                        },
+                      ]}
+                    >
+                      <Text
+                        style={[
+                          styles.roleText,
+                          {
+                            color: isRefund
+                              ? '#166534'
+                              : isPenalty
+                              ? '#dc2626'
+                              : '#475569',
+                          },
+                        ]}
+                      >
+                        {isRefund
+                          ? 'Refund'
+                          : isPenalty
+                          ? 'Penalty'
+                          : lead.userRole === 'trucker'
+                          ? 'Trucker Fee'
+                          : 'Provider Fee'}
                       </Text>
                     </View>
                   </View>
@@ -237,24 +385,45 @@ export default function LeadsScreen() {
       </ScrollView>
 
       {user.role === 'trucker' && (
-        <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.infoCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <TrendingUp size={20} color="#2563eb" />
           <View style={styles.infoText}>
-            <Text style={[styles.infoTitle, { color: colors.text }]}>Lead Fee Information</Text>
-            <Text style={[styles.infoDescription, { color: colors.textSecondary }]}>
-              You are charged $5 when a service provider accepts your request. If they cancel, you get a full refund.
+            <Text style={[styles.infoTitle, { color: colors.text }]}>
+              Lead Fee Information
+            </Text>
+            <Text
+              style={[styles.infoDescription, { color: colors.textSecondary }]}
+            >
+              You are charged $5 when a service provider accepts your request.
+              If they cancel, you get a full refund.
             </Text>
           </View>
         </View>
       )}
 
       {user.role === 'provider' && (
-        <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.infoCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <TrendingUp size={20} color="#ea580c" />
           <View style={styles.infoText}>
-            <Text style={[styles.infoTitle, { color: colors.text }]}>Lead Fee & Cancellation Policy</Text>
-            <Text style={[styles.infoDescription, { color: colors.textSecondary }]}>
-              You pay $5 when accepting a request. If you cancel, you'll be charged an additional $5 penalty fee ($10 total) while the trucker gets a full refund.
+            <Text style={[styles.infoTitle, { color: colors.text }]}>
+              Lead Fee & Cancellation Policy
+            </Text>
+            <Text
+              style={[styles.infoDescription, { color: colors.textSecondary }]}
+            >
+              You pay $5 when accepting a request. If you cancel, youll be
+              charged an additional $5 penalty fee ($10 total) while the trucker
+              gets a full refund.
             </Text>
           </View>
         </View>

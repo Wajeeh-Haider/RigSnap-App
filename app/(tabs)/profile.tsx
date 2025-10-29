@@ -8,14 +8,31 @@ import {
   Alert,
   TextInput,
   Modal,
-  ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { User, Settings, MapPin, Phone, Mail, Star, Calendar, Truck, Shield, CreditCard as Edit3, Save, X, Globe, ChevronRight } from 'lucide-react-native';
-import { CreditCard, Plus, Trash2 } from 'lucide-react-native';
+import {
+  User,
+  Settings,
+  MapPin,
+  Phone,
+  Mail,
+  Star,
+  Calendar,
+  Truck,
+  Shield,
+  CreditCard as Edit3,
+  Save,
+  X,
+  Globe,
+  ChevronRight,
+  CreditCard,
+  Plus,
+  Trash2,
+} from 'lucide-react-native';
 
 export default function ProfileScreen() {
   const { user, logout, updateProfile } = useAuth();
@@ -32,7 +49,7 @@ export default function ProfileScreen() {
       last4: '4242',
       expiryMonth: '12',
       expiryYear: '2025',
-      isDefault: true
+      isDefault: true,
     },
     {
       id: '2',
@@ -40,15 +57,15 @@ export default function ProfileScreen() {
       last4: '5555',
       expiryMonth: '08',
       expiryYear: '2026',
-      isDefault: false
-    }
+      isDefault: false,
+    },
   ]);
   const [newCard, setNewCard] = useState({
     number: '',
     expiryMonth: '',
     expiryYear: '',
     cvc: '',
-    name: ''
+    name: '',
   });
 
   if (!user) return null;
@@ -83,7 +100,7 @@ export default function ProfileScreen() {
         licenseNumber: editedUser.licenseNumber,
         services: editedUser.services,
         serviceRadius: editedUser.serviceRadius,
-        certifications: editedUser.certifications
+        certifications: editedUser.certifications,
       });
 
       if (result.success) {
@@ -100,73 +117,88 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: () => {
-            logout();
-            router.replace('/(auth)/login');
-          }
-        }
-      ]
-    );
+    Alert.alert('Sign Out', 'Are you sure you want to sign out?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Sign Out',
+        style: 'destructive',
+        onPress: () => {
+          logout();
+          router.replace('/(auth)/login');
+        },
+      },
+    ]);
   };
 
   const handleAddCard = () => {
-    if (!newCard.number || !newCard.expiryMonth || !newCard.expiryYear || !newCard.cvc || !newCard.name) {
+    if (
+      !newCard.number ||
+      !newCard.expiryMonth ||
+      !newCard.expiryYear ||
+      !newCard.cvc ||
+      !newCard.name
+    ) {
       Alert.alert('Error', 'Please fill in all card details');
       return;
     }
 
-    const cardType = newCard.number.startsWith('4') ? 'visa' : 
-                    newCard.number.startsWith('5') ? 'mastercard' : 'card';
-    
+    const cardType = newCard.number.startsWith('4')
+      ? 'visa'
+      : newCard.number.startsWith('5')
+      ? 'mastercard'
+      : 'card';
+
     const newPaymentMethod = {
       id: Date.now().toString(),
       type: cardType,
       last4: newCard.number.slice(-4),
       expiryMonth: newCard.expiryMonth,
       expiryYear: newCard.expiryYear,
-      isDefault: paymentMethods.length === 0
+      isDefault: paymentMethods.length === 0,
     };
 
-    setPaymentMethods(prev => [...prev, newPaymentMethod]);
-    setNewCard({ number: '', expiryMonth: '', expiryYear: '', cvc: '', name: '' });
+    setPaymentMethods((prev) => [...prev, newPaymentMethod]);
+    setNewCard({
+      number: '',
+      expiryMonth: '',
+      expiryYear: '',
+      cvc: '',
+      name: '',
+    });
     setShowPaymentModal(false);
     Alert.alert('Success', 'Payment method added successfully!');
   };
 
   const handleDeleteCard = (cardId: string) => {
-    const card = paymentMethods.find(c => c.id === cardId);
+    const card = paymentMethods.find((c) => c.id === cardId);
     if (!card) return;
 
     Alert.alert(
       'Delete Payment Method',
-      `Are you sure you want to delete the ${card.type.toUpperCase()} ending in ${card.last4}?`,
+      `Are you sure you want to delete the ${card.type.toUpperCase()} ending in ${
+        card.last4
+      }?`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
           style: 'destructive',
           onPress: () => {
-            setPaymentMethods(prev => prev.filter(c => c.id !== cardId));
+            setPaymentMethods((prev) => prev.filter((c) => c.id !== cardId));
             Alert.alert('Success', 'Payment method deleted successfully!');
-          }
-        }
+          },
+        },
       ]
     );
   };
 
   const handleSetDefault = (cardId: string) => {
-    setPaymentMethods(prev => prev.map(card => ({
-      ...card,
-      isDefault: card.id === cardId
-    })));
+    setPaymentMethods((prev) =>
+      prev.map((card) => ({
+        ...card,
+        isDefault: card.id === cardId,
+      }))
+    );
     Alert.alert('Success', 'Default payment method updated!');
   };
 
@@ -177,7 +209,7 @@ export default function ProfileScreen() {
   const formatCardNumber = (value: string) => {
     const v = value.replace(/\s+/g, '').replace(/[^0-9]/gi, '');
     const matches = v.match(/\d{4,16}/g);
-    const match = matches && matches[0] || '';
+    const match = (matches && matches[0]) || '';
     const parts = [];
     for (let i = 0, len = match.length; i < len; i += 4) {
       parts.push(match.substring(i, i + 4));
@@ -191,11 +223,23 @@ export default function ProfileScreen() {
   const isTrucker = user.role === 'trucker';
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
         <View style={styles.headerContent}>
           <View style={styles.avatarContainer}>
-            <View style={[styles.logoContainer, { backgroundColor: isTrucker ? '#2563eb' : '#ea580c' }]}>
+            <View
+              style={[
+                styles.logoContainer,
+                { backgroundColor: isTrucker ? '#2563eb' : '#ea580c' },
+              ]}
+            >
               {isTrucker ? (
                 <Truck size={40} color="white" />
               ) : (
@@ -203,44 +247,62 @@ export default function ProfileScreen() {
               )}
             </View>
           </View>
-          
+
           <View style={styles.userInfo}>
             <Text style={[styles.userName, { color: colors.text }]}>
               {user.firstName} {user.lastName}
             </Text>
             <View style={styles.roleContainer}>
-              <Text style={[
-                styles.userRole,
-                { color: isTrucker ? '#2563eb' : '#ea580c' }
-              ]}>
+              <Text
+                style={[
+                  styles.userRole,
+                  { color: isTrucker ? '#2563eb' : '#ea580c' },
+                ]}
+              >
                 {isTrucker ? 'Trucker' : 'Service Provider'}
               </Text>
             </View>
-            
+
             <View style={styles.ratingContainer}>
               <Star size={16} color="#f59e0b" fill="#f59e0b" />
-              <Text style={[styles.rating, { color: colors.text }]}>{user.rating.toFixed(1)}</Text>
-              <Text style={[styles.ratingText, { color: colors.textSecondary }]}>{t('profile.rating')}</Text>
+              <Text style={[styles.rating, { color: colors.text }]}>
+                {user.rating.toFixed(1)}
+              </Text>
+              <Text
+                style={[styles.ratingText, { color: colors.textSecondary }]}
+              >
+                {t('profile.rating')}
+              </Text>
             </View>
           </View>
         </View>
 
         <View style={styles.headerActions}>
           {!isEditing ? (
-            <TouchableOpacity style={[styles.editButton, { backgroundColor: colors.primary + '20' }]} onPress={handleEdit}>
+            <TouchableOpacity
+              style={[
+                styles.editButton,
+                { backgroundColor: colors.primary + '20' },
+              ]}
+              onPress={handleEdit}
+            >
               <Edit3 size={20} color="#2563eb" />
             </TouchableOpacity>
           ) : (
             <View style={styles.editActions}>
-              <TouchableOpacity 
-                style={[styles.cancelButton, { backgroundColor: colors.card }]} 
+              <TouchableOpacity
+                style={[styles.cancelButton, { backgroundColor: colors.card }]}
                 onPress={handleCancel}
                 disabled={isLoading}
               >
                 <X size={20} color={colors.textSecondary} />
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.saveButton, { backgroundColor: colors.primary }, isLoading && styles.saveButtonDisabled]} 
+              <TouchableOpacity
+                style={[
+                  styles.saveButton,
+                  { backgroundColor: colors.primary },
+                  isLoading && styles.saveButtonDisabled,
+                ]}
                 onPress={handleSave}
                 disabled={isLoading}
               >
@@ -258,31 +320,63 @@ export default function ProfileScreen() {
       <View style={[styles.content, { backgroundColor: colors.background }]}>
         {/* Personal Information */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.personalInformation')}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {t('profile.personalInformation')}
+          </Text>
           <View style={[styles.card, { backgroundColor: colors.surface }]}>
             <View style={styles.infoRow}>
               <User size={20} color={colors.textSecondary} />
               <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('profile.name')}</Text>
+                <Text
+                  style={[styles.infoLabel, { color: colors.textSecondary }]}
+                >
+                  {t('profile.name')}
+                </Text>
                 {isEditing ? (
                   <View style={styles.nameInputs}>
                     <TextInput
-                      style={[styles.input, styles.nameInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                      style={[
+                        styles.input,
+                        styles.nameInput,
+                        {
+                          backgroundColor: colors.background,
+                          borderColor: colors.border,
+                          color: colors.text,
+                        },
+                      ]}
                       value={editedUser?.firstName || ''}
-                      onChangeText={(text) => setEditedUser(prev => prev ? { ...prev, firstName: text } : null)}
+                      onChangeText={(text) =>
+                        setEditedUser((prev) =>
+                          prev ? { ...prev, firstName: text } : null
+                        )
+                      }
                       placeholder="First name"
                       placeholderTextColor={colors.textSecondary}
                     />
                     <TextInput
-                      style={[styles.input, styles.nameInput, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                      style={[
+                        styles.input,
+                        styles.nameInput,
+                        {
+                          backgroundColor: colors.background,
+                          borderColor: colors.border,
+                          color: colors.text,
+                        },
+                      ]}
                       value={editedUser?.lastName || ''}
-                      onChangeText={(text) => setEditedUser(prev => prev ? { ...prev, lastName: text } : null)}
+                      onChangeText={(text) =>
+                        setEditedUser((prev) =>
+                          prev ? { ...prev, lastName: text } : null
+                        )
+                      }
                       placeholder="Last name"
                       placeholderTextColor={colors.textSecondary}
                     />
                   </View>
                 ) : (
-                  <Text style={[styles.infoValue, { color: colors.text }]}>{user.firstName} {user.lastName}</Text>
+                  <Text style={[styles.infoValue, { color: colors.text }]}>
+                    {user.firstName} {user.lastName}
+                  </Text>
                 )}
               </View>
             </View>
@@ -290,26 +384,49 @@ export default function ProfileScreen() {
             <View style={styles.infoRow}>
               <Mail size={20} color={colors.textSecondary} />
               <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('profile.email')}</Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>{user.email}</Text>
+                <Text
+                  style={[styles.infoLabel, { color: colors.textSecondary }]}
+                >
+                  {t('profile.email')}
+                </Text>
+                <Text style={[styles.infoValue, { color: colors.text }]}>
+                  {user.email}
+                </Text>
               </View>
             </View>
 
             <View style={styles.infoRow}>
               <Phone size={20} color={colors.textSecondary} />
               <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('profile.phone')}</Text>
+                <Text
+                  style={[styles.infoLabel, { color: colors.textSecondary }]}
+                >
+                  {t('profile.phone')}
+                </Text>
                 {isEditing ? (
                   <TextInput
-                    style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: colors.background,
+                        borderColor: colors.border,
+                        color: colors.text,
+                      },
+                    ]}
                     value={editedUser?.phone || ''}
-                    onChangeText={(text) => setEditedUser(prev => prev ? { ...prev, phone: text } : null)}
+                    onChangeText={(text) =>
+                      setEditedUser((prev) =>
+                        prev ? { ...prev, phone: text } : null
+                      )
+                    }
                     placeholder="Phone number"
                     placeholderTextColor={colors.textSecondary}
                     keyboardType="phone-pad"
                   />
                 ) : (
-                  <Text style={[styles.infoValue, { color: colors.text }]}>{user.phone || t('profile.notProvided')}</Text>
+                  <Text style={[styles.infoValue, { color: colors.text }]}>
+                    {user.phone || t('profile.notProvided')}
+                  </Text>
                 )}
               </View>
             </View>
@@ -317,17 +434,34 @@ export default function ProfileScreen() {
             <View style={styles.infoRow}>
               <MapPin size={20} color={colors.textSecondary} />
               <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('profile.location')}</Text>
+                <Text
+                  style={[styles.infoLabel, { color: colors.textSecondary }]}
+                >
+                  {t('profile.location')}
+                </Text>
                 {isEditing ? (
                   <TextInput
-                    style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                    style={[
+                      styles.input,
+                      {
+                        backgroundColor: colors.background,
+                        borderColor: colors.border,
+                        color: colors.text,
+                      },
+                    ]}
                     value={editedUser?.location || ''}
-                    onChangeText={(text) => setEditedUser(prev => prev ? { ...prev, location: text } : null)}
+                    onChangeText={(text) =>
+                      setEditedUser((prev) =>
+                        prev ? { ...prev, location: text } : null
+                      )
+                    }
                     placeholder="Location"
                     placeholderTextColor={colors.textSecondary}
                   />
                 ) : (
-                  <Text style={[styles.infoValue, { color: colors.text }]}>{user.location}</Text>
+                  <Text style={[styles.infoValue, { color: colors.text }]}>
+                    {user.location}
+                  </Text>
                 )}
               </View>
             </View>
@@ -335,11 +469,15 @@ export default function ProfileScreen() {
             <View style={styles.infoRow}>
               <Calendar size={20} color={colors.textSecondary} />
               <View style={styles.infoContent}>
-                <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('profile.memberSince')}</Text>
+                <Text
+                  style={[styles.infoLabel, { color: colors.textSecondary }]}
+                >
+                  {t('profile.memberSince')}
+                </Text>
                 <Text style={[styles.infoValue, { color: colors.text }]}>
                   {new Date(user.joinDate).toLocaleDateString('en-US', {
                     month: 'long',
-                    year: 'numeric'
+                    year: 'numeric',
                   })}
                 </Text>
               </View>
@@ -350,22 +488,41 @@ export default function ProfileScreen() {
         {/* Role-specific Information */}
         {isTrucker ? (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.truckerInformation')}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('profile.truckerInformation')}
+            </Text>
             <View style={[styles.card, { backgroundColor: colors.surface }]}>
               <View style={styles.infoRow}>
                 <Truck size={20} color="#2563eb" />
                 <View style={styles.infoContent}>
-                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('profile.truckType')}</Text>
+                  <Text
+                    style={[styles.infoLabel, { color: colors.textSecondary }]}
+                  >
+                    {t('profile.truckType')}
+                  </Text>
                   {isEditing ? (
                     <TextInput
-                      style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: colors.background,
+                          borderColor: colors.border,
+                          color: colors.text,
+                        },
+                      ]}
                       value={editedUser?.truckType || ''}
-                      onChangeText={(text) => setEditedUser(prev => prev ? { ...prev, truckType: text } : null)}
+                      onChangeText={(text) =>
+                        setEditedUser((prev) =>
+                          prev ? { ...prev, truckType: text } : null
+                        )
+                      }
                       placeholder="Truck type"
                       placeholderTextColor={colors.textSecondary}
                     />
                   ) : (
-                    <Text style={[styles.infoValue, { color: colors.text }]}>{user.truckType || t('profile.notSpecified')}</Text>
+                    <Text style={[styles.infoValue, { color: colors.text }]}>
+                      {user.truckType || t('profile.notSpecified')}
+                    </Text>
                   )}
                 </View>
               </View>
@@ -373,18 +530,35 @@ export default function ProfileScreen() {
               <View style={styles.infoRow}>
                 <User size={20} color="#2563eb" />
                 <View style={styles.infoContent}>
-                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('profile.licenseNumber')}</Text>
+                  <Text
+                    style={[styles.infoLabel, { color: colors.textSecondary }]}
+                  >
+                    {t('profile.licenseNumber')}
+                  </Text>
                   {isEditing ? (
                     <TextInput
-                      style={[styles.input, { backgroundColor: colors.background, borderColor: colors.border, color: colors.text }]}
+                      style={[
+                        styles.input,
+                        {
+                          backgroundColor: colors.background,
+                          borderColor: colors.border,
+                          color: colors.text,
+                        },
+                      ]}
                       value={editedUser?.licenseNumber || ''}
-                      onChangeText={(text) => setEditedUser(prev => prev ? { ...prev, licenseNumber: text } : null)}
+                      onChangeText={(text) =>
+                        setEditedUser((prev) =>
+                          prev ? { ...prev, licenseNumber: text } : null
+                        )
+                      }
                       placeholder="License number"
                       placeholderTextColor={colors.textSecondary}
                       autoCapitalize="characters"
                     />
                   ) : (
-                    <Text style={[styles.infoValue, { color: colors.text }]}>{user.licenseNumber || t('profile.notProvided')}</Text>
+                    <Text style={[styles.infoValue, { color: colors.text }]}>
+                      {user.licenseNumber || t('profile.notProvided')}
+                    </Text>
                   )}
                 </View>
               </View>
@@ -392,17 +566,24 @@ export default function ProfileScreen() {
           </View>
         ) : (
           <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.serviceProviderInformation')}</Text>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('profile.serviceProviderInformation')}
+            </Text>
             <View style={[styles.card, { backgroundColor: colors.surface }]}>
               <View style={styles.infoRow}>
                 <Shield size={20} color="#ea580c" />
                 <View style={styles.infoContent}>
-                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('profile.servicesOffered')}</Text>
+                  <Text
+                    style={[styles.infoLabel, { color: colors.textSecondary }]}
+                  >
+                    {t('profile.servicesOffered')}
+                  </Text>
                   <Text style={[styles.infoValue, { color: colors.text }]}>
-                    {user.services && user.services.length > 0 
-                      ? user.services.map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(', ')
-                      : t('profile.notSpecified')
-                    }
+                    {user.services && user.services.length > 0
+                      ? user.services
+                          .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+                          .join(', ')
+                      : t('profile.notSpecified')}
                   </Text>
                 </View>
               </View>
@@ -410,9 +591,15 @@ export default function ProfileScreen() {
               <View style={styles.infoRow}>
                 <MapPin size={20} color="#ea580c" />
                 <View style={styles.infoContent}>
-                  <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('profile.serviceRadius')}</Text>
+                  <Text
+                    style={[styles.infoLabel, { color: colors.textSecondary }]}
+                  >
+                    {t('profile.serviceRadius')}
+                  </Text>
                   <Text style={[styles.infoValue, { color: colors.text }]}>
-                    {user.serviceRadius ? `${user.serviceRadius} ${t('profile.miles')}` : t('profile.notSpecified')}
+                    {user.serviceRadius
+                      ? `${user.serviceRadius} ${t('profile.miles')}`
+                      : t('profile.notSpecified')}
                   </Text>
                 </View>
               </View>
@@ -421,7 +608,14 @@ export default function ProfileScreen() {
                 <View style={styles.infoRow}>
                   <Star size={20} color="#ea580c" />
                   <View style={styles.infoContent}>
-                    <Text style={[styles.infoLabel, { color: colors.textSecondary }]}>{t('profile.certifications')}</Text>
+                    <Text
+                      style={[
+                        styles.infoLabel,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      {t('profile.certifications')}
+                    </Text>
                     <Text style={[styles.infoValue, { color: colors.text }]}>
                       {user.certifications.join(', ')}
                     </Text>
@@ -435,54 +629,123 @@ export default function ProfileScreen() {
         {/* Payment Methods */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.paymentMethods')}</Text>
-            <TouchableOpacity 
-              style={[styles.addButton, { backgroundColor: colors.primary + '20' }]}
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('profile.paymentMethods')}
+            </Text>
+            <TouchableOpacity
+              style={[
+                styles.addButton,
+                { backgroundColor: colors.primary + '20' },
+              ]}
               onPress={() => setShowPaymentModal(true)}
             >
               <Plus size={16} color={colors.primary} />
-              <Text style={[styles.addButtonText, { color: colors.primary }]}>Add Card</Text>
+              <Text style={[styles.addButtonText, { color: colors.primary }]}>
+                Add Card
+              </Text>
             </TouchableOpacity>
           </View>
           <View style={[styles.card, { backgroundColor: colors.surface }]}>
             {paymentMethods.length === 0 ? (
               <View style={styles.emptyPayment}>
                 <CreditCard size={48} color={colors.textSecondary} />
-                <Text style={[styles.emptyPaymentText, { color: colors.text }]}>No payment methods added</Text>
-                <Text style={[styles.emptyPaymentSubtext, { color: colors.textSecondary }]}>Add a credit or debit card to get started</Text>
+                <Text style={[styles.emptyPaymentText, { color: colors.text }]}>
+                  No payment methods added
+                </Text>
+                <Text
+                  style={[
+                    styles.emptyPaymentSubtext,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Add a credit or debit card to get started
+                </Text>
               </View>
             ) : (
               paymentMethods.map((method) => {
                 const CardIcon = getCardIcon(method.type);
                 return (
-                  <View key={method.id} style={[styles.paymentMethod, { borderBottomColor: colors.border }]}>
+                  <View
+                    key={method.id}
+                    style={[
+                      styles.paymentMethod,
+                      { borderBottomColor: colors.border },
+                    ]}
+                  >
                     <View style={styles.paymentMethodContent}>
-                      <View style={[styles.paymentMethodIcon, { backgroundColor: colors.background, borderColor: colors.border }]}>
-                        <CardIcon size={24} color={method.type === 'visa' ? '#1a1f71' : method.type === 'mastercard' ? '#eb001b' : '#6b7280'} />
+                      <View
+                        style={[
+                          styles.paymentMethodIcon,
+                          {
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
+                          },
+                        ]}
+                      >
+                        <CardIcon
+                          size={24}
+                          color={
+                            method.type === 'visa'
+                              ? '#1a1f71'
+                              : method.type === 'mastercard'
+                              ? '#eb001b'
+                              : '#6b7280'
+                          }
+                        />
                       </View>
                       <View style={styles.paymentMethodInfo}>
-                        <Text style={[styles.paymentMethodTitle, { color: colors.text }]}>
+                        <Text
+                          style={[
+                            styles.paymentMethodTitle,
+                            { color: colors.text },
+                          ]}
+                        >
                           {method.type.toUpperCase()} •••• {method.last4}
                         </Text>
-                        <Text style={[styles.paymentMethodExpiry, { color: colors.textSecondary }]}>
+                        <Text
+                          style={[
+                            styles.paymentMethodExpiry,
+                            { color: colors.textSecondary },
+                          ]}
+                        >
                           Expires {method.expiryMonth}/{method.expiryYear}
                         </Text>
                         {method.isDefault && (
-                          <Text style={[styles.defaultBadge, { color: colors.success }]}>Default</Text>
+                          <Text
+                            style={[
+                              styles.defaultBadge,
+                              { color: colors.success },
+                            ]}
+                          >
+                            Default
+                          </Text>
                         )}
                       </View>
                     </View>
                     <View style={styles.paymentMethodActions}>
                       {!method.isDefault && (
                         <TouchableOpacity
-                          style={[styles.setDefaultButton, { backgroundColor: colors.background }]}
+                          style={[
+                            styles.setDefaultButton,
+                            { backgroundColor: colors.background },
+                          ]}
                           onPress={() => handleSetDefault(method.id)}
                         >
-                          <Text style={[styles.setDefaultText, { color: colors.textSecondary }]}>Set Default</Text>
+                          <Text
+                            style={[
+                              styles.setDefaultText,
+                              { color: colors.textSecondary },
+                            ]}
+                          >
+                            Set Default
+                          </Text>
                         </TouchableOpacity>
                       )}
                       <TouchableOpacity
-                        style={[styles.deleteButton, { backgroundColor: colors.error + '20' }]}
+                        style={[
+                          styles.deleteButton,
+                          { backgroundColor: colors.error + '20' },
+                        ]}
                         onPress={() => handleDeleteCard(method.id)}
                       >
                         <Trash2 size={16} color={colors.error} />
@@ -496,26 +759,32 @@ export default function ProfileScreen() {
         </View>
         {/* Settings */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('profile.settings')}</Text>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {t('profile.settings')}
+          </Text>
           <View style={[styles.card, { backgroundColor: colors.surface }]}>
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.settingRow, { borderBottomColor: colors.border }]}
               onPress={() => router.push('/account-settings')}
             >
               <View style={styles.settingContent}>
                 <Settings size={20} color={colors.textSecondary} />
-                <Text style={[styles.settingText, { color: colors.text }]}>{t('profile.accountSettings')}</Text>
+                <Text style={[styles.settingText, { color: colors.text }]}>
+                  {t('profile.accountSettings')}
+                </Text>
               </View>
               <ChevronRight size={20} color={colors.textSecondary} />
             </TouchableOpacity>
 
-            <TouchableOpacity 
+            <TouchableOpacity
               style={[styles.settingRow, { borderBottomColor: colors.border }]}
               onPress={() => router.push('/account-settings')}
             >
               <View style={styles.settingContent}>
                 <Globe size={20} color={colors.textSecondary} />
-                <Text style={[styles.settingText, { color: colors.text }]}>{t('profile.languageRegion')}</Text>
+                <Text style={[styles.settingText, { color: colors.text }]}>
+                  {t('profile.languageRegion')}
+                </Text>
               </View>
               <ChevronRight size={20} color={colors.textSecondary} />
             </TouchableOpacity>
@@ -523,7 +792,10 @@ export default function ProfileScreen() {
         </View>
 
         {/* Logout */}
-        <TouchableOpacity style={[styles.logoutButton, { backgroundColor: colors.error }]} onPress={handleLogout}>
+        <TouchableOpacity
+          style={[styles.logoutButton, { backgroundColor: colors.error }]}
+          onPress={handleLogout}
+        >
           <Text style={styles.logoutText}>{t('profile.signOut')}</Text>
         </TouchableOpacity>
       </View>
@@ -535,13 +807,34 @@ export default function ProfileScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowPaymentModal(false)}
       >
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-          <View style={[styles.modalHeader, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Add Payment Method</Text>
-            <TouchableOpacity 
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: colors.background },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                backgroundColor: colors.surface,
+                borderBottomColor: colors.border,
+              },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Add Payment Method
+            </Text>
+            <TouchableOpacity
               onPress={() => {
                 setShowPaymentModal(false);
-                setNewCard({ number: '', expiryMonth: '', expiryYear: '', cvc: '', name: '' });
+                setNewCard({
+                  number: '',
+                  expiryMonth: '',
+                  expiryYear: '',
+                  cvc: '',
+                  name: '',
+                });
               }}
               style={styles.closeButton}
             >
@@ -549,24 +842,49 @@ export default function ProfileScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={[styles.modalContent, { backgroundColor: colors.background }]}>
+          <ScrollView
+            style={[
+              styles.modalContent,
+              { backgroundColor: colors.background },
+            ]}
+          >
             <View style={styles.cardForm}>
-              <View style={[styles.cardPreview, { backgroundColor: colors.primary }]}>
+              <View
+                style={[
+                  styles.cardPreview,
+                  { backgroundColor: colors.primary },
+                ]}
+              >
                 <CreditCard size={32} color="#2563eb" />
                 <Text style={styles.cardPreviewText}>
-                  {newCard.number ? `•••• •••• •••• ${newCard.number.slice(-4)}` : '•••• •••• •••• ••••'}
+                  {newCard.number
+                    ? `•••• •••• •••• ${newCard.number.slice(-4)}`
+                    : '•••• •••• •••• ••••'}
                 </Text>
                 <Text style={styles.cardPreviewExpiry}>
-                  {newCard.expiryMonth && newCard.expiryYear ? `${newCard.expiryMonth}/${newCard.expiryYear}` : 'MM/YY'}
+                  {newCard.expiryMonth && newCard.expiryYear
+                    ? `${newCard.expiryMonth}/${newCard.expiryYear}`
+                    : 'MM/YY'}
                 </Text>
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={[styles.formLabel, { color: colors.text }]}>Cardholder Name</Text>
+                <Text style={[styles.formLabel, { color: colors.text }]}>
+                  Cardholder Name
+                </Text>
                 <TextInput
-                  style={[styles.formInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  style={[
+                    styles.formInput,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                      color: colors.text,
+                    },
+                  ]}
                   value={newCard.name}
-                  onChangeText={(text) => setNewCard(prev => ({ ...prev, name: text }))}
+                  onChangeText={(text) =>
+                    setNewCard((prev) => ({ ...prev, name: text }))
+                  }
                   placeholder="John Doe"
                   placeholderTextColor={colors.textSecondary}
                   autoCapitalize="words"
@@ -574,14 +892,23 @@ export default function ProfileScreen() {
               </View>
 
               <View style={styles.formGroup}>
-                <Text style={[styles.formLabel, { color: colors.text }]}>Card Number</Text>
+                <Text style={[styles.formLabel, { color: colors.text }]}>
+                  Card Number
+                </Text>
                 <TextInput
-                  style={[styles.formInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                  style={[
+                    styles.formInput,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                      color: colors.text,
+                    },
+                  ]}
                   value={formatCardNumber(newCard.number)}
                   onChangeText={(text) => {
                     const cleaned = text.replace(/\s/g, '');
                     if (cleaned.length <= 16) {
-                      setNewCard(prev => ({ ...prev, number: cleaned }));
+                      setNewCard((prev) => ({ ...prev, number: cleaned }));
                     }
                   }}
                   placeholder="1234 5678 9012 3456"
@@ -593,15 +920,27 @@ export default function ProfileScreen() {
 
               <View style={styles.formRow}>
                 <View style={styles.formGroup}>
-                  <Text style={[styles.formLabel, { color: colors.text }]}>Expiry Month</Text>
+                  <Text style={[styles.formLabel, { color: colors.text }]}>
+                    Expiry Month
+                  </Text>
                   <TextInput
-                    style={[styles.formInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                    style={[
+                      styles.formInput,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                        color: colors.text,
+                      },
+                    ]}
                     value={newCard.expiryMonth}
                     onChangeText={(text) => {
                       if (text.length <= 2 && /^\d*$/.test(text)) {
                         const month = parseInt(text);
                         if (text === '' || (month >= 1 && month <= 12)) {
-                          setNewCard(prev => ({ ...prev, expiryMonth: text }));
+                          setNewCard((prev) => ({
+                            ...prev,
+                            expiryMonth: text,
+                          }));
                         }
                       }
                     }}
@@ -613,13 +952,22 @@ export default function ProfileScreen() {
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={[styles.formLabel, { color: colors.text }]}>Expiry Year</Text>
+                  <Text style={[styles.formLabel, { color: colors.text }]}>
+                    Expiry Year
+                  </Text>
                   <TextInput
-                    style={[styles.formInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                    style={[
+                      styles.formInput,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                        color: colors.text,
+                      },
+                    ]}
                     value={newCard.expiryYear}
                     onChangeText={(text) => {
                       if (text.length <= 4 && /^\d*$/.test(text)) {
-                        setNewCard(prev => ({ ...prev, expiryYear: text }));
+                        setNewCard((prev) => ({ ...prev, expiryYear: text }));
                       }
                     }}
                     placeholder="2025"
@@ -630,13 +978,22 @@ export default function ProfileScreen() {
                 </View>
 
                 <View style={styles.formGroup}>
-                  <Text style={[styles.formLabel, { color: colors.text }]}>CVC</Text>
+                  <Text style={[styles.formLabel, { color: colors.text }]}>
+                    CVC
+                  </Text>
                   <TextInput
-                    style={[styles.formInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                    style={[
+                      styles.formInput,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                        color: colors.text,
+                      },
+                    ]}
                     value={newCard.cvc}
                     onChangeText={(text) => {
                       if (text.length <= 4 && /^\d*$/.test(text)) {
-                        setNewCard(prev => ({ ...prev, cvc: text }));
+                        setNewCard((prev) => ({ ...prev, cvc: text }));
                       }
                     }}
                     placeholder="123"
@@ -648,32 +1005,74 @@ export default function ProfileScreen() {
                 </View>
               </View>
 
-              <View style={[styles.securityNotice, { backgroundColor: colors.success + '20', borderColor: colors.success + '40' }]}>
+              <View
+                style={[
+                  styles.securityNotice,
+                  {
+                    backgroundColor: colors.success + '20',
+                    borderColor: colors.success + '40',
+                  },
+                ]}
+              >
                 <Text style={[styles.securityText, { color: colors.success }]}>
-                  🔒 Your payment information is encrypted and secure. We use industry-standard security measures to protect your data.
+                  🔒 Your payment information is encrypted and secure. We use
+                  industry-standard security measures to protect your data.
                 </Text>
               </View>
             </View>
           </ScrollView>
 
-          <View style={[styles.modalActions, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          <View
+            style={[
+              styles.modalActions,
+              {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.border,
+              },
+            ]}
+          >
             <TouchableOpacity
               style={[styles.cancelButton, { backgroundColor: colors.card }]}
               onPress={() => {
                 setShowPaymentModal(false);
-                setNewCard({ number: '', expiryMonth: '', expiryYear: '', cvc: '', name: '' });
+                setNewCard({
+                  number: '',
+                  expiryMonth: '',
+                  expiryYear: '',
+                  cvc: '',
+                  name: '',
+                });
               }}
             >
-              <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>Cancel</Text>
+              <Text
+                style={[
+                  styles.cancelButtonText,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                Cancel
+              </Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[
-                styles.addCardButton, { backgroundColor: colors.primary },
-                (!newCard.number || !newCard.expiryMonth || !newCard.expiryYear || !newCard.cvc || !newCard.name) && styles.addCardButtonDisabled
+                styles.addCardButton,
+                { backgroundColor: colors.primary },
+                (!newCard.number ||
+                  !newCard.expiryMonth ||
+                  !newCard.expiryYear ||
+                  !newCard.cvc ||
+                  !newCard.name) &&
+                  styles.addCardButtonDisabled,
               ]}
               onPress={handleAddCard}
-              disabled={!newCard.number || !newCard.expiryMonth || !newCard.expiryYear || !newCard.cvc || !newCard.name}
+              disabled={
+                !newCard.number ||
+                !newCard.expiryMonth ||
+                !newCard.expiryYear ||
+                !newCard.cvc ||
+                !newCard.name
+              }
             >
               <CreditCard size={16} color="white" />
               <Text style={styles.addCardButtonText}>Add Card</Text>

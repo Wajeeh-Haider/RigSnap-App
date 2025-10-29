@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import * as React from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -7,59 +8,104 @@ import {
   TouchableOpacity,
   Alert,
   Modal,
-  ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
-import { Clock, CircleCheck as CheckCircle, CircleAlert as AlertCircle, MapPin, Phone, DollarSign, Filter, Truck, Wrench, Settings, CircleDot, Droplets, Zap, X as XIcon } from 'lucide-react-native';
+import {
+  Clock,
+  CircleCheck as CheckCircle,
+  CircleAlert as AlertCircle,
+  MapPin,
+  Phone,
+  DollarSign,
+  Filter,
+  Truck,
+  Wrench,
+  Settings,
+  CircleDot,
+  Droplets,
+  Zap,
+  X as XIcon,
+} from 'lucide-react-native';
 import LocationButton from '@/components/LocationButton';
 import { locationService } from '@/utils/location';
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'pending': return '#f59e0b';
-    case 'accepted': return '#3b82f6';
-    case 'in_progress': return '#8b5cf6';
-    case 'completed': return '#10b981';
-    case 'cancelled': return '#ef4444';
-    default: return '#6b7280';
+    case 'pending':
+      return '#f59e0b';
+    case 'accepted':
+      return '#3b82f6';
+    case 'in_progress':
+      return '#8b5cf6';
+    case 'completed':
+      return '#10b981';
+    case 'cancelled':
+      return '#ef4444';
+    default:
+      return '#6b7280';
   }
 };
 
 const getStatusIcon = (status: string) => {
   switch (status) {
-    case 'pending': return Clock;
-    case 'accepted': 
-    case 'in_progress': return AlertCircle;
-    case 'completed': return CheckCircle;
-    case 'cancelled': return AlertCircle;
-    default: return Clock;
+    case 'pending':
+      return Clock;
+    case 'accepted':
+    case 'in_progress':
+      return AlertCircle;
+    case 'completed':
+      return CheckCircle;
+    case 'cancelled':
+      return AlertCircle;
+    default:
+      return Clock;
   }
 };
 
 const getServiceIcon = (serviceType: string) => {
   switch (serviceType) {
-    case 'towing': return Truck;
-    case 'repair': return Wrench;
-    case 'mechanic': return Settings;
-    case 'tire_repair': return CircleDot;
-    case 'truck_wash': return Droplets;
-    case 'hose_repair': return Zap;
-    default: return Truck;
+    case 'towing':
+      return Truck;
+    case 'repair':
+      return Wrench;
+    case 'mechanic':
+      return Settings;
+    case 'tire_repair':
+      return CircleDot;
+    case 'truck_wash':
+      return Droplets;
+    case 'hose_repair':
+      return Zap;
+    default:
+      return Truck;
   }
 };
 
 const getUrgencyColor = (urgency: string) => {
   switch (urgency) {
-    case 'high': return '#ef4444';
-    case 'medium': return '#f59e0b';
-    case 'low': return '#10b981';
-    default: return '#6b7280';
+    case 'high':
+      return '#ef4444';
+    case 'medium':
+      return '#f59e0b';
+    case 'low':
+      return '#10b981';
+    default:
+      return '#6b7280';
   }
 };
 
-const filterOptions = ['all', 'towing', 'repair', 'mechanic', 'tire_repair', 'truck_wash', 'hose_repair'];
+const filterOptions = [
+  'all',
+  'towing',
+  'repair',
+  'mechanic',
+  'tire_repair',
+  'truck_wash',
+  'hose_repair',
+];
 
 export default function BrowseRequestsScreen() {
   const { user } = useAuth();
@@ -69,40 +115,45 @@ export default function BrowseRequestsScreen() {
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
+
+  const getUserLocation = async () => {
+    try {
+      if (locationService.isLocationAvailable()) {
+        const location = await locationService.getCurrentPosition();
+        setUserLocation({
+          latitude: location.coords.latitude,
+          longitude: location.coords.longitude,
+        });
+      }
+    } catch (error) {
+      console.log('Could not get user location:', error);
+    }
+  };
+
+  // Get user location on component mount
+  useEffect(() => {
+    getUserLocation();
+  }, []);
 
   if (!user || user.role !== 'provider') return null;
 
   const availableRequests = getAvailableRequests();
-  const filteredRequests = filter === 'all' 
-    ? availableRequests 
-    : availableRequests.filter(r => r.serviceType === filter);
-
-  const userLanguage = user.language || 'en';
-
-  // Get user location on component mount
-  React.useEffect(() => {
-    const getUserLocation = async () => {
-      try {
-        if (locationService.isLocationAvailable()) {
-          const location = await locationService.getCurrentPosition();
-          setUserLocation({
-            latitude: location.coords.latitude,
-            longitude: location.coords.longitude
-          });
-        }
-      } catch (error) {
-        console.log('Could not get user location:', error);
-      }
-    };
-
-    getUserLocation();
-  }, []);
+  const filteredRequests =
+    filter === 'all'
+      ? availableRequests
+      : availableRequests.filter((r) => r.serviceType === filter);
 
   const handleAcceptRequest = async (request: any) => {
     Alert.alert(
       'Accept Request',
-      `Are you sure you want to accept this ${request.serviceType.replace('_', ' ')} request? A $5 lead fee will be charged to both you and the trucker.`,
+      `Are you sure you want to accept this ${request.serviceType.replace(
+        '_',
+        ' '
+      )} request? A $5 lead fee will be charged to both you and the trucker.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -110,20 +161,27 @@ export default function BrowseRequestsScreen() {
           onPress: async () => {
             setIsAccepting(true);
             try {
-              acceptRequest(request.id, user.id, `${user.firstName} ${user.lastName}`);
+              acceptRequest(
+                request.id,
+                user.id,
+                `${user.firstName} ${user.lastName}`
+              );
               setSelectedRequest(null);
               Alert.alert(
                 'Request Accepted! 🎉',
                 'You have successfully accepted this request. The trucker has been notified and you can now start chatting.',
                 [{ text: 'OK' }]
               );
-            } catch (error) {
-              Alert.alert('Error', 'Failed to accept request. Please try again.');
+            } catch {
+              Alert.alert(
+                'Error',
+                'Failed to accept request. Please try again.'
+              );
             } finally {
               setIsAccepting(false);
             }
-          }
-        }
+          },
+        },
       ]
     );
   };
@@ -131,7 +189,10 @@ export default function BrowseRequestsScreen() {
   const handleCancelRequest = async (request: any) => {
     Alert.alert(
       'Cancel Request',
-      `Are you sure you want to cancel this ${request.serviceType.replace('_', ' ')} request?\n\n⚠️ Warning: You will be charged a $5 penalty fee in addition to the original $5 lead fee (total $10). The trucker will receive a full refund.`,
+      `Are you sure you want to cancel this ${request.serviceType.replace(
+        '_',
+        ' '
+      )} request?\n\n⚠️ Warning: You will be charged a $5 penalty fee in addition to the original $5 lead fee (total $10). The trucker will receive a full refund.`,
       [
         { text: 'Keep Request', style: 'cancel' },
         {
@@ -147,7 +208,10 @@ export default function BrowseRequestsScreen() {
                   text: 'Submit',
                   onPress: async (reason) => {
                     if (!reason || reason.trim().length === 0) {
-                      Alert.alert('Error', 'Please provide a reason for cancellation.');
+                      Alert.alert(
+                        'Error',
+                        'Please provide a reason for cancellation.'
+                      );
                       return;
                     }
 
@@ -160,101 +224,178 @@ export default function BrowseRequestsScreen() {
                         'The request has been cancelled. The trucker has been notified and will receive a full refund. You have been charged a $5 penalty fee.',
                         [{ text: 'OK' }]
                       );
-                    } catch (error) {
-                      Alert.alert('Error', 'Failed to cancel request. Please try again.');
+                    } catch {
+                      Alert.alert(
+                        'Error',
+                        'Failed to cancel request. Please try again.'
+                      );
                     } finally {
                       setIsCancelling(false);
                     }
-                  }
-                }
+                  },
+                },
               ],
               'plain-text',
               '',
               'default'
             );
-          }
-        }
+          },
+        },
       ]
     );
   };
 
   const getFilterDisplayName = (filterType: string) => {
     switch (filterType) {
-      case 'tire_repair': return 'Tire Repair';
-      case 'truck_wash': return 'Truck Wash';
-      case 'hose_repair': return 'Hose Repair';
-      default: return filterType.charAt(0).toUpperCase() + filterType.slice(1);
+      case 'tire_repair':
+        return 'Tire Repair';
+      case 'truck_wash':
+        return 'Truck Wash';
+      case 'hose_repair':
+        return 'Hose Repair';
+      default:
+        return filterType.charAt(0).toUpperCase() + filterType.slice(1);
     }
   };
 
   const getServiceDisplayName = (serviceType: string) => {
     switch (serviceType) {
-      case 'tire_repair': return 'TIRE REPAIR';
-      case 'truck_wash': return 'TRUCK WASH';
-      case 'hose_repair': return 'HOSE REPAIR';
-      default: return serviceType.toUpperCase();
+      case 'tire_repair':
+        return 'TIRE REPAIR';
+      case 'truck_wash':
+        return 'TRUCK WASH';
+      case 'hose_repair':
+        return 'HOSE REPAIR';
+      default:
+        return serviceType.toUpperCase();
     }
   };
 
-  const RequestDetailModal = ({ request, onClose }: { request: any, onClose: () => void }) => {
+  const RequestDetailModal = ({
+    request,
+    onClose,
+  }: {
+    request: any;
+    onClose: () => void;
+  }) => {
     if (!request) return null;
 
     const ServiceIcon = getServiceIcon(request.serviceType);
     const StatusIcon = getStatusIcon(request.status);
-    const canCancel = request.status === 'accepted' && request.providerId === user.id;
+    const canCancel =
+      request.status === 'accepted' && request.providerId === user.id;
 
     return (
-      <Modal visible={!!request} animationType="slide" presentationStyle="pageSheet">
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-          <View style={[styles.modalHeader, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Request Details</Text>
+      <Modal
+        visible={!!request}
+        animationType="slide"
+        presentationStyle="pageSheet"
+      >
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: colors.background },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                backgroundColor: colors.surface,
+                borderBottomColor: colors.border,
+              },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Request Details
+            </Text>
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
               <XIcon size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={[styles.modalContent, { backgroundColor: colors.background }]}>
-            <View style={[styles.requestDetailCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <ScrollView
+            style={[
+              styles.modalContent,
+              { backgroundColor: colors.background },
+            ]}
+          >
+            <View
+              style={[
+                styles.requestDetailCard,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
               <View style={styles.serviceHeader}>
                 <ServiceIcon size={32} color="#2563eb" />
                 <View style={styles.serviceInfo}>
-                  <Text style={[styles.serviceTypeDetail, { color: colors.primary }]}>
+                  <Text
+                    style={[
+                      styles.serviceTypeDetail,
+                      { color: colors.primary },
+                    ]}
+                  >
                     {getServiceDisplayName(request.serviceType)} SERVICE
                   </Text>
                   <View style={styles.statusRow}>
-                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) }]}>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        { backgroundColor: getStatusColor(request.status) },
+                      ]}
+                    >
                       <StatusIcon size={12} color="white" />
                       <Text style={styles.statusText}>{request.status}</Text>
                     </View>
-                    <View style={[styles.urgencyBadge, { backgroundColor: getUrgencyColor(request.urgency) }]}>
-                      <Text style={styles.urgencyText}>{request.urgency.toUpperCase()}</Text>
+                    <View
+                      style={[
+                        styles.urgencyBadge,
+                        { backgroundColor: getUrgencyColor(request.urgency) },
+                      ]}
+                    >
+                      <Text style={styles.urgencyText}>
+                        {request.urgency.toUpperCase()}
+                      </Text>
                     </View>
                   </View>
                 </View>
               </View>
 
               <View style={styles.detailSection}>
-                <Text style={[styles.detailTitle, { color: colors.text }]}>Description</Text>
-                <Text style={[styles.detailText, { color: colors.textSecondary }]}>
+                <Text style={[styles.detailTitle, { color: colors.text }]}>
+                  Description
+                </Text>
+                <Text
+                  style={[styles.detailText, { color: colors.textSecondary }]}
+                >
                   {request.description}
                 </Text>
               </View>
 
               <View style={styles.detailSection}>
-                <Text style={[styles.detailTitle, { color: colors.text }]}>Location & Navigation</Text>
+                <Text style={[styles.detailTitle, { color: colors.text }]}>
+                  Location & Navigation
+                </Text>
                 <View style={styles.locationContainer}>
                   <View style={styles.detailRow}>
                     <MapPin size={16} color={colors.textSecondary} />
-                    <Text style={[styles.detailText, { color: colors.textSecondary }]}>{request.location}</Text>
+                    <Text
+                      style={[
+                        styles.detailText,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      {request.location}
+                    </Text>
                   </View>
-                  
+
                   <LocationButton
                     location={request.location}
                     coordinates={request.coordinates}
                     showDirections={true}
                     showEstimate={true}
                     showShare={false}
-                    userLocation={userLocation}
+                    userLocation={userLocation || undefined}
                     style={styles.locationButton}
                     size="medium"
                     variant="primary"
@@ -263,27 +404,43 @@ export default function BrowseRequestsScreen() {
               </View>
 
               <View style={styles.detailSection}>
-                <Text style={[styles.detailTitle, { color: colors.text }]}>Trucker Information</Text>
+                <Text style={[styles.detailTitle, { color: colors.text }]}>
+                  Trucker Information
+                </Text>
                 <View style={styles.detailRow}>
                   <Phone size={16} color={colors.textSecondary} />
-                  <Text style={[styles.detailText, { color: colors.textSecondary }]}>{request.truckerName}</Text>
+                  <Text
+                    style={[styles.detailText, { color: colors.textSecondary }]}
+                  >
+                    {request.truckerName}
+                  </Text>
                 </View>
-                <Text style={[styles.phoneNumber, { color: colors.primary }]}>{request.truckerPhone}</Text>
+                <Text style={[styles.phoneNumber, { color: colors.primary }]}>
+                  {request.truckerPhone}
+                </Text>
               </View>
 
               {request.estimatedCost && (
                 <View style={styles.detailSection}>
-                  <Text style={[styles.detailTitle, { color: colors.text }]}>Estimated Cost</Text>
+                  <Text style={[styles.detailTitle, { color: colors.text }]}>
+                    Estimated Cost
+                  </Text>
                   <View style={styles.detailRow}>
                     <DollarSign size={16} color={colors.success} />
-                    <Text style={[styles.costText, { color: colors.success }]}>${request.estimatedCost}</Text>
+                    <Text style={[styles.costText, { color: colors.success }]}>
+                      ${request.estimatedCost}
+                    </Text>
                   </View>
                 </View>
               )}
 
               <View style={styles.detailSection}>
-                <Text style={[styles.detailTitle, { color: colors.text }]}>Posted</Text>
-                <Text style={[styles.detailText, { color: colors.textSecondary }]}>
+                <Text style={[styles.detailTitle, { color: colors.text }]}>
+                  Posted
+                </Text>
+                <Text
+                  style={[styles.detailText, { color: colors.textSecondary }]}
+                >
                   {new Date(request.createdAt).toLocaleString()}
                 </Text>
               </View>
@@ -294,20 +451,44 @@ export default function BrowseRequestsScreen() {
               <View style={styles.feeText}>
                 <Text style={styles.feeTitle}>Lead Fee Information</Text>
                 <Text style={styles.feeDescription}>
-                  A $5 lead fee will be charged to both you and the trucker when you accept this request. This ensures serious commitment from both parties.
+                  A $5 lead fee will be charged to both you and the trucker when
+                  you accept this request. This ensures serious commitment from
+                  both parties.
                 </Text>
               </View>
             </View>
           </ScrollView>
 
-          <View style={[styles.modalActions, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
-            <TouchableOpacity style={[styles.cancelButton, { backgroundColor: colors.card }]} onPress={onClose}>
-              <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>Close</Text>
+          <View
+            style={[
+              styles.modalActions,
+              {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.border,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={[styles.cancelButton, { backgroundColor: colors.card }]}
+              onPress={onClose}
+            >
+              <Text
+                style={[
+                  styles.cancelButtonText,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                Close
+              </Text>
             </TouchableOpacity>
-            
+
             {request.status === 'pending' && (
-              <TouchableOpacity 
-                style={[styles.acceptButton, { backgroundColor: colors.primary }, isAccepting && styles.buttonDisabled]}
+              <TouchableOpacity
+                style={[
+                  styles.acceptButton,
+                  { backgroundColor: colors.primary },
+                  isAccepting && styles.buttonDisabled,
+                ]}
                 onPress={() => handleAcceptRequest(request)}
                 disabled={isAccepting}
               >
@@ -320,15 +501,20 @@ export default function BrowseRequestsScreen() {
             )}
 
             {canCancel && (
-              <TouchableOpacity 
-                style={[styles.cancelRequestButton, isCancelling && styles.buttonDisabled]}
+              <TouchableOpacity
+                style={[
+                  styles.cancelRequestButton,
+                  isCancelling && styles.buttonDisabled,
+                ]}
                 onPress={() => handleCancelRequest(request)}
                 disabled={isCancelling}
               >
                 {isCancelling ? (
                   <ActivityIndicator color="white" />
                 ) : (
-                  <Text style={styles.cancelRequestButtonText}>Cancel Request</Text>
+                  <Text style={styles.cancelRequestButtonText}>
+                    Cancel Request
+                  </Text>
                 )}
               </TouchableOpacity>
             )}
@@ -340,28 +526,51 @@ export default function BrowseRequestsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>Available Requests</Text>
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>Find and accept service requests in your area</Text>
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
+        <Text style={[styles.title, { color: colors.text }]}>
+          Available Requests
+        </Text>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          Find and accept service requests in your area
+        </Text>
       </View>
 
-      <View style={[styles.filterContainer, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterScroll}>
+      <View
+        style={[
+          styles.filterContainer,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterScroll}
+        >
           {filterOptions.map((filterType) => (
             <TouchableOpacity
               key={filterType}
               style={[
                 styles.filterButton,
                 { backgroundColor: colors.card, borderColor: colors.border },
-                filter === filterType && { backgroundColor: colors.primary, borderColor: colors.primary }
+                filter === filterType && {
+                  backgroundColor: colors.primary,
+                  borderColor: colors.primary,
+                },
               ]}
               onPress={() => setFilter(filterType)}
             >
-              <Text style={[
-                styles.filterText,
-                { color: colors.textSecondary },
-                filter === filterType && { color: 'white' }
-              ]}>
+              <Text
+                style={[
+                  styles.filterText,
+                  { color: colors.textSecondary },
+                  filter === filterType && { color: 'white' },
+                ]}
+              >
                 {getFilterDisplayName(filterType)}
               </Text>
             </TouchableOpacity>
@@ -369,27 +578,43 @@ export default function BrowseRequestsScreen() {
         </ScrollView>
       </View>
 
-      <ScrollView style={[styles.content, { backgroundColor: colors.background }]}>
+      <ScrollView
+        style={[styles.content, { backgroundColor: colors.background }]}
+      >
         {filteredRequests.length === 0 ? (
           <View style={styles.emptyState}>
             <Filter size={48} color="#9ca3af" />
-            <Text style={[styles.emptyStateText, { color: colors.text }]}>No requests available</Text>
-            <Text style={[styles.emptyStateSubtext, { color: colors.textSecondary }]}>
-              {filter === 'all' 
+            <Text style={[styles.emptyStateText, { color: colors.text }]}>
+              No requests available
+            </Text>
+            <Text
+              style={[
+                styles.emptyStateSubtext,
+                { color: colors.textSecondary },
+              ]}
+            >
+              {filter === 'all'
                 ? 'There are no pending requests at the moment'
-                : `No ${getFilterDisplayName(filter).toLowerCase()} requests available right now`
-              }
+                : `No ${getFilterDisplayName(
+                    filter
+                  ).toLowerCase()} requests available right now`}
             </Text>
           </View>
         ) : (
           filteredRequests.map((request) => {
             const ServiceIcon = getServiceIcon(request.serviceType);
             const StatusIcon = getStatusIcon(request.status);
-            
+
             return (
-              <TouchableOpacity 
-                key={request.id} 
-                style={[styles.requestCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+              <TouchableOpacity
+                key={request.id}
+                style={[
+                  styles.requestCard,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  },
+                ]}
                 onPress={() => setSelectedRequest(request)}
               >
                 <View style={styles.requestHeader}>
@@ -400,35 +625,68 @@ export default function BrowseRequestsScreen() {
                     </Text>
                   </View>
                   <View style={styles.badgeContainer}>
-                    <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) }]}>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        { backgroundColor: getStatusColor(request.status) },
+                      ]}
+                    >
                       <StatusIcon size={12} color="white" />
                       <Text style={styles.statusText}>{request.status}</Text>
                     </View>
-                    <View style={[styles.urgencyBadge, { backgroundColor: getUrgencyColor(request.urgency) }]}>
+                    <View
+                      style={[
+                        styles.urgencyBadge,
+                        { backgroundColor: getUrgencyColor(request.urgency) },
+                      ]}
+                    >
                       <Text style={styles.urgencyText}>{request.urgency}</Text>
                     </View>
                   </View>
                 </View>
-                
-                <Text style={[styles.requestDescription, { color: colors.text }]} numberOfLines={2}>
+
+                <Text
+                  style={[styles.requestDescription, { color: colors.text }]}
+                  numberOfLines={2}
+                >
                   {request.description}
                 </Text>
-                
+
                 <View style={styles.requestDetails}>
                   <View style={styles.detailRow}>
                     <MapPin size={14} color={colors.textSecondary} />
-                    <Text style={[styles.detailText, { color: colors.textSecondary }]}>{request.location}</Text>
+                    <Text
+                      style={[
+                        styles.detailText,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      {request.location}
+                    </Text>
                   </View>
                   <View style={styles.detailRow}>
                     <Phone size={14} color={colors.textSecondary} />
-                    <Text style={[styles.detailText, { color: colors.textSecondary }]}>{request.truckerName}</Text>
+                    <Text
+                      style={[
+                        styles.detailText,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      {request.truckerName}
+                    </Text>
                   </View>
                 </View>
-                
+
                 <View style={styles.availableRequestFooter}>
-                  <Text style={[styles.tapToAccept, { color: colors.secondary }]}>Tap to view & accept</Text>
+                  <Text
+                    style={[styles.tapToAccept, { color: colors.secondary }]}
+                  >
+                    Tap to view & accept
+                  </Text>
                   {request.estimatedCost && (
-                    <Text style={[styles.estimatedCost, { color: colors.success }]}>
+                    <Text
+                      style={[styles.estimatedCost, { color: colors.success }]}
+                    >
                       Est. ${request.estimatedCost}
                     </Text>
                   )}
@@ -439,9 +697,9 @@ export default function BrowseRequestsScreen() {
         )}
       </ScrollView>
 
-      <RequestDetailModal 
-        request={selectedRequest} 
-        onClose={() => setSelectedRequest(null)} 
+      <RequestDetailModal
+        request={selectedRequest}
+        onClose={() => setSelectedRequest(null)}
       />
     </View>
   );

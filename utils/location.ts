@@ -23,7 +23,10 @@ export interface LocationError {
 
 export interface LocationService {
   getCurrentPosition: () => Promise<LocationResult>;
-  watchPosition: (callback: (location: LocationResult) => void, errorCallback?: (error: LocationError) => void) => number;
+  watchPosition: (
+    callback: (location: LocationResult) => void,
+    errorCallback?: (error: LocationError) => void
+  ) => number;
   clearWatch: (watchId: number) => void;
   reverseGeocode: (latitude: number, longitude: number) => Promise<string>;
   isLocationAvailable: () => boolean;
@@ -41,7 +44,7 @@ class WebLocationService implements LocationService {
     if (!this.isLocationAvailable()) {
       throw {
         code: 1,
-        message: 'Geolocation is not supported by this browser'
+        message: 'Geolocation is not supported by this browser',
       } as LocationError;
     }
 
@@ -57,38 +60,38 @@ class WebLocationService implements LocationService {
               heading: position.coords.heading || undefined,
               speed: position.coords.speed || undefined,
             },
-            timestamp: position.timestamp
+            timestamp: position.timestamp,
           });
         },
         (error) => {
           reject({
             code: error.code,
-            message: this.getErrorMessage(error.code)
+            message: this.getErrorMessage(error.code),
           } as LocationError);
         },
         {
           enableHighAccuracy: true,
           timeout: 15000,
-          maximumAge: 60000
+          maximumAge: 60000,
         }
       );
     });
   }
 
   watchPosition(
-    callback: (location: LocationResult) => void, 
+    callback: (location: LocationResult) => void,
     errorCallback?: (error: LocationError) => void
   ): number {
     if (!this.isLocationAvailable()) {
       errorCallback?.({
         code: 1,
-        message: 'Geolocation is not supported by this browser'
+        message: 'Geolocation is not supported by this browser',
       });
       return -1;
     }
 
     const watchId = ++this.watchId;
-    
+
     const nativeWatchId = navigator.geolocation.watchPosition(
       (position) => {
         callback({
@@ -100,19 +103,19 @@ class WebLocationService implements LocationService {
             heading: position.coords.heading || undefined,
             speed: position.coords.speed || undefined,
           },
-          timestamp: position.timestamp
+          timestamp: position.timestamp,
         });
       },
       (error) => {
         errorCallback?.({
           code: error.code,
-          message: this.getErrorMessage(error.code)
+          message: this.getErrorMessage(error.code),
         });
       },
       {
         enableHighAccuracy: true,
         timeout: 10000,
-        maximumAge: 30000
+        maximumAge: 30000,
       }
     );
 
@@ -135,8 +138,8 @@ class WebLocationService implements LocationService {
         `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
         {
           headers: {
-            'User-Agent': 'RigSnap-Mobile-App/1.0'
-          }
+            'User-Agent': 'RigSnap-Mobile-App/1.0',
+          },
         }
       );
 
@@ -145,7 +148,7 @@ class WebLocationService implements LocationService {
       }
 
       const data = await response.json();
-      
+
       if (data && data.display_name) {
         // Format the address for trucking context
         const address = data.address || {};
@@ -209,7 +212,8 @@ class WebLocationService implements LocationService {
 
 // Mobile location service using expo-location
 class MobileLocationService implements LocationService {
-  private watchSubscriptions: Map<number, Location.LocationSubscription> = new Map();
+  private watchSubscriptions: Map<number, Location.LocationSubscription> =
+    new Map();
   private watchId: number = 0;
 
   isLocationAvailable(): boolean {
@@ -223,7 +227,7 @@ class MobileLocationService implements LocationService {
       if (status !== 'granted') {
         throw {
           code: 1,
-          message: 'Location permission denied'
+          message: 'Location permission denied',
         } as LocationError;
       }
 
@@ -242,18 +246,18 @@ class MobileLocationService implements LocationService {
           heading: location.coords.heading || undefined,
           speed: location.coords.speed || undefined,
         },
-        timestamp: location.timestamp
+        timestamp: location.timestamp,
       };
     } catch (error: any) {
       throw {
         code: error.code || 2,
-        message: error.message || 'Failed to get current position'
+        message: error.message || 'Failed to get current position',
       } as LocationError;
     }
   }
 
   watchPosition(
-    callback: (location: LocationResult) => void, 
+    callback: (location: LocationResult) => void,
     errorCallback?: (error: LocationError) => void
   ): number {
     const watchId = ++this.watchId;
@@ -265,7 +269,7 @@ class MobileLocationService implements LocationService {
         if (status !== 'granted') {
           errorCallback?.({
             code: 1,
-            message: 'Location permission denied'
+            message: 'Location permission denied',
           });
           return;
         }
@@ -286,7 +290,7 @@ class MobileLocationService implements LocationService {
                 heading: location.coords.heading || undefined,
                 speed: location.coords.speed || undefined,
               },
-              timestamp: location.timestamp
+              timestamp: location.timestamp,
             });
           }
         );
@@ -295,7 +299,7 @@ class MobileLocationService implements LocationService {
       } catch (error: any) {
         errorCallback?.({
           code: error.code || 2,
-          message: error.message || 'Failed to watch position'
+          message: error.message || 'Failed to watch position',
         });
       }
     })();
@@ -315,7 +319,7 @@ class MobileLocationService implements LocationService {
     try {
       const result = await Location.reverseGeocodeAsync({
         latitude,
-        longitude
+        longitude,
       });
 
       if (result && result.length > 0) {
@@ -362,9 +366,10 @@ class MobileLocationService implements LocationService {
 }
 
 // Create platform-specific service
-export const locationService: LocationService = Platform.OS === 'web' 
-  ? new WebLocationService() 
-  : new MobileLocationService();
+export const locationService: LocationService =
+  Platform.OS === 'web'
+    ? new WebLocationService()
+    : new MobileLocationService();
 
 // Utility functions
 export function formatCoordinates(latitude: number, longitude: number): string {
@@ -372,67 +377,73 @@ export function formatCoordinates(latitude: number, longitude: number): string {
 }
 
 export function calculateDistance(
-  lat1: number, 
-  lon1: number, 
-  lat2: number, 
+  lat1: number,
+  lon1: number,
+  lat2: number,
   lon2: number
 ): number {
   const R = 3959; // Earth's radius in miles
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLon = ((lon2 - lon1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLon / 2) *
+      Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
-export function isValidCoordinates(latitude: number, longitude: number): boolean {
+export function isValidCoordinates(
+  latitude: number,
+  longitude: number
+): boolean {
   return (
-    latitude >= -90 && latitude <= 90 &&
-    longitude >= -180 && longitude <= 180
+    latitude >= -90 && latitude <= 90 && longitude >= -180 && longitude <= 180
   );
 }
 
 // Common trucking locations for fallback/demo purposes
 export const commonTruckingLocations = [
   {
-    name: "I-35 Mile Marker 234, Dallas, TX",
-    coordinates: { latitude: 32.7767, longitude: -96.7970 }
+    name: 'I-35 Mile Marker 234, Dallas, TX',
+    coordinates: { latitude: 32.7767, longitude: -96.797 },
   },
   {
-    name: "I-10 Rest Area, Houston, TX", 
-    coordinates: { latitude: 29.7604, longitude: -95.3698 }
+    name: 'I-10 Rest Area, Houston, TX',
+    coordinates: { latitude: 29.7604, longitude: -95.3698 },
   },
   {
-    name: "I-20 Truck Stop, Arlington, TX",
-    coordinates: { latitude: 32.7357, longitude: -97.1081 }
+    name: 'I-20 Truck Stop, Arlington, TX',
+    coordinates: { latitude: 32.7357, longitude: -97.1081 },
   },
   {
-    name: "Highway 183 Service Road, Irving, TX",
-    coordinates: { latitude: 32.8140, longitude: -96.9489 }
+    name: 'Highway 183 Service Road, Irving, TX',
+    coordinates: { latitude: 32.814, longitude: -96.9489 },
   },
   {
-    name: "I-45 Mile Marker 156, Huntsville, TX",
-    coordinates: { latitude: 30.7235, longitude: -95.5508 }
+    name: 'I-45 Mile Marker 156, Huntsville, TX',
+    coordinates: { latitude: 30.7235, longitude: -95.5508 },
   },
   {
-    name: "I-75 Truck Plaza, Atlanta, GA",
-    coordinates: { latitude: 33.7490, longitude: -84.3880 }
+    name: 'I-75 Truck Plaza, Atlanta, GA',
+    coordinates: { latitude: 33.749, longitude: -84.388 },
   },
   {
-    name: "I-40 Rest Stop, Oklahoma City, OK",
-    coordinates: { latitude: 35.4676, longitude: -97.5164 }
+    name: 'I-40 Rest Stop, Oklahoma City, OK',
+    coordinates: { latitude: 35.4676, longitude: -97.5164 },
   },
   {
-    name: "I-80 Truck Stop, Des Moines, IA",
-    coordinates: { latitude: 41.5868, longitude: -93.6250 }
-  }
+    name: 'I-80 Truck Stop, Des Moines, IA',
+    coordinates: { latitude: 41.5868, longitude: -93.625 },
+  },
 ];
 
 export function getRandomTruckingLocation() {
-  const randomIndex = Math.floor(Math.random() * commonTruckingLocations.length);
+  const randomIndex = Math.floor(
+    Math.random() * commonTruckingLocations.length
+  );
   return commonTruckingLocations[randomIndex];
 }
 
@@ -453,15 +464,15 @@ export async function requestLocationPermission(): Promise<boolean> {
     return true;
   } catch (error: any) {
     const locationError = error as LocationError;
-    
+
     if (locationError.code === 1) {
       Alert.alert(
         'Location Permission Required',
         'RigSnap needs access to your location to help service providers find you. Please enable location access in your device settings.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { 
-            text: 'Open Settings', 
+          {
+            text: 'Open Settings',
             onPress: () => {
               if (Platform.OS === 'web') {
                 // Guide user to browser settings
@@ -478,18 +489,14 @@ export async function requestLocationPermission(): Promise<boolean> {
                   [{ text: 'OK' }]
                 );
               }
-            }
-          }
+            },
+          },
         ]
       );
     } else {
-      Alert.alert(
-        'Location Error',
-        locationError.message,
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Location Error', locationError.message, [{ text: 'OK' }]);
     }
-    
+
     return false;
   }
 }

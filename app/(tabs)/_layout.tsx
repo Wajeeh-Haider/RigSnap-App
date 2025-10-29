@@ -1,14 +1,19 @@
+import * as React from 'react';
 import { Tabs } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { Chrome as Home, User, DollarSign, MessageCircle } from 'lucide-react-native';
-import { View, Text, StyleSheet } from 'react-native';
+import {
+  Chrome as Home,
+  User,
+  DollarSign,
+  MessageCircle,
+} from 'lucide-react-native';
 
 export default function TabLayout() {
   const { user } = useAuth();
-  const { getUserChats } = useApp();
+  const { getUserChats, messages } = useApp();
   const { colors } = useTheme();
   const { t } = useLanguage();
 
@@ -24,11 +29,12 @@ export default function TabLayout() {
   const isTrucker = user.role === 'trucker';
   const userChats = getUserChats(user.id);
   // Calculate total unread messages from other users only
-  const { messages } = useApp();
-  const unreadCount = messages.filter(message => 
-    message.senderId !== user.id && 
-    !message.isRead &&
-    userChats.some(chat => chat.requestId === message.requestId)
+
+  const unreadCount = messages.filter(
+    (message) =>
+      message.senderId !== user.id &&
+      !message.isRead &&
+      userChats.some((chat) => chat.requestId === message.requestId)
   ).length;
 
   console.log('TabLayout - unread count:', unreadCount);
@@ -65,7 +71,7 @@ export default function TabLayout() {
         name="index"
         options={{
           title: t('nav.home'),
-          tabBarIcon: ({ size, color }) => (
+          tabBarIcon: ({ size, color }: any) => (
             <Home size={size} color={color} />
           ),
         }}
@@ -75,7 +81,12 @@ export default function TabLayout() {
         name="chat"
         options={{
           title: t('nav.messages'),
-          tabBarBadge: unreadCount > 0 ? (unreadCount > 99 ? '99+' : unreadCount.toString()) : undefined,
+          tabBarBadge:
+            unreadCount > 0
+              ? unreadCount > 99
+                ? '99+'
+                : unreadCount.toString()
+              : undefined,
           tabBarBadgeStyle: {
             backgroundColor: '#ef4444',
             color: 'white',
@@ -88,7 +99,7 @@ export default function TabLayout() {
             lineHeight: 20,
             marginTop: -2,
           },
-          tabBarIcon: ({ size, color }) => (
+          tabBarIcon: ({ size, color }: any) => (
             <MessageCircle size={size} color={color} />
           ),
         }}
@@ -98,7 +109,7 @@ export default function TabLayout() {
         name="leads"
         options={{
           title: t('nav.leads'),
-          tabBarIcon: ({ size, color }) => (
+          tabBarIcon: ({ size, color }: any) => (
             <DollarSign size={size} color={color} />
           ),
         }}
@@ -108,7 +119,7 @@ export default function TabLayout() {
         name="profile"
         options={{
           title: t('nav.profile'),
-          tabBarIcon: ({ size, color }) => (
+          tabBarIcon: ({ size, color }: any) => (
             <User size={size} color={color} />
           ),
         }}
@@ -159,7 +170,3 @@ export default function TabLayout() {
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  // Remove unused styles since we're using built-in tabBarBadge
-});

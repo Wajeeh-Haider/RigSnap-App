@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import * as React from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -7,7 +8,7 @@ import {
   Alert,
   ScrollView,
   ActivityIndicator,
-  TextInput
+  TextInput,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
@@ -15,7 +16,9 @@ import { Truck, Shield, Check } from 'lucide-react-native';
 
 export default function RoleSelectionScreen() {
   const params = useLocalSearchParams();
-  const [selectedRole, setSelectedRole] = useState<'trucker' | 'provider' | null>(null);
+  const [selectedRole, setSelectedRole] = useState<
+    'trucker' | 'provider' | null
+  >(null);
   const [isLoading, setIsLoading] = useState(false);
   const { signup } = useAuth();
 
@@ -31,9 +34,9 @@ export default function RoleSelectionScreen() {
   const serviceOptions = ['towing', 'repair', 'mechanic'];
 
   const toggleService = (service: string) => {
-    setServices(prev => 
-      prev.includes(service) 
-        ? prev.filter(s => s !== service)
+    setServices((prev) =>
+      prev.includes(service)
+        ? prev.filter((s) => s !== service)
         : [...prev, service]
     );
   };
@@ -59,14 +62,19 @@ export default function RoleSelectionScreen() {
       const userData = {
         ...params,
         role: selectedRole,
-        ...(selectedRole === 'trucker' ? {
-          truckType,
-          licenseNumber
-        } : {
-          services,
-          serviceRadius: parseInt(serviceRadius),
-          certifications: certifications.split(',').map(c => c.trim()).filter(c => c)
-        })
+        ...(selectedRole === 'trucker'
+          ? {
+              truckType,
+              licenseNumber,
+            }
+          : {
+              services,
+              serviceRadius: parseInt(serviceRadius),
+              certifications: certifications
+                .split(',')
+                .map((c) => c.trim())
+                .filter((c) => c),
+            }),
       };
 
       const success = await signup(userData);
@@ -87,27 +95,36 @@ export default function RoleSelectionScreen() {
       <View style={styles.content}>
         <View style={styles.header}>
           <Text style={styles.title}>Choose Your Role</Text>
-          <Text style={styles.subtitle}>Select how you'll be using RigSnap</Text>
+          <Text style={styles.subtitle}>Select how youll be using RigSnap</Text>
         </View>
 
         <View style={styles.roleCards}>
           <TouchableOpacity
             style={[
               styles.roleCard,
-              selectedRole === 'trucker' && styles.selectedCard
+              selectedRole === 'trucker' && styles.selectedCard,
             ]}
             onPress={() => setSelectedRole('trucker')}
           >
             <View style={styles.roleHeader}>
               <View style={styles.roleIcon}>
-                <Truck size={32} color={selectedRole === 'trucker' ? '#2563eb' : '#6b7280'} />
+                <Truck
+                  size={32}
+                  color={selectedRole === 'trucker' ? '#2563eb' : '#6b7280'}
+                />
               </View>
               <View style={styles.roleInfo}>
-                <Text style={[styles.roleTitle, selectedRole === 'trucker' && styles.selectedText]}>
+                <Text
+                  style={[
+                    styles.roleTitle,
+                    selectedRole === 'trucker' && styles.selectedText,
+                  ]}
+                >
                   Trucker
                 </Text>
                 <Text style={styles.roleDescription}>
-                  Request help when you need towing, repairs, or mobile mechanic services
+                  Request help when you need towing, repairs, or mobile mechanic
+                  services
                 </Text>
               </View>
               {selectedRole === 'trucker' && (
@@ -119,20 +136,29 @@ export default function RoleSelectionScreen() {
           <TouchableOpacity
             style={[
               styles.roleCard,
-              selectedRole === 'provider' && styles.selectedCard
+              selectedRole === 'provider' && styles.selectedCard,
             ]}
             onPress={() => setSelectedRole('provider')}
           >
             <View style={styles.roleHeader}>
               <View style={styles.roleIcon}>
-                <Shield size={32} color={selectedRole === 'provider' ? '#ea580c' : '#6b7280'} />
+                <Shield
+                  size={32}
+                  color={selectedRole === 'provider' ? '#ea580c' : '#6b7280'}
+                />
               </View>
               <View style={styles.roleInfo}>
-                <Text style={[styles.roleTitle, selectedRole === 'provider' && styles.selectedText]}>
+                <Text
+                  style={[
+                    styles.roleTitle,
+                    selectedRole === 'provider' && styles.selectedText,
+                  ]}
+                >
                   Service Provider
                 </Text>
                 <Text style={styles.roleDescription}>
-                  Provide towing, repair, and mechanic services to truckers in need
+                  Provide towing, repair, and mechanic services to truckers in
+                  need
                 </Text>
               </View>
               {selectedRole === 'provider' && (
@@ -145,7 +171,7 @@ export default function RoleSelectionScreen() {
         {selectedRole === 'trucker' && (
           <View style={styles.additionalFields}>
             <Text style={styles.fieldsTitle}>Trucker Details</Text>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Truck Type</Text>
               <TextInput
@@ -172,23 +198,26 @@ export default function RoleSelectionScreen() {
         {selectedRole === 'provider' && (
           <View style={styles.additionalFields}>
             <Text style={styles.fieldsTitle}>Service Provider Details</Text>
-            
+
             <View style={styles.inputGroup}>
               <Text style={styles.label}>Services Offered</Text>
               <View style={styles.serviceOptions}>
-                {serviceOptions.map(service => (
+                {serviceOptions.map((service) => (
                   <TouchableOpacity
                     key={service}
                     style={[
                       styles.serviceOption,
-                      services.includes(service) && styles.selectedService
+                      services.includes(service) && styles.selectedService,
                     ]}
                     onPress={() => toggleService(service)}
                   >
-                    <Text style={[
-                      styles.serviceText,
-                      services.includes(service) && styles.selectedServiceText
-                    ]}>
+                    <Text
+                      style={[
+                        styles.serviceText,
+                        services.includes(service) &&
+                          styles.selectedServiceText,
+                      ]}
+                    >
                       {service.charAt(0).toUpperCase() + service.slice(1)}
                     </Text>
                     {services.includes(service) && (
@@ -219,7 +248,9 @@ export default function RoleSelectionScreen() {
                 placeholder="e.g., ASE Certified, DOT Inspector"
                 multiline
               />
-              <Text style={styles.helperText}>Separate multiple certifications with commas</Text>
+              <Text style={styles.helperText}>
+                Separate multiple certifications with commas
+              </Text>
             </View>
           </View>
         )}
@@ -227,7 +258,7 @@ export default function RoleSelectionScreen() {
         <TouchableOpacity
           style={[
             styles.completeButton,
-            (!selectedRole || isLoading) && styles.buttonDisabled
+            (!selectedRole || isLoading) && styles.buttonDisabled,
           ]}
           onPress={handleComplete}
           disabled={!selectedRole || isLoading}

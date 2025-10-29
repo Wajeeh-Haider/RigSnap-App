@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import * as React from 'react';
+import { useState } from 'react';
 import {
   View,
   Text,
@@ -9,13 +10,31 @@ import {
   Alert,
   TextInput,
   Modal,
-  ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { ArrowLeft, Bell, Mail, MessageSquare, Shield, Moon, Globe, CircleHelp as HelpCircle, ChevronRight, Check, Key, Lock, Eye, EyeOff, X, Trash2, TriangleAlert as AlertTriangle } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Bell,
+  Mail,
+  MessageSquare,
+  Shield,
+  Moon,
+  Globe,
+  CircleHelp as HelpCircle,
+  ChevronRight,
+  Check,
+  Key,
+  Lock,
+  Eye,
+  EyeOff,
+  X,
+  Trash2,
+  TriangleAlert as AlertTriangle,
+} from 'lucide-react-native';
 
 interface NotificationSettings {
   pushNotifications: boolean;
@@ -27,9 +46,10 @@ interface NotificationSettings {
 }
 
 export default function AccountSettingsScreen() {
-  const { user, updateProfile } = useAuth();
+  const { user } = useAuth();
   const { isDarkMode, toggleDarkMode, colors } = useTheme();
-  const { currentLanguage, setLanguage, languages, getCurrentLanguage } = useLanguage();
+  const { currentLanguage, setLanguage, languages, getCurrentLanguage } =
+    useLanguage();
   const { t } = useLanguage();
   const [notifications, setNotifications] = useState<NotificationSettings>({
     pushNotifications: true,
@@ -37,7 +57,7 @@ export default function AccountSettingsScreen() {
     smsNotifications: false,
     requestUpdates: true,
     marketingEmails: false,
-    securityAlerts: true
+    securityAlerts: true,
   });
 
   // Password change state
@@ -45,12 +65,12 @@ export default function AccountSettingsScreen() {
   const [passwordData, setPasswordData] = useState({
     currentPassword: '',
     newPassword: '',
-    confirmPassword: ''
+    confirmPassword: '',
   });
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
-    confirm: false
+    confirm: false,
   });
   const [isChangingPassword, setIsChangingPassword] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
@@ -62,13 +82,25 @@ export default function AccountSettingsScreen() {
 
   if (!user) return null;
 
-  const updateNotificationSetting = (key: keyof NotificationSettings, value: boolean) => {
-    setNotifications(prev => ({ ...prev, [key]: value }));
-    Alert.alert('Settings Updated', `${key.replace(/([A-Z])/g, ' $1').toLowerCase()} has been ${value ? 'enabled' : 'disabled'}`);
+  const updateNotificationSetting = (
+    key: keyof NotificationSettings,
+    value: boolean
+  ) => {
+    setNotifications((prev) => ({ ...prev, [key]: value }));
+    Alert.alert(
+      'Settings Updated',
+      `${key.replace(/([A-Z])/g, ' $1').toLowerCase()} has been ${
+        value ? 'enabled' : 'disabled'
+      }`
+    );
   };
 
   const handlePasswordChange = async () => {
-    if (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword) {
+    if (
+      !passwordData.currentPassword ||
+      !passwordData.newPassword ||
+      !passwordData.confirmPassword
+    ) {
       Alert.alert('Error', 'Please fill in all password fields');
       return;
     }
@@ -84,26 +116,33 @@ export default function AccountSettingsScreen() {
     }
 
     if (passwordData.currentPassword === passwordData.newPassword) {
-      Alert.alert('Error', 'New password must be different from current password');
+      Alert.alert(
+        'Error',
+        'New password must be different from current password'
+      );
       return;
     }
 
     setIsChangingPassword(true);
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+
       // In a real app, this would verify current password and update to new one
       setShowPasswordModal(false);
-      setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
+      setPasswordData({
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
+      });
       setShowPasswords({ current: false, new: false, confirm: false });
-      
+
       Alert.alert(
         'Password Changed',
         'Your password has been successfully updated. Please use your new password for future logins.',
         [{ text: 'OK' }]
       );
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to change password. Please try again.');
     } finally {
       setIsChangingPassword(false);
@@ -113,9 +152,15 @@ export default function AccountSettingsScreen() {
   const handleLanguageChange = (languageCode: string) => {
     setLanguage(languageCode);
     setShowLanguageModal(false);
-    
-    const selectedLang = languages.find(lang => lang.code === languageCode);
+
+    const selectedLang = languages.find((lang) => lang.code === languageCode);
     // Language changes instantly, no need for alert
+    if (selectedLang) {
+      // Language changes instantly, no need for alert
+      // The selected language is already applied by setLanguage(languageCode) above
+    } else {
+      Alert.alert('Error', 'Failed to change language. Please try again.');
+    }
   };
 
   const handleDeleteAccount = async () => {
@@ -127,15 +172,15 @@ export default function AccountSettingsScreen() {
     setIsDeletingAccount(true);
     try {
       // Simulate API call for account deletion
-      await new Promise(resolve => setTimeout(resolve, 3000));
-      
+      await new Promise((resolve) => setTimeout(resolve, 3000));
+
       // In a real app, this would:
       // 1. Delete user data from database
       // 2. Cancel any active requests/jobs
       // 3. Process any pending payments/refunds
       // 4. Delete the auth user account
       // 5. Sign out the user
-      
+
       Alert.alert(
         'Account Deleted',
         'Your account has been permanently deleted. All your data has been removed from our servers.',
@@ -145,12 +190,15 @@ export default function AccountSettingsScreen() {
             onPress: () => {
               // In a real app, this would sign out and redirect to login
               router.replace('/(auth)/login');
-            }
-          }
+            },
+          },
         ]
       );
-    } catch (error) {
-      Alert.alert('Error', 'Failed to delete account. Please try again or contact support.');
+    } catch {
+      Alert.alert(
+        'Error',
+        'Failed to delete account. Please try again or contact support.'
+      );
     } finally {
       setIsDeletingAccount(false);
       setShowDeleteModal(false);
@@ -161,14 +209,18 @@ export default function AccountSettingsScreen() {
   const showDeleteAccountConfirmation = () => {
     Alert.alert(
       'Delete Account',
-      `Are you sure you want to permanently delete your ${user.role === 'trucker' ? 'trucker' : 'service provider'} account?\n\nThis action cannot be undone and will:\n\n• Delete all your personal data\n• Cancel any active ${user.role === 'trucker' ? 'requests' : 'jobs'}\n• Remove your account permanently\n• Process any pending refunds`,
+      `Are you sure you want to permanently delete your ${
+        user.role === 'trucker' ? 'trucker' : 'service provider'
+      } account?\n\nThis action cannot be undone and will:\n\n• Delete all your personal data\n• Cancel any active ${
+        user.role === 'trucker' ? 'requests' : 'jobs'
+      }\n• Remove your account permanently\n• Process any pending refunds`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Continue',
           style: 'destructive',
-          onPress: () => setShowDeleteModal(true)
-        }
+          onPress: () => setShowDeleteModal(true),
+        },
       ]
     );
   };
@@ -180,48 +232,54 @@ export default function AccountSettingsScreen() {
     if (/[a-z]/.test(password)) strength++;
     if (/[0-9]/.test(password)) strength++;
     if (/[^A-Za-z0-9]/.test(password)) strength++;
-    
+
     return strength;
   };
 
   const getPasswordStrengthText = (strength: number) => {
     switch (strength) {
       case 0:
-      case 1: return { text: 'Very Weak', color: '#dc2626' };
-      case 2: return { text: 'Weak', color: '#ea580c' };
-      case 3: return { text: 'Fair', color: '#f59e0b' };
-      case 4: return { text: 'Good', color: '#10b981' };
-      case 5: return { text: 'Strong', color: '#059669' };
-      default: return { text: 'Very Weak', color: '#dc2626' };
+      case 1:
+        return { text: 'Very Weak', color: '#dc2626' };
+      case 2:
+        return { text: 'Weak', color: '#ea580c' };
+      case 3:
+        return { text: 'Fair', color: '#f59e0b' };
+      case 4:
+        return { text: 'Good', color: '#10b981' };
+      case 5:
+        return { text: 'Strong', color: '#059669' };
+      default:
+        return { text: 'Very Weak', color: '#dc2626' };
     }
   };
 
   const currentLang = getCurrentLanguage();
 
-  const SettingItem = ({ 
-    icon, 
-    title, 
-    description, 
-    value, 
-    onToggle, 
+  const SettingItem = ({
+    icon,
+    title,
+    description,
+    value,
+    onToggle,
     showSwitch = true,
     onPress,
-    rightContent
+    rightContent,
   }: {
-    icon: any,
-    title: string,
-    description?: string,
-    value?: boolean,
-    onToggle?: (value: boolean) => void,
-    showSwitch?: boolean,
-    onPress?: () => void,
-    rightContent?: React.ReactNode
+    icon: any;
+    title: string;
+    description?: string;
+    value?: boolean;
+    onToggle?: (value: boolean) => void;
+    showSwitch?: boolean;
+    onPress?: () => void;
+    rightContent?: React.ReactNode;
   }) => {
     const Icon = icon;
-    
+
     return (
-      <TouchableOpacity 
-        style={[styles.settingItem, { borderBottomColor: colors.border }]} 
+      <TouchableOpacity
+        style={[styles.settingItem, { borderBottomColor: colors.border }]}
         onPress={onPress}
         disabled={!onPress && !onToggle}
       >
@@ -230,50 +288,67 @@ export default function AccountSettingsScreen() {
             <Icon size={20} color={colors.textSecondary} />
           </View>
           <View style={styles.settingText}>
-            <Text style={[styles.settingTitle, { color: colors.text }]}>{title}</Text>
+            <Text style={[styles.settingTitle, { color: colors.text }]}>
+              {title}
+            </Text>
             {description && (
-              <Text style={[styles.settingDescription, { color: colors.textSecondary }]}>{description}</Text>
+              <Text
+                style={[
+                  styles.settingDescription,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                {description}
+              </Text>
             )}
           </View>
         </View>
-        {rightContent || (showSwitch && onToggle ? (
-          <Switch
-            value={value}
-            onValueChange={onToggle}
-            trackColor={{ false: colors.border, true: colors.primary + '40' }}
-            thumbColor={value ? colors.primary : colors.textSecondary}
-          />
-        ) : (
-          <ChevronRight size={20} color={colors.textSecondary} />
-        ))}
+        {rightContent ||
+          (showSwitch && onToggle ? (
+            <Switch
+              value={value}
+              onValueChange={onToggle}
+              trackColor={{ false: colors.border, true: colors.primary + '40' }}
+              thumbColor={value ? colors.primary : colors.textSecondary}
+            />
+          ) : (
+            <ChevronRight size={20} color={colors.textSecondary} />
+          ))}
       </TouchableOpacity>
     );
   };
 
-  const PasswordInput = ({ 
-    label, 
-    value, 
-    onChangeText, 
-    showPassword, 
-    onToggleShow, 
+  const PasswordInput = ({
+    label,
+    value,
+    onChangeText,
+    showPassword,
+    onToggleShow,
     placeholder,
-    showStrength = false
+    showStrength = false,
   }: {
-    label: string,
-    value: string,
-    onChangeText: (text: string) => void,
-    showPassword: boolean,
-    onToggleShow: () => void,
-    placeholder: string,
-    showStrength?: boolean
+    label: string;
+    value: string;
+    onChangeText: (text: string) => void;
+    showPassword: boolean;
+    onToggleShow: () => void;
+    placeholder: string;
+    showStrength?: boolean;
   }) => {
     const strength = showStrength ? getPasswordStrength(value) : 0;
     const strengthInfo = getPasswordStrengthText(strength);
 
     return (
       <View style={styles.passwordInputContainer}>
-        <Text style={[styles.passwordLabel, { color: colors.text }]}>{label}</Text>
-        <View style={[styles.passwordInputWrapper, { borderColor: colors.border, backgroundColor: colors.surface }]}>
+        <Text style={[styles.passwordLabel, { color: colors.text }]}>
+          {label}
+        </Text>
+        <View
+          style={[
+            styles.passwordInputWrapper,
+            { borderColor: colors.border, backgroundColor: colors.surface },
+          ]}
+        >
           <TextInput
             style={[styles.passwordInput, { color: colors.text }]}
             value={value}
@@ -303,7 +378,13 @@ export default function AccountSettingsScreen() {
                   key={level}
                   style={[
                     styles.strengthSegment,
-                    currentLanguage === language.code && [styles.selectedLanguageOption, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }]
+                    currentLanguage === languages[0].code && [
+                      styles.selectedLanguageOption,
+                      {
+                        borderColor: colors.primary,
+                        backgroundColor: colors.primary + '20',
+                      },
+                    ],
                   ]}
                 />
               ))}
@@ -319,22 +400,38 @@ export default function AccountSettingsScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity 
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
           <ArrowLeft size={24} color={colors.text} />
         </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>{t('settings.title')}</Text>
+        <Text style={[styles.title, { color: colors.text }]}>
+          {t('settings.title')}
+        </Text>
         <View style={styles.placeholder} />
       </View>
 
-      <ScrollView style={[styles.content, { backgroundColor: colors.background }]}>
+      <ScrollView
+        style={[styles.content, { backgroundColor: colors.background }]}
+      >
         {/* Security Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('settings.security')}</Text>
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {t('settings.security')}
+          </Text>
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <SettingItem
               icon={Key}
               title={t('settings.changePassword')}
@@ -347,12 +444,21 @@ export default function AccountSettingsScreen() {
 
         {/* Language & Region Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('settings.languageRegion')}</Text>
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {t('settings.languageRegion')}
+          </Text>
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <SettingItem
               icon={Globe}
               title={t('settings.language')}
-              description={`${t('settings.currentLanguage')}: ${currentLang?.nativeName || 'English'}`}
+              description={`${t('settings.currentLanguage')}: ${
+                currentLang?.nativeName || 'English'
+              }`}
               showSwitch={false}
               onPress={() => setShowLanguageModal(true)}
               rightContent={
@@ -367,71 +473,105 @@ export default function AccountSettingsScreen() {
 
         {/* Notifications Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('settings.notifications')}</Text>
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {t('settings.notifications')}
+          </Text>
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <SettingItem
               icon={Bell}
               title={t('settings.pushNotifications')}
               description="Receive notifications on your device"
               value={notifications.pushNotifications}
-              onToggle={(value) => updateNotificationSetting('pushNotifications', value)}
+              onToggle={(value) =>
+                updateNotificationSetting('pushNotifications', value)
+              }
             />
-            
+
             <SettingItem
               icon={Mail}
               title={t('settings.emailNotifications')}
               description="Receive updates via email"
               value={notifications.emailNotifications}
-              onToggle={(value) => updateNotificationSetting('emailNotifications', value)}
+              onToggle={(value) =>
+                updateNotificationSetting('emailNotifications', value)
+              }
             />
-            
+
             <SettingItem
               icon={MessageSquare}
               title={t('settings.smsNotifications')}
               description="Receive text message alerts"
               value={notifications.smsNotifications}
-              onToggle={(value) => updateNotificationSetting('smsNotifications', value)}
+              onToggle={(value) =>
+                updateNotificationSetting('smsNotifications', value)
+              }
             />
           </View>
         </View>
 
         {/* Notification Types Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>Notification Types</Text>
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            Notification Types
+          </Text>
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <SettingItem
               icon={Bell}
               title={t('settings.requestUpdates')}
-              description={user.role === 'trucker' 
-                ? "Get notified when providers respond to your requests"
-                : "Get notified about new requests in your area"
+              description={
+                user.role === 'trucker'
+                  ? 'Get notified when providers respond to your requests'
+                  : 'Get notified about new requests in your area'
               }
               value={notifications.requestUpdates}
-              onToggle={(value) => updateNotificationSetting('requestUpdates', value)}
+              onToggle={(value) =>
+                updateNotificationSetting('requestUpdates', value)
+              }
             />
-            
+
             <SettingItem
               icon={Shield}
               title={t('settings.securityAlerts')}
               description="Important security and account notifications"
               value={notifications.securityAlerts}
-              onToggle={(value) => updateNotificationSetting('securityAlerts', value)}
+              onToggle={(value) =>
+                updateNotificationSetting('securityAlerts', value)
+              }
             />
-            
+
             <SettingItem
               icon={Mail}
               title={t('settings.marketingEmails')}
               description="Promotional offers and feature updates"
               value={notifications.marketingEmails}
-              onToggle={(value) => updateNotificationSetting('marketingEmails', value)}
+              onToggle={(value) =>
+                updateNotificationSetting('marketingEmails', value)
+              }
             />
           </View>
         </View>
 
         {/* App Preferences Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('settings.appPreferences')}</Text>
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {t('settings.appPreferences')}
+          </Text>
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <SettingItem
               icon={Moon}
               title={t('settings.darkMode')}
@@ -444,16 +584,28 @@ export default function AccountSettingsScreen() {
 
         {/* Support Section */}
         <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>{t('settings.support')}</Text>
-          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          <Text style={[styles.sectionTitle, { color: colors.text }]}>
+            {t('settings.support')}
+          </Text>
+          <View
+            style={[
+              styles.card,
+              { backgroundColor: colors.surface, borderColor: colors.border },
+            ]}
+          >
             <SettingItem
               icon={HelpCircle}
               title={t('settings.helpCenter')}
               description="Get help and support"
               showSwitch={false}
-              onPress={() => Alert.alert('Help Center', 'Contact support at support@rigsnap.com')}
+              onPress={() =>
+                Alert.alert(
+                  'Help Center',
+                  'Contact support at support@rigsnap.com'
+                )
+              }
             />
-            
+
             <SettingItem
               icon={Shield}
               title={t('settings.privacyPolicy')}
@@ -466,8 +618,16 @@ export default function AccountSettingsScreen() {
 
         {/* Danger Zone Section */}
         <View style={styles.section}>
-          <Text style={[styles.dangerSectionTitle, { color: colors.error }]}>{t('settings.dangerZone')}</Text>
-          <View style={[styles.card, styles.dangerCard, { backgroundColor: colors.surface, borderColor: colors.error }]}>
+          <Text style={[styles.dangerSectionTitle, { color: colors.error }]}>
+            {t('settings.dangerZone')}
+          </Text>
+          <View
+            style={[
+              styles.card,
+              styles.dangerCard,
+              { backgroundColor: colors.surface, borderColor: colors.error },
+            ]}
+          >
             <SettingItem
               icon={Trash2}
               title={t('settings.deleteAccount')}
@@ -479,27 +639,42 @@ export default function AccountSettingsScreen() {
         </View>
 
         {/* Notification Summary */}
-        <View style={[styles.summaryCard, { backgroundColor: colors.success + '20', borderColor: colors.success + '40' }]}>
+        <View
+          style={[
+            styles.summaryCard,
+            {
+              backgroundColor: colors.success + '20',
+              borderColor: colors.success + '40',
+            },
+          ]}
+        >
           <View style={styles.summaryHeader}>
             <Check size={20} color={colors.success} />
-            <Text style={[styles.summaryTitle, { color: colors.success }]}>Notification Summary</Text>
+            <Text style={[styles.summaryTitle, { color: colors.success }]}>
+              Notification Summary
+            </Text>
           </View>
           <Text style={[styles.summaryText, { color: colors.success }]}>
-            You'll receive notifications via{' '}
+            You`&apos;`ll receive notifications via{' '}
             {[
               notifications.pushNotifications && 'push notifications',
               notifications.emailNotifications && 'email',
-              notifications.smsNotifications && 'SMS'
-            ].filter(Boolean).join(', ') || 'none of the selected methods'}.
+              notifications.smsNotifications && 'SMS',
+            ]
+              .filter(Boolean)
+              .join(', ') || 'none of the selected methods'}
+            .
           </Text>
           {user.role === 'trucker' && (
             <Text style={[styles.summarySubtext, { color: colors.success }]}>
-              As a trucker, you'll be notified when service providers respond to your requests.
+              As a trucker, you&apos;ll be notified when service providers
+              respond to your requests.
             </Text>
           )}
           {user.role === 'provider' && (
             <Text style={[styles.summarySubtext, { color: colors.success }]}>
-              As a service provider, you'll be notified about new requests in your service area.
+              As a service provider, you&apos;ll be notified about new requests
+              in your service area.
             </Text>
           )}
         </View>
@@ -512,14 +687,29 @@ export default function AccountSettingsScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowPasswordModal(false)}
       >
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: colors.background },
+          ]}
+        >
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Change Password</Text>
-            <TouchableOpacity 
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Change Password
+            </Text>
+            <TouchableOpacity
               onPress={() => {
                 setShowPasswordModal(false);
-                setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                setShowPasswords({ current: false, new: false, confirm: false });
+                setPasswordData({
+                  currentPassword: '',
+                  newPassword: '',
+                  confirmPassword: '',
+                });
+                setShowPasswords({
+                  current: false,
+                  new: false,
+                  confirm: false,
+                });
               }}
               style={styles.closeButton}
             >
@@ -527,23 +717,42 @@ export default function AccountSettingsScreen() {
             </TouchableOpacity>
           </View>
 
-          <ScrollView style={[styles.modalContent, { backgroundColor: colors.background }]}>
+          <ScrollView
+            style={[
+              styles.modalContent,
+              { backgroundColor: colors.background },
+            ]}
+          >
             <View style={styles.passwordForm}>
               <PasswordInput
                 label="Current Password"
                 value={passwordData.currentPassword}
-                onChangeText={(text) => setPasswordData(prev => ({ ...prev, currentPassword: text }))}
+                onChangeText={(text) =>
+                  setPasswordData((prev) => ({
+                    ...prev,
+                    currentPassword: text,
+                  }))
+                }
                 showPassword={showPasswords.current}
-                onToggleShow={() => setShowPasswords(prev => ({ ...prev, current: !prev.current }))}
+                onToggleShow={() =>
+                  setShowPasswords((prev) => ({
+                    ...prev,
+                    current: !prev.current,
+                  }))
+                }
                 placeholder="Enter your current password"
               />
 
               <PasswordInput
                 label="New Password"
                 value={passwordData.newPassword}
-                onChangeText={(text) => setPasswordData(prev => ({ ...prev, newPassword: text }))}
+                onChangeText={(text) =>
+                  setPasswordData((prev) => ({ ...prev, newPassword: text }))
+                }
                 showPassword={showPasswords.new}
-                onToggleShow={() => setShowPasswords(prev => ({ ...prev, new: !prev.new }))}
+                onToggleShow={() =>
+                  setShowPasswords((prev) => ({ ...prev, new: !prev.new }))
+                }
                 placeholder="Enter your new password"
                 showStrength={true}
               />
@@ -551,18 +760,60 @@ export default function AccountSettingsScreen() {
               <PasswordInput
                 label="Confirm New Password"
                 value={passwordData.confirmPassword}
-                onChangeText={(text) => setPasswordData(prev => ({ ...prev, confirmPassword: text }))}
+                onChangeText={(text) =>
+                  setPasswordData((prev) => ({
+                    ...prev,
+                    confirmPassword: text,
+                  }))
+                }
                 showPassword={showPasswords.confirm}
-                onToggleShow={() => setShowPasswords(prev => ({ ...prev, confirm: !prev.confirm }))}
+                onToggleShow={() =>
+                  setShowPasswords((prev) => ({
+                    ...prev,
+                    confirm: !prev.confirm,
+                  }))
+                }
                 placeholder="Confirm your new password"
               />
 
               <View style={styles.passwordRequirements}>
-                <Text style={[styles.requirementsTitle, { color: colors.text }]}>Password Requirements:</Text>
-                <Text style={[styles.requirementItem, { color: colors.textSecondary }]}>• At least 8 characters long</Text>
-                <Text style={[styles.requirementItem, { color: colors.textSecondary }]}>• Contains uppercase and lowercase letters</Text>
-                <Text style={[styles.requirementItem, { color: colors.textSecondary }]}>• Contains at least one number</Text>
-                <Text style={[styles.requirementItem, { color: colors.textSecondary }]}>• Contains at least one special character</Text>
+                <Text
+                  style={[styles.requirementsTitle, { color: colors.text }]}
+                >
+                  Password Requirements:
+                </Text>
+                <Text
+                  style={[
+                    styles.requirementItem,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  • At least 8 characters long
+                </Text>
+                <Text
+                  style={[
+                    styles.requirementItem,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  • Contains uppercase and lowercase letters
+                </Text>
+                <Text
+                  style={[
+                    styles.requirementItem,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  • Contains at least one number
+                </Text>
+                <Text
+                  style={[
+                    styles.requirementItem,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  • Contains at least one special character
+                </Text>
               </View>
             </View>
           </ScrollView>
@@ -572,27 +823,56 @@ export default function AccountSettingsScreen() {
               style={[styles.cancelButton, { backgroundColor: colors.card }]}
               onPress={() => {
                 setShowPasswordModal(false);
-                setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
-                setShowPasswords({ current: false, new: false, confirm: false });
+                setPasswordData({
+                  currentPassword: '',
+                  newPassword: '',
+                  confirmPassword: '',
+                });
+                setShowPasswords({
+                  current: false,
+                  new: false,
+                  confirm: false,
+                });
               }}
             >
-              <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>Cancel</Text>
+              <Text
+                style={[
+                  styles.cancelButtonText,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                Cancel
+              </Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[
-                [styles.changePasswordButton, { backgroundColor: colors.primary }],
-                (!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword || isChangingPassword) && styles.changePasswordButtonDisabled
+                [
+                  styles.changePasswordButton,
+                  { backgroundColor: colors.primary },
+                ],
+                (!passwordData.currentPassword ||
+                  !passwordData.newPassword ||
+                  !passwordData.confirmPassword ||
+                  isChangingPassword) &&
+                  styles.changePasswordButtonDisabled,
               ]}
               onPress={handlePasswordChange}
-              disabled={!passwordData.currentPassword || !passwordData.newPassword || !passwordData.confirmPassword || isChangingPassword}
+              disabled={
+                !passwordData.currentPassword ||
+                !passwordData.newPassword ||
+                !passwordData.confirmPassword ||
+                isChangingPassword
+              }
             >
               {isChangingPassword ? (
                 <ActivityIndicator color="white" size="small" />
               ) : (
                 <>
                   <Lock size={16} color="white" />
-                  <Text style={styles.changePasswordButtonText}>Change Password</Text>
+                  <Text style={styles.changePasswordButtonText}>
+                    Change Password
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
@@ -607,37 +887,71 @@ export default function AccountSettingsScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowLanguageModal(false)}
       >
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: colors.background },
+          ]}
+        >
           <View style={styles.modalHeader}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Language</Text>
-            <TouchableOpacity 
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Select Language
+            </Text>
+            <TouchableOpacity
               onPress={() => setShowLanguageModal(false)}
               style={styles.closeButton}
             >
               <X size={24} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
-          
-          <ScrollView style={[styles.languageList, { backgroundColor: colors.background }]}>
+
+          <ScrollView
+            style={[
+              styles.languageList,
+              { backgroundColor: colors.background },
+            ]}
+          >
             {languages.map((language) => (
               <TouchableOpacity
                 key={language.code}
                 style={[
-                  [styles.languageOption, { backgroundColor: colors.surface, borderColor: colors.border }],
-                  currentLanguage === language.code && [styles.selectedLanguageOption, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }]
+                  [
+                    styles.languageOption,
+                    {
+                      backgroundColor: colors.surface,
+                      borderColor: colors.border,
+                    },
+                  ],
+                  currentLanguage === language.code && [
+                    styles.selectedLanguageOption,
+                    {
+                      borderColor: colors.primary,
+                      backgroundColor: colors.primary + '20',
+                    },
+                  ],
                 ]}
                 onPress={() => handleLanguageChange(language.code)}
               >
                 <View style={styles.languageOptionContent}>
                   <Text style={styles.languageFlag}>{language.flag}</Text>
                   <View style={styles.languageNames}>
-                    <Text style={[
-                      [styles.languageName, { color: colors.text }],
-                      currentLanguage === language.code && [styles.selectedLanguageName, { color: colors.primary }]
-                    ]}>
+                    <Text
+                      style={[
+                        [styles.languageName, { color: colors.text }],
+                        currentLanguage === language.code && [
+                          styles.selectedLanguageName,
+                          { color: colors.primary },
+                        ],
+                      ]}
+                    >
                       {language.name}
                     </Text>
-                    <Text style={[styles.languageNativeName, { color: colors.textSecondary }]}>
+                    <Text
+                      style={[
+                        styles.languageNativeName,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
                       {language.nativeName}
                     </Text>
                   </View>
@@ -661,7 +975,7 @@ export default function AccountSettingsScreen() {
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
             <Text style={styles.modalTitle}>Delete Account</Text>
-            <TouchableOpacity 
+            <TouchableOpacity
               onPress={() => {
                 setShowDeleteModal(false);
                 setDeleteConfirmation('');
@@ -679,46 +993,53 @@ export default function AccountSettingsScreen() {
                 This action cannot be undone
               </Text>
               <Text style={styles.deleteWarningText}>
-                Deleting your {user.role === 'trucker' ? 'trucker' : 'service provider'} account will permanently remove:
+                Deleting your{' '}
+                {user.role === 'trucker' ? 'trucker' : 'service provider'}{' '}
+                account will permanently remove:
               </Text>
             </View>
 
             <View style={styles.deleteConsequences}>
               <View style={styles.consequenceItem}>
                 <Trash2 size={16} color="#ef4444" />
-                <Text style={styles.consequenceText}>All your personal information and profile data</Text>
+                <Text style={styles.consequenceText}>
+                  All your personal information and profile data
+                </Text>
               </View>
               <View style={styles.consequenceItem}>
                 <Trash2 size={16} color="#ef4444" />
                 <Text style={styles.consequenceText}>
-                  {user.role === 'trucker' 
+                  {user.role === 'trucker'
                     ? 'All your service requests and chat history'
-                    : 'All your job history and chat conversations'
-                  }
+                    : 'All your job history and chat conversations'}
                 </Text>
-              </View>
-              <View style={styles.consequenceItem}>
-                <Trash2 size={16} color="#ef4444" />
-                <Text style={styles.consequenceText}>Your ratings and reviews</Text>
               </View>
               <View style={styles.consequenceItem}>
                 <Trash2 size={16} color="#ef4444" />
                 <Text style={styles.consequenceText}>
-                  {user.role === 'trucker' 
-                    ? 'Any active service requests will be cancelled'
-                    : 'Any active jobs will be cancelled (may incur penalty fees)'
-                  }
+                  Your ratings and reviews
                 </Text>
               </View>
               <View style={styles.consequenceItem}>
                 <Trash2 size={16} color="#ef4444" />
-                <Text style={styles.consequenceText}>Access to your RigSnap account</Text>
+                <Text style={styles.consequenceText}>
+                  {user.role === 'trucker'
+                    ? 'Any active service requests will be cancelled'
+                    : 'Any active jobs will be cancelled (may incur penalty fees)'}
+                </Text>
+              </View>
+              <View style={styles.consequenceItem}>
+                <Trash2 size={16} color="#ef4444" />
+                <Text style={styles.consequenceText}>
+                  Access to your RigSnap account
+                </Text>
               </View>
             </View>
 
             <View style={styles.deleteConfirmationSection}>
               <Text style={styles.confirmationLabel}>
-                To confirm deletion, type <Text style={styles.confirmationKeyword}>DELETE</Text> below:
+                To confirm deletion, type{' '}
+                <Text style={styles.confirmationKeyword}>DELETE</Text> below:
               </Text>
               <TextInput
                 style={styles.confirmationInput}
@@ -731,12 +1052,15 @@ export default function AccountSettingsScreen() {
             </View>
 
             <View style={styles.deleteAlternatives}>
-              <Text style={styles.alternativesTitle}>Before you delete your account:</Text>
+              <Text style={styles.alternativesTitle}>
+                Before you delete your account:
+              </Text>
               <Text style={styles.alternativesText}>
                 • Consider temporarily deactivating instead of deleting
               </Text>
               <Text style={styles.alternativesText}>
-                • Contact support if you're having issues: support@rigsnap.com
+                • Contact support if you`&apos;`re having issues:
+                support@rigsnap.com
               </Text>
               <Text style={styles.alternativesText}>
                 • Download your data if you want to keep a copy
@@ -754,21 +1078,28 @@ export default function AccountSettingsScreen() {
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={[
                 styles.deleteAccountButton,
-                (deleteConfirmation.toLowerCase() !== 'delete' || isDeletingAccount) && styles.deleteAccountButtonDisabled
+                (deleteConfirmation.toLowerCase() !== 'delete' ||
+                  isDeletingAccount) &&
+                  styles.deleteAccountButtonDisabled,
               ]}
               onPress={handleDeleteAccount}
-              disabled={deleteConfirmation.toLowerCase() !== 'delete' || isDeletingAccount}
+              disabled={
+                deleteConfirmation.toLowerCase() !== 'delete' ||
+                isDeletingAccount
+              }
             >
               {isDeletingAccount ? (
                 <ActivityIndicator color="white" size="small" />
               ) : (
                 <>
                   <Trash2 size={16} color="white" />
-                  <Text style={styles.deleteAccountButtonText}>Delete Account</Text>
+                  <Text style={styles.deleteAccountButtonText}>
+                    Delete Account
+                  </Text>
                 </>
               )}
             </TouchableOpacity>

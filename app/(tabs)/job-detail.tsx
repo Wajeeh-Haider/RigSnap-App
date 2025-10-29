@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import * as React from 'react';
 import {
   View,
   Text,
@@ -10,52 +10,85 @@ import {
   ActivityIndicator,
   Linking,
   TextInput,
-  Image
+  // Image,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
-import { ArrowLeft, MapPin, Phone, Clock, CircleCheck as CheckCircle, Star, DollarSign, Calendar, Truck, Shield, MessageCircle, X, TriangleAlert as AlertTriangle, CircleCheck as CheckCircle2 } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  // MapPin,
+  Phone,
+  Clock,
+  CircleCheck as CheckCircle,
+  Star,
+  DollarSign,
+  Calendar,
+  Truck,
+  Shield,
+  MessageCircle,
+  X,
+  TriangleAlert as AlertTriangle,
+  CircleCheck as CheckCircle2,
+} from 'lucide-react-native';
 import LocationButton from '@/components/LocationButton';
 import { locationService } from '@/utils/location';
+import { useState } from 'react';
 
 const getStatusColor = (status: string) => {
   switch (status) {
-    case 'pending': return '#f59e0b';
-    case 'accepted': return '#3b82f6';
-    case 'in_progress': return '#8b5cf6';
-    case 'completed': return '#10b981';
-    case 'cancelled': return '#ef4444';
-    default: return '#6b7280';
+    case 'pending':
+      return '#f59e0b';
+    case 'accepted':
+      return '#3b82f6';
+    case 'in_progress':
+      return '#8b5cf6';
+    case 'completed':
+      return '#10b981';
+    case 'cancelled':
+      return '#ef4444';
+    default:
+      return '#6b7280';
   }
 };
 
 const getStatusIcon = (status: string) => {
   switch (status) {
-    case 'pending': return Clock;
-    case 'accepted': 
-    case 'in_progress': return AlertTriangle;
-    case 'completed': return CheckCircle;
-    case 'cancelled': return AlertTriangle;
-    default: return Clock;
+    case 'pending':
+      return Clock;
+    case 'accepted':
+    case 'in_progress':
+      return AlertTriangle;
+    case 'completed':
+      return CheckCircle;
+    case 'cancelled':
+      return AlertTriangle;
+    default:
+      return Clock;
   }
 };
 
 const getServiceDisplayName = (serviceType: string) => {
   switch (serviceType) {
-    case 'tire_repair': return 'Tire Repair';
-    case 'truck_wash': return 'Truck Wash';
-    case 'hose_repair': return 'Hose Repair';
-    case 'repair': return 'Road Service';
-    default: return serviceType.charAt(0).toUpperCase() + serviceType.slice(1);
+    case 'tire_repair':
+      return 'Tire Repair';
+    case 'truck_wash':
+      return 'Truck Wash';
+    case 'hose_repair':
+      return 'Hose Repair';
+    case 'repair':
+      return 'Road Service';
+    default:
+      return serviceType.charAt(0).toUpperCase() + serviceType.slice(1);
   }
 };
 
 export default function JobDetailScreen() {
   const params = useLocalSearchParams();
   const { user } = useAuth();
-  const { requests, updateRequestStatus, acceptRequest, cancelRequest } = useApp();
+  const { requests, updateRequestStatus, acceptRequest, cancelRequest } =
+    useApp();
   const { colors } = useTheme();
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
@@ -64,10 +97,13 @@ export default function JobDetailScreen() {
   const [isCompleting, setIsCompleting] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
-  const [userLocation, setUserLocation] = useState<{ latitude: number; longitude: number } | null>(null);
+  const [userLocation, setUserLocation] = useState<{
+    latitude: number;
+    longitude: number;
+  } | null>(null);
 
   const requestId = params.requestId as string;
-  const request = requests.find(r => r.id === requestId);
+  const request = requests.find((r) => r.id === requestId);
 
   // Get user location on component mount
   React.useEffect(() => {
@@ -77,7 +113,7 @@ export default function JobDetailScreen() {
           const location = await locationService.getCurrentPosition();
           setUserLocation({
             latitude: location.coords.latitude,
-            longitude: location.coords.longitude
+            longitude: location.coords.longitude,
           });
         }
       } catch (error) {
@@ -91,18 +127,30 @@ export default function JobDetailScreen() {
   if (!user || !request) {
     return (
       <View style={[styles.container, { backgroundColor: colors.background }]}>
-        <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-          <TouchableOpacity 
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: colors.surface,
+              borderBottomColor: colors.border,
+            },
+          ]}
+        >
+          <TouchableOpacity
             style={styles.backButton}
             onPress={() => router.back()}
           >
             <ArrowLeft size={24} color={colors.text} />
           </TouchableOpacity>
-          <Text style={[styles.title, { color: colors.text }]}>Job Not Found</Text>
+          <Text style={[styles.title, { color: colors.text }]}>
+            Job Not Found
+          </Text>
           <View style={styles.placeholder} />
         </View>
         <View style={styles.errorContainer}>
-          <Text style={[styles.errorText, { color: colors.text }]}>Job details could not be found.</Text>
+          <Text style={[styles.errorText, { color: colors.text }]}>
+            Job details could not be found.
+          </Text>
         </View>
       </View>
     );
@@ -110,15 +158,24 @@ export default function JobDetailScreen() {
 
   const StatusIcon = getStatusIcon(request.status);
   const isTrucker = user.role === 'trucker';
-  const isMyRequest = isTrucker ? request.truckerId === user.id : request.providerId === user.id;
+  const isMyRequest = isTrucker
+    ? request.truckerId === user.id
+    : request.providerId === user.id;
   const canComplete = request.status === 'in_progress' && !isTrucker;
   const canRate = request.status === 'completed' && isTrucker;
-  const canAccept = request.status === 'pending' && user.role === 'provider' && !isMyRequest;
-  const canCancel = request.status === 'accepted' && user.role === 'provider' && request.providerId === user.id;
+  const canAccept =
+    request.status === 'pending' && user.role === 'provider' && !isMyRequest;
+  const canCancel =
+    request.status === 'accepted' &&
+    user.role === 'provider' &&
+    request.providerId === user.id;
 
   const handlePhoneCall = async (phoneNumber: string, contactName: string) => {
     if (!phoneNumber) {
-      Alert.alert('No Phone Number', `No phone number available for ${contactName}.`);
+      Alert.alert(
+        'No Phone Number',
+        `No phone number available for ${contactName}.`
+      );
       return;
     }
 
@@ -133,13 +190,16 @@ export default function JobDetailScreen() {
       } else {
         Alert.alert(
           'Cannot Make Call',
-          `Your device doesn't support making phone calls. The number is: ${phoneNumber}`,
+          `Your device doesn&apos;t support making phone calls. The number is: ${phoneNumber}`,
           [
-            { text: 'Copy Number', onPress: () => {
-              // On web, we can't copy to clipboard easily, so just show the number
-              Alert.alert('Phone Number', phoneNumber);
-            }},
-            { text: 'OK', style: 'cancel' }
+            {
+              text: 'Copy Number',
+              onPress: () => {
+                // On web, we can&apos;t copy to clipboard easily, so just show the number
+                Alert.alert('Phone Number', phoneNumber);
+              },
+            },
+            { text: 'OK', style: 'cancel' },
           ]
         );
       }
@@ -158,7 +218,7 @@ export default function JobDetailScreen() {
     try {
       acceptRequest(request.id, user.id, `${user.firstName} ${user.lastName}`);
       setShowAcceptModal(false);
-      
+
       Alert.alert(
         'Request Accepted! 🎉',
         'You have successfully accepted this request. The trucker has been notified and you can now start chatting.',
@@ -168,17 +228,17 @@ export default function JobDetailScreen() {
             onPress: () => {
               router.replace({
                 pathname: '/chat-detail',
-                params: { requestId: request.id }
+                params: { requestId: request.id },
               });
-            }
+            },
           },
           {
             text: 'View Job',
-            style: 'cancel'
-          }
+            style: 'cancel',
+          },
         ]
       );
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to accept request. Please try again.');
     } finally {
       setIsAccepting(false);
@@ -188,7 +248,9 @@ export default function JobDetailScreen() {
   const handleCancelRequest = async () => {
     Alert.alert(
       'Cancel Request',
-      `Are you sure you want to cancel this ${getServiceDisplayName(request.serviceType).toLowerCase()} request?\n\n⚠️ Warning: You will be charged a $5 penalty fee in addition to the original $5 lead fee (total $10). The trucker will receive a full refund.`,
+      `Are you sure you want to cancel this ${getServiceDisplayName(
+        request.serviceType
+      ).toLowerCase()} request?\n\n⚠️ Warning: You will be charged a $5 penalty fee in addition to the original $5 lead fee (total $10). The trucker will receive a full refund.`,
       [
         { text: 'Keep Request', style: 'cancel' },
         {
@@ -204,7 +266,10 @@ export default function JobDetailScreen() {
                   text: 'Submit',
                   onPress: async (reason) => {
                     if (!reason || reason.trim().length === 0) {
-                      Alert.alert('Error', 'Please provide a reason for cancellation.');
+                      Alert.alert(
+                        'Error',
+                        'Please provide a reason for cancellation.'
+                      );
                       return;
                     }
 
@@ -216,27 +281,30 @@ export default function JobDetailScreen() {
                         'The request has been cancelled. The trucker has been notified and will receive a full refund. You have been charged a $5 penalty fee.',
                         [{ text: 'OK', onPress: () => router.back() }]
                       );
-                    } catch (error) {
-                      Alert.alert('Error', 'Failed to cancel request. Please try again.');
+                    } catch {
+                      Alert.alert(
+                        'Error',
+                        'Failed to cancel request. Please try again.'
+                      );
                     } finally {
                       setIsCancelling(false);
                     }
-                  }
-                }
+                  },
+                },
               ],
               'plain-text',
               '',
               'default'
             );
-          }
-        }
+          },
+        },
       ]
     );
   };
 
   const handleCompleteJob = () => {
     if (user.role !== 'provider') return;
-    
+
     Alert.alert(
       'Complete Job',
       'Are you sure you want to mark this job as completed?',
@@ -251,40 +319,49 @@ export default function JobDetailScreen() {
               'The job has been marked as completed. The trucker will be notified.',
               [{ text: 'OK', onPress: () => router.back() }]
             );
-          }
-        }
+          },
+        },
       ]
     );
   };
 
   const handleRateService = async () => {
     if (rating === 0) {
-      Alert.alert('Rating Required', 'Please provide a rating before submitting.');
+      Alert.alert(
+        'Rating Required',
+        'Please provide a rating before submitting.'
+      );
       return;
     }
 
     setIsCompleting(true);
     try {
       // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
-      
+      await new Promise((resolve) => setTimeout(resolve, 1500));
+
       setShowCompleteModal(false);
       Alert.alert(
         'Thank You!',
-        `You rated this service ${rating} star${rating !== 1 ? 's' : ''}. Your feedback helps improve our platform.`,
+        `You rated this service ${rating} star${
+          rating !== 1 ? 's' : ''
+        }. Your feedback helps improve our platform.`,
         [{ text: 'OK', onPress: () => router.back() }]
       );
-    } catch (error) {
+    } catch {
       Alert.alert('Error', 'Failed to submit rating. Please try again.');
     } finally {
       setIsCompleting(false);
     }
   };
 
-  const StarRating = ({ rating, onRatingChange, readonly = false }: { 
-    rating: number, 
-    onRatingChange?: (rating: number) => void,
-    readonly?: boolean 
+  const StarRating = ({
+    rating,
+    onRatingChange,
+    readonly = false,
+  }: {
+    rating: number;
+    onRatingChange?: (rating: number) => void;
+    readonly?: boolean;
   }) => {
     return (
       <View style={styles.starContainer}>
@@ -308,8 +385,13 @@ export default function JobDetailScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <TouchableOpacity 
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
+        <TouchableOpacity
           style={styles.backButton}
           onPress={() => router.back()}
         >
@@ -321,54 +403,97 @@ export default function JobDetailScreen() {
 
       <ScrollView style={styles.content}>
         {/* Job Overview Card */}
-        <View style={[styles.overviewCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <View
+          style={[
+            styles.overviewCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
           <View style={styles.serviceHeader}>
             <View style={styles.serviceInfo}>
               <Text style={[styles.serviceType, { color: colors.primary }]}>
-                {getServiceDisplayName(request.serviceType).toUpperCase()} SERVICE
+                {getServiceDisplayName(request.serviceType).toUpperCase()}{' '}
+                SERVICE
               </Text>
               <View style={styles.statusContainer}>
-                <View style={[styles.statusBadge, { backgroundColor: getStatusColor(request.status) }]}>
+                <View
+                  style={[
+                    styles.statusBadge,
+                    { backgroundColor: getStatusColor(request.status) },
+                  ]}
+                >
                   <StatusIcon size={14} color="white" />
-                  <Text style={styles.statusText}>{request.status.replace('_', ' ').toUpperCase()}</Text>
+                  <Text style={styles.statusText}>
+                    {request.status.replace('_', ' ').toUpperCase()}
+                  </Text>
                 </View>
-                <View style={[styles.urgencyBadge, { 
-                  backgroundColor: request.urgency === 'high' ? '#ef4444' : 
-                                  request.urgency === 'medium' ? '#f59e0b' : '#10b981' 
-                }]}>
-                  <Text style={styles.urgencyText}>{request.urgency.toUpperCase()}</Text>
+                <View
+                  style={[
+                    styles.urgencyBadge,
+                    {
+                      backgroundColor:
+                        request.urgency === 'high'
+                          ? '#ef4444'
+                          : request.urgency === 'medium'
+                          ? '#f59e0b'
+                          : '#10b981',
+                    },
+                  ]}
+                >
+                  <Text style={styles.urgencyText}>
+                    {request.urgency.toUpperCase()}
+                  </Text>
                 </View>
               </View>
             </View>
           </View>
 
-          <Text style={[styles.description, { color: colors.text }]}>{request.description}</Text>
+          <Text style={[styles.description, { color: colors.text }]}>
+            {request.description}
+          </Text>
 
           {/* Photos Section */}
-          {request.photos && request.photos.length > 0 && (
+          {/* {request.photos && request.photos.length > 0 && (
             <View style={styles.photosSection}>
-              <Text style={[styles.photosTitle, { color: colors.text }]}>Photos</Text>
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.photosScroll}>
+              <Text style={[styles.photosTitle, { color: colors.text }]}>
+                Photos
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.photosScroll}
+              >
                 {request.photos.map((photo, index) => (
-                  <Image key={index} source={{ uri: photo }} style={styles.requestPhoto} />
+                  <Image
+                  <Image
+                    key={`photo-${index}`}
+                    source={{ uri: photo }}
+                    style={styles.requestPhoto}
+                  />
                 ))}
               </ScrollView>
             </View>
-          )}
+          )} */}
 
           <View style={styles.detailsGrid}>
             <View style={styles.detailItem}>
               <View style={styles.detailContent}>
-                <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Location & Navigation</Text>
-                <Text style={[styles.detailValue, { color: colors.text }]}>{request.location}</Text>
-                
+                <Text
+                  style={[styles.detailLabel, { color: colors.textSecondary }]}
+                >
+                  Location & Navigation
+                </Text>
+                <Text style={[styles.detailValue, { color: colors.text }]}>
+                  {request.location}
+                </Text>
+
                 <LocationButton
                   location={request.location}
                   coordinates={request.coordinates}
                   showDirections={!(isTrucker && isMyRequest)}
                   showEstimate={true}
                   showShare={false}
-                  userLocation={userLocation}
+                  userLocation={userLocation || undefined}
                   style={styles.locationButton}
                   size="medium"
                   variant="primary"
@@ -379,14 +504,18 @@ export default function JobDetailScreen() {
             <View style={styles.detailItem}>
               <Calendar size={18} color={colors.textSecondary} />
               <View style={styles.detailContent}>
-                <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Created</Text>
+                <Text
+                  style={[styles.detailLabel, { color: colors.textSecondary }]}
+                >
+                  Created
+                </Text>
                 <Text style={[styles.detailValue, { color: colors.text }]}>
                   {new Date(request.createdAt).toLocaleDateString('en-US', {
                     month: 'short',
                     day: 'numeric',
                     year: 'numeric',
                     hour: '2-digit',
-                    minute: '2-digit'
+                    minute: '2-digit',
                   })}
                 </Text>
               </View>
@@ -396,8 +525,17 @@ export default function JobDetailScreen() {
               <View style={styles.detailItem}>
                 <DollarSign size={18} color={colors.success} />
                 <View style={styles.detailContent}>
-                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Estimated Cost</Text>
-                  <Text style={[styles.detailValue, { color: colors.success }]}>${request.estimatedCost}</Text>
+                  <Text
+                    style={[
+                      styles.detailLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Estimated Cost
+                  </Text>
+                  <Text style={[styles.detailValue, { color: colors.success }]}>
+                    ${request.estimatedCost}
+                  </Text>
                 </View>
               </View>
             )}
@@ -406,13 +544,20 @@ export default function JobDetailScreen() {
               <View style={styles.detailItem}>
                 <CheckCircle size={18} color={colors.success} />
                 <View style={styles.detailContent}>
-                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Accepted</Text>
+                  <Text
+                    style={[
+                      styles.detailLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Accepted
+                  </Text>
                   <Text style={[styles.detailValue, { color: colors.text }]}>
                     {new Date(request.acceptedAt).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
                       hour: '2-digit',
-                      minute: '2-digit'
+                      minute: '2-digit',
                     })}
                   </Text>
                 </View>
@@ -423,17 +568,29 @@ export default function JobDetailScreen() {
               <View style={styles.detailItem}>
                 <AlertTriangle size={18} color={colors.error} />
                 <View style={styles.detailContent}>
-                  <Text style={[styles.detailLabel, { color: colors.textSecondary }]}>Cancelled</Text>
+                  <Text
+                    style={[
+                      styles.detailLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Cancelled
+                  </Text>
                   <Text style={[styles.detailValue, { color: colors.error }]}>
                     {new Date(request.cancelledAt).toLocaleDateString('en-US', {
                       month: 'short',
                       day: 'numeric',
                       hour: '2-digit',
-                      minute: '2-digit'
+                      minute: '2-digit',
                     })}
                   </Text>
                   {request.cancellationReason && (
-                    <Text style={[styles.cancellationReason, { color: colors.error }]}>
+                    <Text
+                      style={[
+                        styles.cancellationReason,
+                        { color: colors.error },
+                      ]}
+                    >
                       Reason: {request.cancellationReason}
                     </Text>
                   )}
@@ -444,25 +601,45 @@ export default function JobDetailScreen() {
         </View>
 
         {/* Participants Card */}
-        <View style={[styles.participantsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Participants</Text>
-          
+        <View
+          style={[
+            styles.participantsCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
+          <Text style={[styles.cardTitle, { color: colors.text }]}>
+            Participants
+          </Text>
+
           {/* Trucker Info */}
           <View style={styles.participantItem}>
             <View style={styles.participantHeader}>
-              <View style={[styles.participantLogo, { backgroundColor: '#2563eb' }]}>
+              <View
+                style={[styles.participantLogo, { backgroundColor: '#2563eb' }]}
+              >
                 <Truck size={20} color="white" />
               </View>
               <View style={styles.participantInfo}>
-                <Text style={[styles.participantName, { color: colors.text }]}>{request.truckerName}</Text>
+                <Text style={[styles.participantName, { color: colors.text }]}>
+                  {request.truckerName}
+                </Text>
                 <View style={styles.participantRole}>
                   <Truck size={14} color="#2563eb" />
-                  <Text style={[styles.roleText, { color: colors.textSecondary }]}>Trucker</Text>
+                  <Text
+                    style={[styles.roleText, { color: colors.textSecondary }]}
+                  >
+                    Trucker
+                  </Text>
                 </View>
               </View>
-              <TouchableOpacity 
-                style={[styles.contactButton, { backgroundColor: colors.primary + '20' }]}
-                onPress={() => handlePhoneCall(request.truckerPhone, request.truckerName)}
+              <TouchableOpacity
+                style={[
+                  styles.contactButton,
+                  { backgroundColor: colors.primary + '20' },
+                ]}
+                onPress={() =>
+                  handlePhoneCall(request.truckerPhone, request.truckerName)
+                }
               >
                 <Phone size={16} color={colors.primary} />
               </TouchableOpacity>
@@ -473,19 +650,40 @@ export default function JobDetailScreen() {
           {request.providerName && (
             <View style={styles.participantItem}>
               <View style={styles.participantHeader}>
-                <View style={[styles.participantLogo, { backgroundColor: '#ea580c' }]}>
+                <View
+                  style={[
+                    styles.participantLogo,
+                    { backgroundColor: '#ea580c' },
+                  ]}
+                >
                   <Shield size={20} color="white" />
                 </View>
                 <View style={styles.participantInfo}>
-                  <Text style={[styles.participantName, { color: colors.text }]}>{request.providerName}</Text>
+                  <Text
+                    style={[styles.participantName, { color: colors.text }]}
+                  >
+                    {request.providerName}
+                  </Text>
                   <View style={styles.participantRole}>
                     <Shield size={14} color="#ea580c" />
-                    <Text style={[styles.roleText, { color: colors.textSecondary }]}>Service Provider</Text>
+                    <Text
+                      style={[styles.roleText, { color: colors.textSecondary }]}
+                    >
+                      Service Provider
+                    </Text>
                   </View>
                 </View>
-                <TouchableOpacity 
-                  style={[styles.contactButton, { backgroundColor: colors.secondary + '20' }]}
-                  onPress={() => handlePhoneCall(request.truckerPhone, request.providerName || 'Service Provider')}
+                <TouchableOpacity
+                  style={[
+                    styles.contactButton,
+                    { backgroundColor: colors.secondary + '20' },
+                  ]}
+                  onPress={() =>
+                    handlePhoneCall(
+                      request.truckerPhone,
+                      request.providerName || 'Service Provider'
+                    )
+                  }
                 >
                   <Phone size={16} color={colors.secondary} />
                 </TouchableOpacity>
@@ -495,14 +693,27 @@ export default function JobDetailScreen() {
         </View>
 
         {/* Timeline Card */}
-        <View style={[styles.timelineCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.text }]}>Timeline</Text>
-          
+        <View
+          style={[
+            styles.timelineCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
+          <Text style={[styles.cardTitle, { color: colors.text }]}>
+            Timeline
+          </Text>
+
           <View style={styles.timelineItem}>
-            <View style={[styles.timelineDot, { backgroundColor: '#2563eb' }]} />
+            <View
+              style={[styles.timelineDot, { backgroundColor: '#2563eb' }]}
+            />
             <View style={styles.timelineContent}>
-              <Text style={[styles.timelineTitle, { color: colors.text }]}>Request Created</Text>
-              <Text style={[styles.timelineTime, { color: colors.textSecondary }]}>
+              <Text style={[styles.timelineTitle, { color: colors.text }]}>
+                Request Created
+              </Text>
+              <Text
+                style={[styles.timelineTime, { color: colors.textSecondary }]}
+              >
                 {new Date(request.createdAt).toLocaleString()}
               </Text>
             </View>
@@ -510,13 +721,24 @@ export default function JobDetailScreen() {
 
           {request.acceptedAt && (
             <View style={styles.timelineItem}>
-              <View style={[styles.timelineDot, { backgroundColor: '#10b981' }]} />
+              <View
+                style={[styles.timelineDot, { backgroundColor: '#10b981' }]}
+              />
               <View style={styles.timelineContent}>
-                <Text style={[styles.timelineTitle, { color: colors.text }]}>Request Accepted</Text>
-                <Text style={[styles.timelineTime, { color: colors.textSecondary }]}>
+                <Text style={[styles.timelineTitle, { color: colors.text }]}>
+                  Request Accepted
+                </Text>
+                <Text
+                  style={[styles.timelineTime, { color: colors.textSecondary }]}
+                >
                   {new Date(request.acceptedAt).toLocaleString()}
                 </Text>
-                <Text style={[styles.timelineDescription, { color: colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.timelineDescription,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Accepted by {request.providerName}
                 </Text>
               </View>
@@ -525,10 +747,19 @@ export default function JobDetailScreen() {
 
           {request.status === 'in_progress' && (
             <View style={styles.timelineItem}>
-              <View style={[styles.timelineDot, { backgroundColor: '#8b5cf6' }]} />
+              <View
+                style={[styles.timelineDot, { backgroundColor: '#8b5cf6' }]}
+              />
               <View style={styles.timelineContent}>
-                <Text style={[styles.timelineTitle, { color: colors.text }]}>Work in Progress</Text>
-                <Text style={[styles.timelineDescription, { color: colors.textSecondary }]}>
+                <Text style={[styles.timelineTitle, { color: colors.text }]}>
+                  Work in Progress
+                </Text>
+                <Text
+                  style={[
+                    styles.timelineDescription,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Service provider is working on your request
                 </Text>
               </View>
@@ -537,10 +768,16 @@ export default function JobDetailScreen() {
 
           {request.completedAt && (
             <View style={styles.timelineItem}>
-              <View style={[styles.timelineDot, { backgroundColor: '#059669' }]} />
+              <View
+                style={[styles.timelineDot, { backgroundColor: '#059669' }]}
+              />
               <View style={styles.timelineContent}>
-                <Text style={[styles.timelineTitle, { color: colors.text }]}>Job Completed</Text>
-                <Text style={[styles.timelineTime, { color: colors.textSecondary }]}>
+                <Text style={[styles.timelineTitle, { color: colors.text }]}>
+                  Job Completed
+                </Text>
+                <Text
+                  style={[styles.timelineTime, { color: colors.textSecondary }]}
+                >
                   {new Date(request.completedAt).toLocaleString()}
                 </Text>
               </View>
@@ -549,17 +786,36 @@ export default function JobDetailScreen() {
 
           {request.cancelledAt && (
             <View style={styles.timelineItem}>
-              <View style={[styles.timelineDot, { backgroundColor: '#ef4444' }]} />
+              <View
+                style={[styles.timelineDot, { backgroundColor: '#ef4444' }]}
+              />
               <View style={styles.timelineContent}>
-                <Text style={[styles.timelineTitle, { color: colors.text }]}>Request Cancelled</Text>
-                <Text style={[styles.timelineTime, { color: colors.textSecondary }]}>
+                <Text style={[styles.timelineTitle, { color: colors.text }]}>
+                  Request Cancelled
+                </Text>
+                <Text
+                  style={[styles.timelineTime, { color: colors.textSecondary }]}
+                >
                   {new Date(request.cancelledAt).toLocaleString()}
                 </Text>
-                <Text style={[styles.timelineDescription, { color: colors.textSecondary }]}>
-                  Cancelled by {request.cancelledBy === 'provider' ? 'service provider' : 'trucker'}
+                <Text
+                  style={[
+                    styles.timelineDescription,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Cancelled by{' '}
+                  {request.cancelledBy === 'provider'
+                    ? 'service provider'
+                    : 'trucker'}
                 </Text>
                 {request.cancellationReason && (
-                  <Text style={[styles.timelineDescription, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.timelineDescription,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
                     Reason: {request.cancellationReason}
                   </Text>
                 )}
@@ -584,7 +840,10 @@ export default function JobDetailScreen() {
           {/* Cancel Request Button for Providers */}
           {canCancel && (
             <TouchableOpacity
-              style={[styles.cancelRequestButton, isCancelling && styles.cancelRequestButtonDisabled]}
+              style={[
+                styles.cancelRequestButton,
+                isCancelling && styles.cancelRequestButtonDisabled,
+              ]}
               onPress={handleCancelRequest}
               disabled={isCancelling}
             >
@@ -593,25 +852,31 @@ export default function JobDetailScreen() {
               ) : (
                 <>
                   <X size={20} color="white" />
-                  <Text style={styles.cancelRequestButtonText}>Cancel Request</Text>
+                  <Text style={styles.cancelRequestButtonText}>
+                    Cancel Request
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
           )}
 
           {/* Chat Button */}
-          {request.status !== 'pending' && request.status !== 'cancelled' && request.providerId && (
-            <TouchableOpacity
-              style={styles.chatButton}
-              onPress={() => router.push({
-                pathname: '/chat-detail',
-                params: { requestId: request.id }
-              })}
-            >
-              <MessageCircle size={20} color="white" />
-              <Text style={styles.chatButtonText}>Open Chat</Text>
-            </TouchableOpacity>
-          )}
+          {request.status !== 'pending' &&
+            request.status !== 'cancelled' &&
+            request.providerId && (
+              <TouchableOpacity
+                style={styles.chatButton}
+                onPress={() =>
+                  router.push({
+                    pathname: '/chat-detail',
+                    params: { requestId: request.id },
+                  })
+                }
+              >
+                <MessageCircle size={20} color="white" />
+                <Text style={styles.chatButtonText}>Open Chat</Text>
+              </TouchableOpacity>
+            )}
 
           {/* Complete Job Button for Providers */}
           {canComplete && (
@@ -644,10 +909,25 @@ export default function JobDetailScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowAcceptModal(false)}
       >
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-          <View style={[styles.modalHeader, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Accept Request</Text>
-            <TouchableOpacity 
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: colors.background },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                backgroundColor: colors.surface,
+                borderBottomColor: colors.border,
+              },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Accept Request
+            </Text>
+            <TouchableOpacity
               onPress={() => setShowAcceptModal(false)}
               style={styles.closeButton}
             >
@@ -660,79 +940,187 @@ export default function JobDetailScreen() {
               <View style={styles.acceptIcon}>
                 <CheckCircle2 size={48} color={colors.success} />
               </View>
-              
-              <Text style={[styles.acceptTitle, { color: colors.text }]}>Accept This Request?</Text>
-              <Text style={[styles.acceptSubtitle, { color: colors.textSecondary }]}>
-                You're about to accept a {getServiceDisplayName(request.serviceType).toLowerCase()} request from {request.truckerName}
+
+              <Text style={[styles.acceptTitle, { color: colors.text }]}>
+                Accept This Request?
+              </Text>
+              <Text
+                style={[styles.acceptSubtitle, { color: colors.textSecondary }]}
+              >
+                You are about to accept a{' '}
+                {getServiceDisplayName(request.serviceType).toLowerCase()}{' '}
+                request from {request.truckerName}re about to accept a{' '}
+                {getServiceDisplayName(request.serviceType).toLowerCase()}{' '}
+                request from {request.truckerName}
               </Text>
 
-              <View style={[styles.requestSummary, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View
+                style={[
+                  styles.requestSummary,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
+              >
                 <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Service Type:</Text>
-                  <Text style={[styles.summaryValue, { color: colors.text }]}>{getServiceDisplayName(request.serviceType)}</Text>
+                  <Text
+                    style={[
+                      styles.summaryLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Service Type:
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: colors.text }]}>
+                    {getServiceDisplayName(request.serviceType)}
+                  </Text>
                 </View>
                 <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Location:</Text>
-                  <Text style={[styles.summaryValue, { color: colors.text }]}>{request.location}</Text>
+                  <Text
+                    style={[
+                      styles.summaryLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Location:
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: colors.text }]}>
+                    {request.location}
+                  </Text>
                 </View>
                 <View style={styles.summaryItem}>
-                  <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Urgency:</Text>
-                  <Text style={[styles.summaryValue, { 
-                    color: request.urgency === 'high' ? '#ef4444' : 
-                           request.urgency === 'medium' ? '#f59e0b' : '#10b981',
-                    fontWeight: 'bold'
-                  }]}>
+                  <Text
+                    style={[
+                      styles.summaryLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Urgency:
+                  </Text>
+                  <Text
+                    style={[
+                      styles.summaryValue,
+                      {
+                        color:
+                          request.urgency === 'high'
+                            ? '#ef4444'
+                            : request.urgency === 'medium'
+                            ? '#f59e0b'
+                            : '#10b981',
+                        fontWeight: 'bold',
+                      },
+                    ]}
+                  >
                     {request.urgency.toUpperCase()}
                   </Text>
                 </View>
                 {request.estimatedCost && (
                   <View style={styles.summaryItem}>
-                    <Text style={[styles.summaryLabel, { color: colors.textSecondary }]}>Estimated Cost:</Text>
-                    <Text style={[styles.summaryValue, { color: colors.success, fontWeight: 'bold' }]}>
+                    <Text
+                      style={[
+                        styles.summaryLabel,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      Estimated Cost:
+                    </Text>
+                    <Text
+                      style={[
+                        styles.summaryValue,
+                        { color: colors.success, fontWeight: 'bold' },
+                      ]}
+                    >
                       ${request.estimatedCost}
                     </Text>
                   </View>
                 )}
               </View>
 
-              <View style={[styles.feeNotice, { backgroundColor: colors.warning + '20', borderColor: colors.warning + '40' }]}>
+              <View
+                style={[
+                  styles.feeNotice,
+                  {
+                    backgroundColor: colors.warning + '20',
+                    borderColor: colors.warning + '40',
+                  },
+                ]}
+              >
                 <DollarSign size={20} color={colors.warning} />
                 <View style={styles.feeText}>
-                  <Text style={[styles.feeTitle, { color: colors.warning }]}>Lead Fee Notice</Text>
-                  <Text style={[styles.feeDescription, { color: colors.warning }]}>
-                    A $5 lead fee will be charged to both you and the trucker when you accept this request. This ensures serious commitment from both parties.
+                  <Text style={[styles.feeTitle, { color: colors.warning }]}>
+                    Lead Fee Notice
+                  </Text>
+                  <Text
+                    style={[styles.feeDescription, { color: colors.warning }]}
+                  >
+                    A $5 lead fee will be charged to both you and the trucker
+                    when you accept this request. This ensures serious
+                    commitment from both parties.
                   </Text>
                 </View>
               </View>
 
-              <View style={[styles.benefitsSection, { backgroundColor: colors.success + '20', borderColor: colors.success + '40' }]}>
-                <Text style={[styles.benefitsTitle, { color: colors.success }]}>What happens next:</Text>
+              <View
+                style={[
+                  styles.benefitsSection,
+                  {
+                    backgroundColor: colors.success + '20',
+                    borderColor: colors.success + '40',
+                  },
+                ]}
+              >
+                <Text style={[styles.benefitsTitle, { color: colors.success }]}>
+                  What happens next:
+                </Text>
                 <View style={styles.benefitItem}>
                   <CheckCircle2 size={16} color={colors.success} />
-                  <Text style={[styles.benefitText, { color: colors.success }]}>You'll be connected with the trucker via chat</Text>
+                  <Text style={[styles.benefitText, { color: colors.success }]}>
+                    You&apos;ll be connected with the trucker via chat
+                  </Text>
                 </View>
                 <View style={styles.benefitItem}>
                   <CheckCircle2 size={16} color={colors.success} />
-                  <Text style={[styles.benefitText, { color: colors.success }]}>You can coordinate location and service details</Text>
+                  <Text style={[styles.benefitText, { color: colors.success }]}>
+                    You can coordinate location and service details
+                  </Text>
                 </View>
                 <View style={styles.benefitItem}>
                   <CheckCircle2 size={16} color={colors.success} />
-                  <Text style={[styles.benefitText, { color: colors.success }]}>Get paid directly by the trucker for your services</Text>
+                  <Text style={[styles.benefitText, { color: colors.success }]}>
+                    Get paid directly by the trucker for your services
+                  </Text>
                 </View>
               </View>
             </View>
           </ScrollView>
 
-          <View style={[styles.modalActions, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          <View
+            style={[
+              styles.modalActions,
+              {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.border,
+              },
+            ]}
+          >
             <TouchableOpacity
               style={[styles.cancelButton, { backgroundColor: colors.card }]}
               onPress={() => setShowAcceptModal(false)}
             >
-              <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>Cancel</Text>
+              <Text
+                style={[
+                  styles.cancelButtonText,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                Cancel
+              </Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
-              style={[styles.confirmAcceptButton, { backgroundColor: colors.success }, isAccepting && styles.confirmAcceptButtonDisabled]}
+              style={[
+                styles.confirmAcceptButton,
+                { backgroundColor: colors.success },
+                isAccepting && styles.confirmAcceptButtonDisabled,
+              ]}
               onPress={handleAcceptRequest}
               disabled={isAccepting}
             >
@@ -741,7 +1129,9 @@ export default function JobDetailScreen() {
               ) : (
                 <>
                   <CheckCircle2 size={16} color="white" />
-                  <Text style={styles.confirmAcceptButtonText}>Accept Request</Text>
+                  <Text style={styles.confirmAcceptButtonText}>
+                    Accept Request
+                  </Text>
                 </>
               )}
             </TouchableOpacity>
@@ -756,10 +1146,25 @@ export default function JobDetailScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowCompleteModal(false)}
       >
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-          <View style={[styles.modalHeader, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-            <Text style={[styles.modalTitle, { color: colors.text }]}>Rate Your Experience</Text>
-            <TouchableOpacity 
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: colors.background },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                backgroundColor: colors.surface,
+                borderBottomColor: colors.border,
+              },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Rate Your Experience
+            </Text>
+            <TouchableOpacity
               onPress={() => setShowCompleteModal(false)}
               style={styles.closeButton}
             >
@@ -769,34 +1174,59 @@ export default function JobDetailScreen() {
 
           <ScrollView style={styles.modalContent}>
             <View style={styles.providerInfo}>
-              <View style={[styles.providerLogo, { backgroundColor: '#ea580c' }]}>
+              <View
+                style={[styles.providerLogo, { backgroundColor: '#ea580c' }]}
+              >
                 <Shield size={32} color="white" />
               </View>
-              <Text style={[styles.providerName, { color: colors.text }]}>{request.providerName}</Text>
-              <Text style={[styles.serviceCompleted, { color: colors.success }]}>Service Completed Successfully!</Text>
+              <Text style={[styles.providerName, { color: colors.text }]}>
+                {request.providerName}
+              </Text>
+              <Text
+                style={[styles.serviceCompleted, { color: colors.success }]}
+              >
+                Service Completed Successfully!
+              </Text>
             </View>
 
             <View style={styles.ratingSection}>
-              <Text style={[styles.ratingTitle, { color: colors.text }]}>How was your experience?</Text>
-              <Text style={[styles.ratingSubtitle, { color: colors.textSecondary }]}>Rate the service provider</Text>
-              
+              <Text style={[styles.ratingTitle, { color: colors.text }]}>
+                How was your experience?
+              </Text>
+              <Text
+                style={[styles.ratingSubtitle, { color: colors.textSecondary }]}
+              >
+                Rate the service provider
+              </Text>
+
               <StarRating rating={rating} onRatingChange={setRating} />
-              
+
               {rating > 0 && (
-                <Text style={[styles.ratingText, { color: colors.textSecondary }]}>
-                  {rating === 1 && "Poor - Service needs improvement"}
-                  {rating === 2 && "Fair - Service was below expectations"}
-                  {rating === 3 && "Good - Service met expectations"}
-                  {rating === 4 && "Very Good - Service exceeded expectations"}
-                  {rating === 5 && "Excellent - Outstanding service!"}
+                <Text
+                  style={[styles.ratingText, { color: colors.textSecondary }]}
+                >
+                  {rating === 1 && 'Poor - Service needs improvement'}
+                  {rating === 2 && 'Fair - Service was below expectations'}
+                  {rating === 3 && 'Good - Service met expectations'}
+                  {rating === 4 && 'Very Good - Service exceeded expectations'}
+                  {rating === 5 && 'Excellent - Outstanding service!'}
                 </Text>
               )}
             </View>
 
             <View style={styles.feedbackSection}>
-              <Text style={[styles.feedbackTitle, { color: colors.text }]}>Additional Feedback (Optional)</Text>
+              <Text style={[styles.feedbackTitle, { color: colors.text }]}>
+                Additional Feedback (Optional)
+              </Text>
               <TextInput
-                style={[styles.feedbackInput, { backgroundColor: colors.surface, borderColor: colors.border, color: colors.text }]}
+                style={[
+                  styles.feedbackInput,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                    color: colors.text,
+                  },
+                ]}
                 value={feedback}
                 onChangeText={setFeedback}
                 placeholder="Share your experience to help other truckers..."
@@ -806,40 +1236,101 @@ export default function JobDetailScreen() {
                 textAlignVertical="top"
                 maxLength={300}
               />
-              <Text style={[styles.characterCount, { color: colors.textSecondary }]}>{feedback.length}/300</Text>
+              <Text
+                style={[styles.characterCount, { color: colors.textSecondary }]}
+              >
+                {feedback.length}/300
+              </Text>
             </View>
 
-            <View style={[styles.serviceDetails, { backgroundColor: colors.card, borderColor: colors.border }]}>
-              <Text style={[styles.serviceDetailsTitle, { color: colors.text }]}>Service Summary</Text>
+            <View
+              style={[
+                styles.serviceDetails,
+                { backgroundColor: colors.card, borderColor: colors.border },
+              ]}
+            >
+              <Text
+                style={[styles.serviceDetailsTitle, { color: colors.text }]}
+              >
+                Service Summary
+              </Text>
               <View style={styles.serviceDetailItem}>
-                <Text style={[styles.serviceDetailLabel, { color: colors.textSecondary }]}>Service Type:</Text>
-                <Text style={[styles.serviceDetailValue, { color: colors.text }]}>
+                <Text
+                  style={[
+                    styles.serviceDetailLabel,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Service Type:
+                </Text>
+                <Text
+                  style={[styles.serviceDetailValue, { color: colors.text }]}
+                >
                   {getServiceDisplayName(request.serviceType)}
                 </Text>
               </View>
               <View style={styles.serviceDetailItem}>
-                <Text style={[styles.serviceDetailLabel, { color: colors.textSecondary }]}>Location:</Text>
-                <Text style={[styles.serviceDetailValue, { color: colors.text }]}>{request.location}</Text>
+                <Text
+                  style={[
+                    styles.serviceDetailLabel,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Location:
+                </Text>
+                <Text
+                  style={[styles.serviceDetailValue, { color: colors.text }]}
+                >
+                  {request.location}
+                </Text>
               </View>
               {request.estimatedCost && (
                 <View style={styles.serviceDetailItem}>
-                  <Text style={[styles.serviceDetailLabel, { color: colors.textSecondary }]}>Estimated Cost:</Text>
-                  <Text style={[styles.serviceDetailValue, { color: colors.text }]}>${request.estimatedCost}</Text>
+                  <Text
+                    style={[
+                      styles.serviceDetailLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Estimated Cost:
+                  </Text>
+                  <Text
+                    style={[styles.serviceDetailValue, { color: colors.text }]}
+                  >
+                    ${request.estimatedCost}
+                  </Text>
                 </View>
               )}
             </View>
           </ScrollView>
 
-          <View style={[styles.modalActions, { backgroundColor: colors.surface, borderTopColor: colors.border }]}>
+          <View
+            style={[
+              styles.modalActions,
+              {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.border,
+              },
+            ]}
+          >
             <TouchableOpacity
               style={[styles.skipButton, { backgroundColor: colors.card }]}
               onPress={() => setShowCompleteModal(false)}
             >
-              <Text style={[styles.skipButtonText, { color: colors.textSecondary }]}>Skip for Now</Text>
+              <Text
+                style={[styles.skipButtonText, { color: colors.textSecondary }]}
+              >
+                Skip for Now
+              </Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
-              style={[styles.submitRatingButton, { backgroundColor: colors.success }, (rating === 0 || isCompleting) && styles.submitRatingButtonDisabled]}
+              style={[
+                styles.submitRatingButton,
+                { backgroundColor: colors.success },
+                (rating === 0 || isCompleting) &&
+                  styles.submitRatingButtonDisabled,
+              ]}
               onPress={handleRateService}
               disabled={rating === 0 || isCompleting}
             >
@@ -848,7 +1339,9 @@ export default function JobDetailScreen() {
               ) : (
                 <>
                   <Star size={16} color="white" />
-                  <Text style={styles.submitRatingButtonText}>Submit Rating</Text>
+                  <Text style={styles.submitRatingButtonText}>
+                    Submit Rating
+                  </Text>
                 </>
               )}
             </TouchableOpacity>

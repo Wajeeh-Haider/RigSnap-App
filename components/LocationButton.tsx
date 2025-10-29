@@ -5,10 +5,14 @@ import {
   TouchableOpacity,
   StyleSheet,
   Alert,
-  ActivityIndicator
+  ActivityIndicator,
 } from 'react-native';
 import { MapPin, Navigation, Share2, Clock } from 'lucide-react-native';
-import { mapsService, formatLocationForMaps, isValidMapLocation, type MapLocation } from '@/utils/maps';
+import {
+  mapsService,
+  formatLocationForMaps,
+  isValidMapLocation,
+} from '@/utils/maps';
 
 interface LocationButtonProps {
   location: string;
@@ -31,7 +35,7 @@ export default function LocationButton({
   userLocation,
   style,
   size = 'medium',
-  variant = 'primary'
+  variant = 'primary',
 }: LocationButtonProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [travelInfo, setTravelInfo] = useState<{
@@ -56,11 +60,13 @@ export default function LocationButton({
     try {
       await mapsService.openDirections({
         destination: mapLocation,
-        origin: userLocation ? {
-          latitude: userLocation.latitude,
-          longitude: userLocation.longitude
-        } : undefined,
-        mode: 'driving'
+        origin: userLocation
+          ? {
+              latitude: userLocation.latitude,
+              longitude: userLocation.longitude,
+            }
+          : undefined,
+        mode: 'driving',
       });
     } catch (error) {
       console.error('Failed to open directions:', error);
@@ -91,11 +97,9 @@ export default function LocationButton({
 
   const handleShareLocation = async () => {
     if (!isValidLocation) {
-      Alert.alert(
-        'Invalid Location',
-        'Unable to share this location.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Invalid Location', 'Unable to share this location.', [
+        { text: 'OK' },
+      ]);
       return;
     }
 
@@ -121,11 +125,11 @@ export default function LocationButton({
       const info = await mapsService.getDirectionsInfo(
         {
           latitude: userLocation.latitude,
-          longitude: userLocation.longitude
+          longitude: userLocation.longitude,
         },
         mapLocation
       );
-      
+
       if (info) {
         setTravelInfo(info);
         Alert.alert(
@@ -133,7 +137,7 @@ export default function LocationButton({
           `Distance: ${info.distance}\nEstimated time: ${info.duration}`,
           [
             { text: 'Get Directions', onPress: handleGetDirections },
-            { text: 'OK', style: 'cancel' }
+            { text: 'OK', style: 'cancel' },
           ]
         );
       }
@@ -159,21 +163,33 @@ export default function LocationButton({
   const getButtonStyle = () => {
     const baseStyle = [styles.button];
     const buttonSize = getButtonSize();
-    
+
     switch (variant) {
       case 'secondary':
-        return [...baseStyle, styles.secondaryButton, { padding: buttonSize.padding }];
+        return [
+          ...baseStyle,
+          styles.secondaryButton,
+          { padding: buttonSize.padding },
+        ];
       case 'outline':
-        return [...baseStyle, styles.outlineButton, { padding: buttonSize.padding }];
+        return [
+          ...baseStyle,
+          styles.outlineButton,
+          { padding: buttonSize.padding },
+        ];
       default:
-        return [...baseStyle, styles.primaryButton, { padding: buttonSize.padding }];
+        return [
+          ...baseStyle,
+          styles.primaryButton,
+          { padding: buttonSize.padding },
+        ];
     }
   };
 
   const getTextStyle = () => {
     const buttonSize = getButtonSize();
     const baseStyle = [styles.buttonText, { fontSize: buttonSize.fontSize }];
-    
+
     switch (variant) {
       case 'secondary':
         return [...baseStyle, styles.secondaryText];
@@ -189,9 +205,21 @@ export default function LocationButton({
   if (!isValidLocation) {
     return (
       <View style={[styles.container, style]}>
-        <View style={[styles.button, styles.disabledButton, { padding: buttonSize.padding }]}>
+        <View
+          style={[
+            styles.button,
+            styles.disabledButton,
+            { padding: buttonSize.padding },
+          ]}
+        >
           <MapPin size={buttonSize.iconSize} color="#9ca3af" />
-          <Text style={[styles.buttonText, styles.disabledText, { fontSize: buttonSize.fontSize }]}>
+          <Text
+            style={[
+              styles.buttonText,
+              styles.disabledText,
+              { fontSize: buttonSize.fontSize },
+            ]}
+          >
             Invalid Location
           </Text>
         </View>
@@ -208,13 +236,22 @@ export default function LocationButton({
         disabled={isLoading}
       >
         {isLoading ? (
-          <ActivityIndicator size="small" color={variant === 'primary' ? 'white' : '#2563eb'} />
+          <ActivityIndicator
+            size="small"
+            color={variant === 'primary' ? 'white' : '#2563eb'}
+          />
         ) : (
           <>
             {showDirections ? (
-              <Navigation size={buttonSize.iconSize} color={variant === 'primary' ? 'white' : '#2563eb'} />
+              <Navigation
+                size={buttonSize.iconSize}
+                color={variant === 'primary' ? 'white' : '#2563eb'}
+              />
             ) : (
-              <MapPin size={buttonSize.iconSize} color={variant === 'primary' ? 'white' : '#2563eb'} />
+              <MapPin
+                size={buttonSize.iconSize}
+                color={variant === 'primary' ? 'white' : '#2563eb'}
+              />
             )}
             <Text style={getTextStyle()}>
               {showDirections ? 'Get Directions' : 'View on Map'}
@@ -238,7 +275,7 @@ export default function LocationButton({
               </Text>
             </TouchableOpacity>
           )}
-          
+
           {showShare && (
             <TouchableOpacity
               style={styles.secondaryAction}

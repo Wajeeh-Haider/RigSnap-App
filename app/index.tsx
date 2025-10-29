@@ -2,14 +2,22 @@ import { useEffect } from 'react';
 import { Redirect } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { View, ActivityIndicator, StyleSheet, Text } from 'react-native';
+import * as React from 'react';
 
 export default function IndexScreen() {
   const { isAuthenticated, isLoading, user } = useAuth();
 
   // Add timeout to prevent infinite loading
   useEffect(() => {
-    console.log('IndexScreen - isLoading:', isLoading, 'isAuthenticated:', isAuthenticated, 'user:', !!user);
-    
+    console.log(
+      'IndexScreen - isLoading:',
+      isLoading,
+      'isAuthenticated:',
+      isAuthenticated,
+      'user:',
+      !!user
+    );
+
     const timeout = setTimeout(() => {
       if (isLoading) {
         console.warn('Loading timeout - redirecting to login');

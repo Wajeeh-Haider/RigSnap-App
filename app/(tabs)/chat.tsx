@@ -11,7 +11,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { MessageCircle, Clock, Truck, Shield } from 'lucide-react-native';
+import { MessageCircle, Truck, Shield } from 'lucide-react-native';
 
 export default function ChatListScreen() {
   const { user } = useAuth();
@@ -22,12 +22,13 @@ export default function ChatListScreen() {
   if (!user) return null;
 
   const userChats = getUserChats(user.id);
-  
+
   // Calculate unread count from actual messages (only from other users)
-  const totalUnreadCount = messages.filter(message => 
-    message.senderId !== user.id && 
-    !message.isRead &&
-    userChats.some(chat => chat.requestId === message.requestId)
+  const totalUnreadCount = messages.filter(
+    (message) =>
+      message.senderId !== user.id &&
+      !message.isRead &&
+      userChats.some((chat) => chat.requestId === message.requestId)
   ).length;
 
   const formatTime = (timestamp: string) => {
@@ -49,21 +50,28 @@ export default function ChatListScreen() {
       return {
         name: chat.providerName,
         role: 'provider' as const,
-        icon: Shield
+        icon: Shield,
       };
     } else {
       return {
         name: chat.truckerName,
         role: 'trucker' as const,
-        icon: Truck
+        icon: Truck,
       };
     }
   };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
-        <Text style={[styles.title, { color: colors.text }]}>{t('chat.title')}</Text>
+      <View
+        style={[
+          styles.header,
+          { backgroundColor: colors.surface, borderBottomColor: colors.border },
+        ]}
+      >
+        <Text style={[styles.title, { color: colors.text }]}>
+          {t('chat.title')}
+        </Text>
         {totalUnreadCount > 0 && (
           <View style={styles.headerBadge}>
             <Text style={styles.headerBadgeText}>
@@ -72,10 +80,9 @@ export default function ChatListScreen() {
           </View>
         )}
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          {user.role === 'trucker' 
+          {user.role === 'trucker'
             ? t('chat.messagesWillAppear')
-            : t('chat.messagesWillAppearProvider')
-          }
+            : t('chat.messagesWillAppearProvider')}
         </Text>
       </View>
 
@@ -86,65 +93,87 @@ export default function ChatListScreen() {
             {t('chat.noMessagesYet')}
           </Text>
           <Text style={[styles.emptySubtitle, { color: colors.textSecondary }]}>
-            {user.role === 'trucker' 
+            {user.role === 'trucker'
               ? t('chat.messagesWillAppear')
-              : t('chat.messagesWillAppearProvider')
-            }
+              : t('chat.messagesWillAppearProvider')}
           </Text>
         </View>
       ) : (
-        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          style={styles.scrollView}
+          showsVerticalScrollIndicator={false}
+        >
           {userChats.map((chat) => {
             const otherParticipant = getOtherParticipant(chat);
             const ParticipantIcon = otherParticipant.icon;
-            
+
             // Calculate actual unread count for this chat from messages
-            const chatUnreadCount = messages.filter(message => 
-              message.requestId === chat.requestId && 
-              message.senderId !== user.id && 
-              !message.isRead
+            const chatUnreadCount = messages.filter(
+              (message) =>
+                message.requestId === chat.requestId &&
+                message.senderId !== user.id &&
+                !message.isRead
             ).length;
             const hasUnread = chatUnreadCount > 0;
-            
+
             return (
               <TouchableOpacity
                 key={chat.id}
                 style={[
-                  styles.chatCard, 
-                  { backgroundColor: colors.surface, borderColor: colors.border },
-                  hasUnread && styles.chatCardUnread
+                  styles.chatCard,
+                  {
+                    backgroundColor: colors.surface,
+                    borderColor: colors.border,
+                  },
+                  hasUnread && styles.chatCardUnread,
                 ]}
-                onPress={() => router.push({
-                  pathname: '/chat-detail',
-                  params: { requestId: chat.requestId }
-                })}
+                onPress={() =>
+                  router.push({
+                    pathname: '/chat-detail',
+                    params: { requestId: chat.requestId },
+                  })
+                }
                 activeOpacity={0.7}
               >
                 <View style={styles.avatarSection}>
-                  <View style={[
-                    styles.logoContainer,
-                    { backgroundColor: otherParticipant.role === 'trucker' ? '#2563eb' : '#ea580c' }
-                  ]}>
+                  <View
+                    style={[
+                      styles.logoContainer,
+                      {
+                        backgroundColor:
+                          otherParticipant.role === 'trucker'
+                            ? '#2563eb'
+                            : '#ea580c',
+                      },
+                    ]}
+                  >
                     <ParticipantIcon size={24} color="white" />
                   </View>
-                  <View style={[
-                    styles.roleIcon,
-                    { backgroundColor: otherParticipant.role === 'trucker' ? '#2563eb' : '#ea580c' }
-                  ]}>
+                  <View
+                    style={[
+                      {
+                        backgroundColor:
+                          otherParticipant.role === 'trucker'
+                            ? '#2563eb'
+                            : '#ea580c',
+                      },
+                    ]}
+                  >
                     <ParticipantIcon size={12} color="white" />
                   </View>
-                  {hasUnread && (
-                    <View style={styles.unreadIndicator} />
-                  )}
+                  {hasUnread && <View style={styles.unreadIndicator} />}
                 </View>
 
                 <View style={styles.contentSection}>
                   <View style={styles.topRow}>
-                    <Text style={[
-                      styles.participantName, 
-                      { color: colors.text },
-                      hasUnread && styles.participantNameUnread
-                    ]} numberOfLines={1}>
+                    <Text
+                      style={[
+                        styles.participantName,
+                        { color: colors.text },
+                        hasUnread && styles.participantNameUnread,
+                      ]}
+                      numberOfLines={1}
+                    >
                       {otherParticipant.name}
                     </Text>
                     <View style={styles.rightSection}>
@@ -155,25 +184,41 @@ export default function ChatListScreen() {
                           </Text>
                         </View>
                       )}
-                      <Text style={[styles.timeText, { color: colors.textSecondary }]}>
-                        {chat.lastMessageTime ? formatTime(chat.lastMessageTime) : ''}
+                      <Text
+                        style={[
+                          styles.timeText,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
+                        {chat.lastMessageTime
+                          ? formatTime(chat.lastMessageTime)
+                          : ''}
                       </Text>
                     </View>
                   </View>
 
-                  <Text style={[
-                    styles.lastMessage, 
-                    { color: colors.textSecondary },
-                    hasUnread && { color: colors.text, fontWeight: '500' }
-                  ]} numberOfLines={2}>
+                  <Text
+                    style={[
+                      styles.lastMessage,
+                      { color: colors.textSecondary },
+                      hasUnread && { color: colors.text, fontWeight: '500' },
+                    ]}
+                    numberOfLines={2}
+                  >
                     {chat.lastMessage || 'No messages yet'}
                   </Text>
 
                   <View style={styles.bottomRow}>
-                    <View style={[
-                      styles.statusBadge,
-                      { backgroundColor: chat.isActive ? '#10b981' : '#6b7280' }
-                    ]}>
+                    <View
+                      style={[
+                        styles.statusBadge,
+                        {
+                          backgroundColor: chat.isActive
+                            ? '#10b981'
+                            : '#6b7280',
+                        },
+                      ]}
+                    >
                       <Text style={styles.statusText}>
                         {chat.isActive ? t('chat.active') : t('chat.completed')}
                       </Text>

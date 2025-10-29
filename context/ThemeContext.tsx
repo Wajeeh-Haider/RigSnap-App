@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import * as React from 'react';
+import {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface ThemeContextType {
@@ -56,7 +63,6 @@ const THEME_STORAGE_KEY = '@rigsnap_theme';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [isDarkMode, setIsDarkMode] = useState(false);
-
   useEffect(() => {
     loadThemePreference();
   }, []);
@@ -85,11 +91,13 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
   const colors = isDarkMode ? darkColors : lightColors;
 
   return (
-    <ThemeContext.Provider value={{
-      isDarkMode,
-      toggleDarkMode,
-      colors,
-    }}>
+    <ThemeContext.Provider
+      value={{
+        isDarkMode,
+        toggleDarkMode,
+        colors,
+      }}
+    >
       {children}
     </ThemeContext.Provider>
   );
