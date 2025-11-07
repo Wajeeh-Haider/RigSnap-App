@@ -1,14 +1,36 @@
 {
+  "cli": {
+    "version": ">= 5.0.0"
+  },
   "build": {
-    "production": {
-      "android": {
-        "buildType": "apk"
-      }
-    },
+    // Android Preview APK
     "preview": {
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
       }
+    },
+
+    // Android Production APK
+    "production": {
+      "android": {
+        "buildType": "apk",
+        "gradleCommand": ":app:assembleRelease"
+      }
+    },
+
+    // iOS Production (for TestFlight & App Store)
+    "production-ios": {
+      "distribution": "store",
+      "ios": {
+        "resourceClass": "m-medium"
+      }
+    }
+  },
+  "submit": {
+    "production-ios": {},
+    "production": {
+      "ios": {}
     }
   }
 }

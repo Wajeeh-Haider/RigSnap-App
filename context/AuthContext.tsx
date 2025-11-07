@@ -170,7 +170,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    const initTimeout: NodeJS.Timeout;
+    // const initTimeout: NodeJS.Timeout;
 
     const initializeAuth = async () => {
       try {
@@ -270,11 +270,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
-      mounted = false;
-      if (initTimeout) {
-        clearTimeout(initTimeout);
-      }
-      subscription.unsubscribe();
+      // mounted = false;
+      // if (initTimeout) {
+      //   clearTimeout(initTimeout);
+      // }
+      // subscription.unsubscribe();
     };
   }, []);
 
@@ -334,6 +334,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         email: userData.email,
         password: userData.password,
         options: {
+          emailRedirectTo: 'myapp://auth/confirm',
           data: {
             firstName: userData.firstName,
             lastName: userData.lastName,
@@ -352,7 +353,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
 
       if (error) {
-        console.log('Signup auth error:', error.message);
+        console.error('Signup auth error details:', {
+          message: error.message,
+          status: error.status,
+          code: error.code || 'no code'
+        });
         return { success: false, error: error.message };
       }
 
