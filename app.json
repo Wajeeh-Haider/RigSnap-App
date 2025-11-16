@@ -12,7 +12,6 @@
     },
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
-    "newArchEnabled": true,
     "ios": {
       "bundleIdentifier": "com.alexchern.rigsnap",
       "buildNumber": "24",
