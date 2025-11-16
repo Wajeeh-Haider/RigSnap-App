@@ -5,7 +5,7 @@ import { supabase } from '../lib/supabase';
 export const STRIPE_PUBLISHABLE_KEY = 'pk_test_51STTDeHgLLh6TNiAZ6Psy2pPZ3qvptzL1JEhHuhzRrTTo0BTrE6aQgp35HnRNR7xHmy75u7zS5u9ZvaYwGFpxbvZ002gnzYpF6';
 
 // Backend API URL configuration
-const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'http://localhost:3000';
+const BACKEND_URL = process.env.EXPO_PUBLIC_BACKEND_URL || 'https://rigsnap-backend-vqqg.vercel.app/';
 
 // Temporary flag to bypass payments for testing when backend is not available
 const BYPASS_PAYMENTS_FOR_TESTING = false;

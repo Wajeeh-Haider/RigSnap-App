@@ -5,11 +5,15 @@
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
+    "splash": {
+      "image": "./assets/images/icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      // "supportsTablet": true,
       "bundleIdentifier": "com.alexchern.rigsnap",
       "buildNumber": "24",
       "infoPlist": {
@@ -17,6 +21,10 @@
         "NSCameraUsageDescription": "RigSnap uses the camera to capture photos of vehicle issues and documentation within service requests.",
         "NSLocationWhenInUseUsageDescription": "RigSnap uses your location to show nearby service providers, calculate routes, and display job locations while you use the app."
       }
+    },
+    "android": {
+      "package": "com.alexchern.rigsnap",
+      "permissions": ["CAMERA", "ACCESS_FINE_LOCATION", "INTERNET"]
     },
     "web": {
       "bundler": "metro",
@@ -30,14 +38,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "5dae1e10-3c70-467a-b325-786d99764f10"
+        "projectId": "0e96c672-5ce2-4215-b363-584fe13554ce"
       }
     },
-    "android": {
-      "package": "com.alexchern.rigsnap"
-    },
-    "owner": "saqlainch12"
+    "owner": "muaz628"
   }
 }
-
-//com.axcher.rigsnap
