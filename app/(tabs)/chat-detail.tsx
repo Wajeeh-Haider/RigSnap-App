@@ -11,6 +11,7 @@ import {
   Alert,
   Modal,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
@@ -28,6 +29,8 @@ import {
   Star,
   X,
 } from 'lucide-react-native';
+import { ChatMessage } from '@/types';
+import { subscribeToMessages } from '@/utils/chatOperations';
 
 export default function ChatDetailScreen() {
   const params = useLocalSearchParams();
@@ -44,31 +47,102 @@ export default function ChatDetailScreen() {
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const requestId = params.requestId as string;
-  const messages = getChatMessages(requestId);
   const request = requests.find((r) => r.id === requestId);
 
+  // Load messages on component mount and set up realtime subscription
   useEffect(() => {
-    if (user && requestId) {
-      // Mark messages as read when entering the chat
-      markMessagesAsRead(requestId, user.id);
+    const loadMessages = async () => {
+      if (!requestId) return;
+      
+      setIsLoadingMessages(true);
+      try {
+        const chatMessages = await getChatMessages(requestId);
+        setMessages(chatMessages);
+        
+        // Mark messages as read when entering the chat
+        if (user) {
+          await markMessagesAsRead(requestId, user.id);
+        }
+      } catch (error) {
+        console.error('Error loading messages:', error);
+      } finally {
+        setIsLoadingMessages(false);
+      }
+    };
+
+    loadMessages();
+
+    // Set up realtime subscription for new messages
+    let subscription: any = null;
+    
+    if (requestId) {
+      subscription = subscribeToMessages(
+        requestId,
+        // On new message received - INSTANT PROCESSING
+        (newMessage) => {
+          // Add message instantly without any delays
+          const messageToAdd = {
+            id: newMessage.id,
+            requestId: newMessage.request_id,
+            senderId: newMessage.sender_id,
+            senderName: newMessage.sender_id === user?.id ? user.firstName : 'Other User',
+            content: newMessage.content,
+            timestamp: newMessage.created_at,
+            messageType: newMessage.message_type || 'text',
+            isRead: newMessage.is_read || false
+          };
+
+          setMessages(prev => {
+            // Avoid duplicates and add instantly
+            const exists = prev.find(msg => msg.id === newMessage.id);
+            if (exists) return prev;
+            return [...prev, messageToAdd];
+          });
+          
+          // Instant scroll - no delay
+          requestAnimationFrame(() => {
+            scrollViewRef.current?.scrollToEnd({ animated: false });
+          });
+          
+          // Mark as read instantly if not from current user
+          if (newMessage.sender_id !== user?.id && user) {
+            markMessagesAsRead(requestId, user.id);
+          }
+        },
+        // On message updated (read status changed)
+        (updatedMessage) => {
+          console.log('Updating message read status:', updatedMessage);
+          setMessages(prev => prev.map(msg => 
+            msg.id === updatedMessage.id 
+              ? { ...msg, isRead: updatedMessage.is_read }
+              : msg
+          ));
+        }
+      );
     }
-  }, [requestId, user, markMessagesAsRead]);
 
-  // Mark messages as read when new messages arrive while viewing this chat
+    // Cleanup subscription on unmount
+    return () => {
+      if (subscription) {
+        console.log('Cleaning up realtime subscription');
+        subscription.unsubscribe();
+      }
+    };
+  }, [requestId, user?.id]);
+
+  // Scroll to bottom when messages load or new messages arrive
   useEffect(() => {
-    if (user && requestId) {
-      // Mark messages as read when new messages arrive
-      markMessagesAsRead(requestId, user.id);
-
-      // Scroll to bottom when new messages arrive
+    if (messages.length > 0) {
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
     }
-  }, [messages.length, user, requestId, markMessagesAsRead]);
+  }, [messages.length]);
 
   if (!user || !request) return null;
 
@@ -133,14 +207,50 @@ export default function ChatDetailScreen() {
   const handleSendMessage = async () => {
     if (!messageText.trim()) return;
 
-    sendMessage(
+    const messageContent = messageText.trim();
+    const tempId = `temp-${Date.now()}`;
+    setMessageText(''); // Clear input immediately for better UX
+    
+    // OPTIMISTIC UPDATE - Show your message instantly
+    const optimisticMessage = {
+      id: tempId,
       requestId,
-      user.id,
-      `${user.firstName} ${user.lastName}`,
-      user.role,
-      messageText.trim()
-    );
-    setMessageText('');
+      senderId: user.id,
+      senderName: `${user.firstName} ${user.lastName}`,
+      content: messageContent,
+      timestamp: new Date().toISOString(),
+      messageType: 'text' as const,
+      isRead: false
+    };
+
+    // Add message to UI instantly
+    setMessages(prev => [...prev, optimisticMessage]);
+    
+    // Scroll immediately
+    requestAnimationFrame(() => {
+      scrollViewRef.current?.scrollToEnd({ animated: false });
+    });
+    
+    try {
+      // Send to database in background
+      await sendMessage(
+        requestId,
+        user.id,
+        `${user.firstName} ${user.lastName}`,
+        user.role,
+        messageContent
+      );
+      
+      // Remove temp message and let realtime add the real one
+      setMessages(prev => prev.filter(msg => msg.id !== tempId));
+      
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Remove failed message and restore input
+      setMessages(prev => prev.filter(msg => msg.id !== tempId));
+      setMessageText(messageContent);
+      Alert.alert('Error', 'Failed to send message. Please try again.');
+    }
   };
 
   const handleStatusUpdate = (newStatus: 'in_progress' | 'completed') => {
@@ -454,20 +564,29 @@ export default function ChatDetailScreen() {
         ]}
         contentContainerStyle={styles.messagesContent}
       >
-        {Object.entries(groupedMessages).map(
-          ([date, dateMessages]: [string, any]) => (
-            <View key={date}>
-              <View style={styles.dateHeader}>
-                <Text style={styles.dateText}>{date}</Text>
+        {isLoadingMessages ? (
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+              Loading messages...
+            </Text>
+          </View>
+        ) : (
+          Object.entries(groupedMessages).map(
+            ([date, dateMessages]: [string, any]) => (
+              <View key={date}>
+                <View style={styles.dateHeader}>
+                  <Text style={styles.dateText}>{date}</Text>
+                </View>
+                {dateMessages.map((message: any) => (
+                  <MessageBubble
+                    key={message.id}
+                    message={message}
+                    isOwn={message.senderId === user.id}
+                  />
+                ))}
               </View>
-              {dateMessages.map((message: any) => (
-                <MessageBubble
-                  key={message.id}
-                  message={message}
-                  isOwn={message.senderId === user.id}
-                />
-              ))}
-            </View>
+            )
           )
         )}
       </ScrollView>
@@ -1217,5 +1336,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 32,
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
   },
 });

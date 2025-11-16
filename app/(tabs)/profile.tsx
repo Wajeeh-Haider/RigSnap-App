@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,9 @@ import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { StripeProvider, useStripe, useConfirmSetupIntent, CardForm } from '@stripe/stripe-react-native';
+import { paymentMethodService } from '@/utils/paymentOperations';
+import { PaymentMethod, STRIPE_PUBLISHABLE_KEY, createSetupIntent } from '@/utils/stripe';
 import {
   User,
   Settings,
@@ -38,28 +41,15 @@ export default function ProfileScreen() {
   const { user, logout, updateProfile } = useAuth();
   const { colors } = useTheme();
   const { t } = useLanguage();
+  const { confirmSetupIntent } = useConfirmSetupIntent();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [editedUser, setEditedUser] = useState(user);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentMethods, setPaymentMethods] = useState([
-    {
-      id: '1',
-      type: 'visa',
-      last4: '4242',
-      expiryMonth: '12',
-      expiryYear: '2025',
-      isDefault: true,
-    },
-    {
-      id: '2',
-      type: 'mastercard',
-      last4: '5555',
-      expiryMonth: '08',
-      expiryYear: '2026',
-      isDefault: false,
-    },
-  ]);
+  const [showStripeCardModal, setShowStripeCardModal] = useState(false);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
+  const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(false);
+  const [cardFormComplete, setCardFormComplete] = useState(false);
   const [newCard, setNewCard] = useState({
     number: '',
     expiryMonth: '',
@@ -68,7 +58,29 @@ export default function ProfileScreen() {
     name: '',
   });
 
+  // Fetch payment methods on component mount
+  useEffect(() => {
+    if (user?.id) {
+      fetchPaymentMethods();
+    }
+  }, [user?.id]);
+
   if (!user) return null;
+
+  const fetchPaymentMethods = async () => {
+    if (!user?.id) return;
+    
+    setIsLoadingPaymentMethods(true);
+    try {
+      const methods = await paymentMethodService.fetchUserPaymentMethods(user.id);
+      setPaymentMethods(methods);
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
+      Alert.alert('Error', 'Failed to load payment methods');
+    } finally {
+      setIsLoadingPaymentMethods(false);
+    }
+  };
 
   const handleEdit = () => {
     setEditedUser({ ...user });
@@ -130,43 +142,237 @@ export default function ProfileScreen() {
     ]);
   };
 
-  const handleAddCard = () => {
-    if (
-      !newCard.number ||
-      !newCard.expiryMonth ||
-      !newCard.expiryYear ||
-      !newCard.cvc ||
-      !newCard.name
-    ) {
-      Alert.alert('Error', 'Please fill in all card details');
+  const handleAddCard = async () => {
+    if (!cardFormComplete || !newCard.name) {
+      Alert.alert('Error', 'Please fill in all card details and cardholder name');
       return;
     }
 
-    const cardType = newCard.number.startsWith('4')
-      ? 'visa'
-      : newCard.number.startsWith('5')
-      ? 'mastercard'
-      : 'card';
+    if (!user?.id) {
+      Alert.alert('Error', 'User not found');
+      return;
+    }
 
-    const newPaymentMethod = {
-      id: Date.now().toString(),
-      type: cardType,
-      last4: newCard.number.slice(-4),
-      expiryMonth: newCard.expiryMonth,
-      expiryYear: newCard.expiryYear,
-      isDefault: paymentMethods.length === 0,
+    setIsLoading(true);
+    
+    try {
+      // Step 1: Create a SetupIntent on the backend
+      const setupIntentResponse = await createSetupIntent(user.id);
+      
+      if (!setupIntentResponse.success || !setupIntentResponse.client_secret) {
+        Alert.alert('Error', 'Failed to initialize payment setup');
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 2: Confirm the SetupIntent with the card details
+      const { error, setupIntent } = await confirmSetupIntent(
+        setupIntentResponse.client_secret,
+        {
+          paymentMethodType: 'Card',
+          paymentMethodData: {
+            billingDetails: {
+              name: newCard.name,
+            },
+          },
+        }
+      );
+
+      if (error) {
+        console.error('Setup intent error:', error);
+        Alert.alert('Payment Error', error.message);
+        setIsLoading(false);
+        return;
+      }
+
+      if (setupIntent?.status !== 'Succeeded') {
+        Alert.alert('Error', 'Payment method setup failed');
+        setIsLoading(false);
+        return;
+      }
+
+      // Step 3: Save the payment method to our database
+      const paymentMethod = setupIntent.paymentMethod;
+      if (!paymentMethod?.id) {
+        Alert.alert('Error', 'Failed to create payment method');
+        setIsLoading(false);
+        return;
+      }
+
+      const cardBrand = paymentMethod.Card?.brand || 'unknown';
+      const last4 = paymentMethod.Card?.last4 || '****';
+      const expMonth = paymentMethod.Card?.expMonth || 0;
+      const expYear = paymentMethod.Card?.expYear || 0;
+      const isFirstCard = paymentMethods.length === 0;
+      
+      const result = await paymentMethodService.addPaymentMethod(
+        user.id,
+        paymentMethod.id, // Use real Stripe payment method ID
+        cardBrand,
+        last4,
+        expMonth,
+        expYear,
+        newCard.name,
+        isFirstCard
+      );
+
+      if (result.success) {
+        await fetchPaymentMethods(); // Refresh the list
+        setNewCard({
+          number: '',
+          expiryMonth: '',
+          expiryYear: '',
+          cvc: '',
+          name: '',
+        });
+        setCardFormComplete(false);
+        setShowPaymentModal(false);
+        Alert.alert('Success', 'Payment method added successfully!');
+      } else {
+        Alert.alert('Error', result.error || 'Failed to save payment method');
+      }
+    } catch (error) {
+      console.error('Error adding payment method:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Component for Stripe card form
+  const StripeCardComponent = () => {
+    const { confirmSetupIntent } = useConfirmSetupIntent();
+    
+    const handleSaveCard = async () => {
+      if (!cardFormComplete || !user?.id) {
+        Alert.alert('Error', 'Please complete the card form');
+        return;
+      }
+
+      setIsLoading(true);
+      
+      try {
+        // Step 1: Create setup intent
+        const setupIntentResult = await createSetupIntent(user.id);
+        
+        if (!setupIntentResult.success || !setupIntentResult.client_secret) {
+          Alert.alert('Error', setupIntentResult.error || 'Failed to create setup intent');
+          return;
+        }
+
+        // Step 2: Confirm setup intent with card
+        const { setupIntent, error } = await confirmSetupIntent(
+          setupIntentResult.client_secret,
+          {
+            paymentMethodType: 'Card',
+          }
+        );
+
+        if (error) {
+          Alert.alert('Error', error.message);
+          return;
+        }
+
+        if (setupIntent?.paymentMethodId) {
+          // Step 3: Save payment method to database
+          const paymentMethod = setupIntent.paymentMethod;
+          const isFirstCard = paymentMethods.length === 0;
+          
+          const result = await paymentMethodService.addPaymentMethod(
+            user.id,
+            setupIntent.paymentMethodId,
+            paymentMethod?.Card?.brand || 'unknown',
+            paymentMethod?.Card?.last4 || '0000',
+            paymentMethod?.Card?.expMonth || 12,
+            paymentMethod?.Card?.expYear || 2025,
+            paymentMethod?.billingDetails?.name || 'Unknown',
+            isFirstCard
+          );
+
+          if (result.success) {
+            await fetchPaymentMethods();
+            setShowStripeCardModal(false);
+            setCardFormComplete(false);
+            Alert.alert('Success', 'Payment method added successfully!');
+          } else {
+            Alert.alert('Error', result.error || 'Failed to save payment method');
+          }
+        }
+      } catch (error) {
+        console.error('Error adding payment method:', error);
+        Alert.alert('Error', 'An unexpected error occurred');
+      } finally {
+        setIsLoading(false);
+      }
     };
 
-    setPaymentMethods((prev) => [...prev, newPaymentMethod]);
-    setNewCard({
-      number: '',
-      expiryMonth: '',
-      expiryYear: '',
-      cvc: '',
-      name: '',
-    });
-    setShowPaymentModal(false);
-    Alert.alert('Success', 'Payment method added successfully!');
+    return (
+      <Modal
+        visible={showStripeCardModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowStripeCardModal(false)}
+      >
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+            <TouchableOpacity
+              onPress={() => setShowStripeCardModal(false)}
+              style={styles.cancelButton}
+            >
+              <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
+                Cancel
+              </Text>
+            </TouchableOpacity>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Add Payment Method
+            </Text>
+            <TouchableOpacity
+              onPress={handleSaveCard}
+              disabled={!cardFormComplete || isLoading}
+              style={[
+                styles.saveButton,
+                {
+                  backgroundColor: cardFormComplete && !isLoading ? '#2563eb' : colors.border,
+                },
+              ]}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <Text style={[styles.saveButtonText, { color: 'white' }]}>Save</Text>
+              )}
+            </TouchableOpacity>
+          </View>
+          
+          <View style={styles.cardFormContainer}>
+            <Text style={[styles.cardFormTitle, { color: colors.text }]}>
+              Card Details
+            </Text>
+            <Text style={[styles.cardFormSubtitle, { color: colors.textSecondary }]}>
+              Your card information is encrypted and secure
+            </Text>
+            
+            <CardForm
+              placeholders={{
+                number: '4242 4242 4242 4242',
+              }}
+              cardStyle={{
+                backgroundColor: "white",
+                textColor: colors.text,
+                placeholderColor: colors.textSecondary,
+                borderColor: colors.border,
+                borderWidth: 1,
+                borderRadius: 8,
+              }}
+              style={{ width: '100%', height: 200, marginTop: 20 }}
+              onFormComplete={(cardDetails) => {
+                setCardFormComplete(cardDetails.complete);
+              }}
+            />
+          </View>
+        </View>
+      </Modal>
+    );
   };
 
   const handleDeleteCard = (cardId: string) => {
@@ -175,7 +381,7 @@ export default function ProfileScreen() {
 
     Alert.alert(
       'Delete Payment Method',
-      `Are you sure you want to delete the ${card.type.toUpperCase()} ending in ${
+      `Are you sure you want to delete the ${card.card_brand.toUpperCase()} ending in ${
         card.last4
       }?`,
       [
@@ -183,23 +389,49 @@ export default function ProfileScreen() {
         {
           text: 'Delete',
           style: 'destructive',
-          onPress: () => {
-            setPaymentMethods((prev) => prev.filter((c) => c.id !== cardId));
-            Alert.alert('Success', 'Payment method deleted successfully!');
+          onPress: async () => {
+            setIsLoading(true);
+            try {
+              const result = await paymentMethodService.removePaymentMethod(
+                card.id,
+                card.stripe_payment_method_id
+              );
+              
+              if (result.success) {
+                await fetchPaymentMethods(); // Refresh the list
+                Alert.alert('Success', 'Payment method deleted successfully!');
+              } else {
+                Alert.alert('Error', result.error || 'Failed to delete payment method');
+              }
+            } catch (error) {
+              console.error('Error deleting payment method:', error);
+              Alert.alert('Error', 'An unexpected error occurred');
+            } finally {
+              setIsLoading(false);
+            }
           },
         },
       ]
     );
   };
 
-  const handleSetDefault = (cardId: string) => {
-    setPaymentMethods((prev) =>
-      prev.map((card) => ({
-        ...card,
-        isDefault: card.id === cardId,
-      }))
-    );
-    Alert.alert('Success', 'Default payment method updated!');
+  const handleSetDefault = async (cardId: string) => {
+    setIsLoading(true);
+    try {
+      const result = await paymentMethodService.setDefaultPaymentMethod(cardId);
+      
+      if (result.success) {
+        await fetchPaymentMethods(); // Refresh the list
+        Alert.alert('Success', 'Default payment method updated!');
+      } else {
+        Alert.alert('Error', result.error || 'Failed to update default payment method');
+      }
+    } catch (error) {
+      console.error('Error setting default payment method:', error);
+      Alert.alert('Error', 'An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const getCardIcon = (type: string) => {
@@ -223,9 +455,10 @@ export default function ProfileScreen() {
   const isTrucker = user.role === 'trucker';
 
   return (
-    <ScrollView
-      style={[styles.container, { backgroundColor: colors.background }]}
-    >
+    <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
+      <ScrollView
+        style={[styles.container, { backgroundColor: colors.background }]}
+      >
       <View
         style={[
           styles.header,
@@ -662,98 +895,109 @@ export default function ProfileScreen() {
                 </Text>
               </View>
             ) : (
-              paymentMethods.map((method) => {
-                const CardIcon = getCardIcon(method.type);
-                return (
-                  <View
-                    key={method.id}
-                    style={[
-                      styles.paymentMethod,
-                      { borderBottomColor: colors.border },
-                    ]}
-                  >
-                    <View style={styles.paymentMethodContent}>
-                      <View
-                        style={[
-                          styles.paymentMethodIcon,
-                          {
-                            backgroundColor: colors.background,
-                            borderColor: colors.border,
-                          },
-                        ]}
-                      >
-                        <CardIcon
-                          size={24}
-                          color={
-                            method.type === 'visa'
-                              ? '#1a1f71'
-                              : method.type === 'mastercard'
-                              ? '#eb001b'
-                              : '#6b7280'
-                          }
-                        />
-                      </View>
-                      <View style={styles.paymentMethodInfo}>
-                        <Text
+              isLoadingPaymentMethods ? (
+                <View style={styles.loadingContainer}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                    Loading payment methods...
+                  </Text>
+                </View>
+              ) : (
+                paymentMethods.map((method) => {
+                  const CardIcon = getCardIcon(method.card_brand);
+                  return (
+                    <View
+                      key={method.id}
+                      style={[
+                        styles.paymentMethod,
+                        { borderBottomColor: colors.border },
+                      ]}
+                    >
+                      <View style={styles.paymentMethodContent}>
+                        <View
                           style={[
-                            styles.paymentMethodTitle,
-                            { color: colors.text },
+                            styles.paymentMethodIcon,
+                            {
+                              backgroundColor: colors.background,
+                              borderColor: colors.border,
+                            },
                           ]}
                         >
-                          {method.type.toUpperCase()} •••• {method.last4}
-                        </Text>
-                        <Text
-                          style={[
-                            styles.paymentMethodExpiry,
-                            { color: colors.textSecondary },
-                          ]}
-                        >
-                          Expires {method.expiryMonth}/{method.expiryYear}
-                        </Text>
-                        {method.isDefault && (
+                          <CardIcon
+                            size={24}
+                            color={
+                              method.card_brand === 'visa'
+                                ? '#1a1f71'
+                                : method.card_brand === 'mastercard'
+                                ? '#eb001b'
+                                : '#6b7280'
+                            }
+                          />
+                        </View>
+                        <View style={styles.paymentMethodInfo}>
                           <Text
                             style={[
-                              styles.defaultBadge,
-                              { color: colors.success },
+                              styles.paymentMethodTitle,
+                              { color: colors.text },
                             ]}
                           >
-                            Default
+                            {method.card_brand.toUpperCase()} •••• {method.last4}
                           </Text>
-                        )}
-                      </View>
-                    </View>
-                    <View style={styles.paymentMethodActions}>
-                      {!method.isDefault && (
-                        <TouchableOpacity
-                          style={[
-                            styles.setDefaultButton,
-                            { backgroundColor: colors.background },
-                          ]}
-                          onPress={() => handleSetDefault(method.id)}
-                        >
                           <Text
                             style={[
-                              styles.setDefaultText,
+                              styles.paymentMethodExpiry,
                               { color: colors.textSecondary },
                             ]}
                           >
-                            Set Default
+                            Expires {method.exp_month.toString().padStart(2, '0')}/{method.exp_year}
                           </Text>
+                          {method.is_default && (
+                            <Text
+                              style={[
+                                styles.defaultBadge,
+                                { color: colors.success },
+                              ]}
+                            >
+                              Default
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+                      <View style={styles.paymentMethodActions}>
+                        {!method.is_default && (
+                          <TouchableOpacity
+                            style={[
+                              styles.setDefaultButton,
+                              { backgroundColor: colors.background },
+                            ]}
+                            onPress={() => handleSetDefault(method.id)}
+                            disabled={isLoading}
+                          >
+                            <Text
+                              style={[
+                                styles.setDefaultText,
+                                { color: colors.textSecondary },
+                              ]}
+                            >
+                              Set Default
+                            </Text>
+                          </TouchableOpacity>
+                        )}
+                        <TouchableOpacity
+                          style={[
+                            styles.deleteButton,
+                            { backgroundColor: colors.error + '20' },
+                          ]}
+                          onPress={() => handleDeleteCard(method.id)}
+                          disabled={isLoading}
+                        >
+                          <Trash2 size={16} color={colors.error} />
                         </TouchableOpacity>
-                      )}
-                      <TouchableOpacity
-                        style={[
-                          styles.deleteButton,
-                          { backgroundColor: colors.error + '20' },
-                        ]}
-                        onPress={() => handleDeleteCard(method.id)}
-                      >
-                        <Trash2 size={16} color={colors.error} />
-                      </TouchableOpacity>
+                      </View>
                     </View>
-                  </View>
-                );
-              })
+                  );
+                })
+              )
             )}
           </View>
         </View>
@@ -849,25 +1093,6 @@ export default function ProfileScreen() {
             ]}
           >
             <View style={styles.cardForm}>
-              <View
-                style={[
-                  styles.cardPreview,
-                  { backgroundColor: colors.primary },
-                ]}
-              >
-                <CreditCard size={32} color="#2563eb" />
-                <Text style={styles.cardPreviewText}>
-                  {newCard.number
-                    ? `•••• •••• •••• ${newCard.number.slice(-4)}`
-                    : '•••• •••• •••• ••••'}
-                </Text>
-                <Text style={styles.cardPreviewExpiry}>
-                  {newCard.expiryMonth && newCard.expiryYear
-                    ? `${newCard.expiryMonth}/${newCard.expiryYear}`
-                    : 'MM/YY'}
-                </Text>
-              </View>
-
               <View style={styles.formGroup}>
                 <Text style={[styles.formLabel, { color: colors.text }]}>
                   Cardholder Name
@@ -893,114 +1118,36 @@ export default function ProfileScreen() {
 
               <View style={styles.formGroup}>
                 <Text style={[styles.formLabel, { color: colors.text }]}>
-                  Card Number
+                  Card Details
                 </Text>
-                <TextInput
-                  style={[
-                    styles.formInput,
-                    {
+                <View style={[
+                  styles.cardInputContainer,
+                  {
+                    backgroundColor: 'transparent',
+                    borderColor: 'transparent',
+                  }
+                ]}>
+                  <CardForm
+                    placeholders={{
+                      number: '1234 5678 9012 3456',
+                      cvc: 'CVC',
+                    }}
+                    cardStyle={{
                       backgroundColor: colors.surface,
+                      textColor: colors.text,
+                      placeholderColor: colors.textSecondary,
+                      borderRadius: 8,
+                      borderWidth: 1,
                       borderColor: colors.border,
-                      color: colors.text,
-                    },
-                  ]}
-                  value={formatCardNumber(newCard.number)}
-                  onChangeText={(text) => {
-                    const cleaned = text.replace(/\s/g, '');
-                    if (cleaned.length <= 16) {
-                      setNewCard((prev) => ({ ...prev, number: cleaned }));
-                    }
-                  }}
-                  placeholder="1234 5678 9012 3456"
-                  placeholderTextColor={colors.textSecondary}
-                  keyboardType="numeric"
-                  maxLength={19}
-                />
-              </View>
-
-              <View style={styles.formRow}>
-                <View style={styles.formGroup}>
-                  <Text style={[styles.formLabel, { color: colors.text }]}>
-                    Expiry Month
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.formInput,
-                      {
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      },
-                    ]}
-                    value={newCard.expiryMonth}
-                    onChangeText={(text) => {
-                      if (text.length <= 2 && /^\d*$/.test(text)) {
-                        const month = parseInt(text);
-                        if (text === '' || (month >= 1 && month <= 12)) {
-                          setNewCard((prev) => ({
-                            ...prev,
-                            expiryMonth: text,
-                          }));
-                        }
-                      }
+                      fontSize: 16,
                     }}
-                    placeholder="12"
-                    placeholderTextColor={colors.textSecondary}
-                    keyboardType="numeric"
-                    maxLength={2}
-                  />
-                </View>
-
-                <View style={styles.formGroup}>
-                  <Text style={[styles.formLabel, { color: colors.text }]}>
-                    Expiry Year
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.formInput,
-                      {
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      },
-                    ]}
-                    value={newCard.expiryYear}
-                    onChangeText={(text) => {
-                      if (text.length <= 4 && /^\d*$/.test(text)) {
-                        setNewCard((prev) => ({ ...prev, expiryYear: text }));
-                      }
+                    style={{
+                      width: '100%',
+                      height: 120,
                     }}
-                    placeholder="2025"
-                    placeholderTextColor={colors.textSecondary}
-                    keyboardType="numeric"
-                    maxLength={4}
-                  />
-                </View>
-
-                <View style={styles.formGroup}>
-                  <Text style={[styles.formLabel, { color: colors.text }]}>
-                    CVC
-                  </Text>
-                  <TextInput
-                    style={[
-                      styles.formInput,
-                      {
-                        backgroundColor: colors.surface,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      },
-                    ]}
-                    value={newCard.cvc}
-                    onChangeText={(text) => {
-                      if (text.length <= 4 && /^\d*$/.test(text)) {
-                        setNewCard((prev) => ({ ...prev, cvc: text }));
-                      }
+                    onFormComplete={(cardDetails) => {
+                      setCardFormComplete(cardDetails.complete);
                     }}
-                    placeholder="123"
-                    placeholderTextColor={colors.textSecondary}
-                    keyboardType="numeric"
-                    maxLength={4}
-                    secureTextEntry
                   />
                 </View>
               </View>
@@ -1009,15 +1156,17 @@ export default function ProfileScreen() {
                 style={[
                   styles.securityNotice,
                   {
-                    backgroundColor: colors.success + '20',
-                    borderColor: colors.success + '40',
+                    backgroundColor: colors.success + '15',
+                    borderColor: colors.success + '30',
                   },
                 ]}
               >
-                <Text style={[styles.securityText, { color: colors.success }]}>
-                  🔒 Your payment information is encrypted and secure. We use
-                  industry-standard security measures to protect your data.
-                </Text>
+                <View style={styles.securityContent}>
+                  <Text style={styles.securityIcon}>🔒</Text>
+                  <Text style={[styles.securityText, { color: colors.success }]}>
+                    Your payment information is encrypted and secure. We use industry-standard security measures to protect your data.
+                  </Text>
+                </View>
               </View>
             </View>
           </ScrollView>
@@ -1058,29 +1207,28 @@ export default function ProfileScreen() {
               style={[
                 styles.addCardButton,
                 { backgroundColor: colors.primary },
-                (!newCard.number ||
-                  !newCard.expiryMonth ||
-                  !newCard.expiryYear ||
-                  !newCard.cvc ||
-                  !newCard.name) &&
+                ((!cardFormComplete || !newCard.name) || isLoading) &&
                   styles.addCardButtonDisabled,
               ]}
               onPress={handleAddCard}
-              disabled={
-                !newCard.number ||
-                !newCard.expiryMonth ||
-                !newCard.expiryYear ||
-                !newCard.cvc ||
-                !newCard.name
-              }
+              disabled={(!cardFormComplete || !newCard.name) || isLoading}
             >
-              <CreditCard size={16} color="white" />
-              <Text style={styles.addCardButtonText}>Add Card</Text>
+              {isLoading ? (
+                <ActivityIndicator size="small" color="white" />
+              ) : (
+                <CreditCard size={16} color="white" />
+              )}
+              <Text style={styles.addCardButtonText}>
+                {isLoading ? 'Adding Card...' : 'Add Card'}
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
       </Modal>
-    </ScrollView>
+      
+      <StripeCardComponent />
+      </ScrollView>
+    </StripeProvider>
   );
 }
 
@@ -1413,11 +1561,20 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     borderWidth: 1,
+    marginTop: 16,
+  },
+  securityContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  securityIcon: {
+    fontSize: 16,
   },
   securityText: {
+    flex: 1,
     fontSize: 14,
     lineHeight: 20,
-    textAlign: 'center',
   },
   modalActions: {
     flexDirection: 'row',
@@ -1445,5 +1602,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 32,
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+  },
+  loadingText: {
+    fontSize: 14,
+  },
+  saveButtonText: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  cardInputContainer: {
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    marginTop: 8,
+  },
+  cardFormContainer: {
+    padding: 24,
+    flex: 1,
+  },
+  cardFormTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    marginBottom: 8,
+  },
+  cardFormSubtitle: {
+    fontSize: 16,
+    marginBottom: 24,
   },
 });

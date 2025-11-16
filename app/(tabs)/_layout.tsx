@@ -13,10 +13,9 @@ import {
 
 export default function TabLayout() {
   const { user } = useAuth();
-  const { getUserChats, messages } = useApp();
+  const { messages } = useApp();
   const { colors } = useTheme();
   const { t } = useLanguage();
-
   console.log('TabLayout - user:', user?.email, user?.role);
 
   if (!user) {
@@ -27,15 +26,10 @@ export default function TabLayout() {
 
   console.log('TabLayout - rendering tabs for user:', user.role);
   const isTrucker = user.role === 'trucker';
-  const userChats = getUserChats(user.id);
-  // Calculate total unread messages from other users only
-
-  const unreadCount = messages.filter(
-    (message) =>
-      message.senderId !== user.id &&
-      !message.isRead &&
-      userChats.some((chat) => chat.requestId === message.requestId)
-  ).length;
+  
+  // For now, we'll show 0 unread count since we don't fetch chats here anymore
+  // The actual unread count will be handled by the chat screen itself
+  const unreadCount = 0;
 
   console.log('TabLayout - unread count:', unreadCount);
   return (

@@ -161,6 +161,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         fallbackUser.email,
         fallbackUser.role
       );
+      
+      // IMPORTANT: Save fallback user to database so it can be found by requests
+      try {
+        console.log('💾 Saving fallback user to database...');
+        const { data, error } = await supabase
+          .from('users')
+          .insert({
+            id: fallbackUser.id,
+            email: fallbackUser.email,
+            name: `${fallbackUser.firstName} ${fallbackUser.lastName}`,
+            role: fallbackUser.role,
+            location: fallbackUser.location,
+            phone: fallbackUser.phone,
+            language: fallbackUser.language,
+            rating: fallbackUser.rating,
+            join_date: fallbackUser.joinDate,
+            truck_type: fallbackUser.truckType,
+            license_number: fallbackUser.licenseNumber,
+            services: fallbackUser.services,
+            service_radius: fallbackUser.serviceRadius,
+            certifications: fallbackUser.certifications,
+          })
+          .select()
+          .single();
+          
+        if (error) {
+          console.error('Failed to save fallback user to database:', error);
+          // Still return the fallback user even if DB save fails
+        } else {
+          console.log('✅ Successfully saved fallback user to database');
+        }
+      } catch (dbError) {
+        console.error('Exception saving fallback user:', dbError);
+      }
+      
       return fallbackUser;
     } catch (error) {
       console.error('Error creating fallback user:', error);
@@ -330,25 +365,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('Starting signup process for:', userData.email);
 
+      // Ultra-minimal signup to avoid all database errors
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
         options: {
           emailRedirectTo: 'myapp://auth/confirm',
-          data: {
-            firstName: userData.firstName,
-            lastName: userData.lastName,
-            name: `${userData.firstName} ${userData.lastName}`,
-            role: userData.role,
-            location: userData.location,
-            phone: userData.phone,
-            language: userData.language,
-            truckType: userData.truckType,
-            licenseNumber: userData.licenseNumber,
-            services: userData.services,
-            serviceRadius: userData.serviceRadius,
-            certifications: userData.certifications,
-          },
+          // No metadata at all to avoid any database constraints
         },
       });
 
@@ -358,6 +381,73 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           status: error.status,
           code: error.code || 'no code'
         });
+        
+        // If the error is about database saving, try manual user profile creation
+        if (error.message.includes('Database error saving new user')) {
+          console.log('Attempting manual user profile creation...');
+          
+          // Try signing up without metadata first
+          const { data: retryData, error: retryError } = await supabase.auth.signUp({
+            email: userData.email,
+            password: userData.password,
+          });
+          
+          if (retryError) {
+            console.error('Retry signup failed:', retryError);
+            return { success: false, error: retryError.message };
+          }
+          
+          if (retryData.user) {
+            console.log('Auth user created, now creating profile manually...');
+            
+            // Direct database insert instead of using RPC function (which might be broken)
+            const { error: profileError } = await supabase
+              .from('users')
+              .insert({
+                id: retryData.user.id,
+                email: retryData.user.email,
+                name: `${userData.firstName} ${userData.lastName}`,
+                role: userData.role,
+                location: userData.location || '',
+                phone: userData.phone || '',
+                language: userData.language || 'en',
+                truck_type: userData.role === 'trucker' ? userData.truckType : null,
+                license_number: userData.role === 'trucker' ? userData.licenseNumber : null,
+                services: userData.role === 'provider' ? userData.services : null,
+                service_radius: userData.role === 'provider' ? userData.serviceRadius : null,
+                certifications: userData.role === 'provider' ? userData.certifications : null,
+              });
+            
+            if (profileError) {
+              console.error('Manual profile creation failed:', profileError);
+              // Continue anyway - the auth user was created
+            } else {
+              console.log('Manual profile creation successful');
+            }
+            
+            const newUser: User = {
+              id: retryData.user.id,
+              email: retryData.user.email!,
+              firstName: userData.firstName,
+              lastName: userData.lastName,
+              phone: userData.phone || '',
+              role: userData.role,
+              rating: 0,
+              joinDate: new Date().toISOString().split('T')[0],
+              location: userData.location,
+              language: userData.language || 'en',
+              truckType: userData.role === 'trucker' ? userData.truckType : undefined,
+              licenseNumber: userData.role === 'trucker' ? userData.licenseNumber : undefined,
+              services: userData.role === 'provider' ? userData.services : undefined,
+              serviceRadius: userData.role === 'provider' ? userData.serviceRadius : undefined,
+              certifications: userData.role === 'provider' ? userData.certifications : undefined,
+            };
+
+            setUser(newUser);
+            return { success: true };
+          }
+        }
+        
         return { success: false, error: error.message };
       }
 

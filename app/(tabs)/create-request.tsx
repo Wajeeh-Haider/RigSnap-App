@@ -300,6 +300,7 @@ export default function CreateRequestScreen() {
 
     setIsLoading(true);
     try {
+      console.log(user);
       const requestData = {
         truckerId: user.id,
         truckerName: `${user.firstName} ${user.lastName}`,
@@ -317,11 +318,12 @@ export default function CreateRequestScreen() {
         photos: photos.length > 0 ? photos : undefined,
       };
 
-      createRequest(requestData);
+      // This will now charge $5 and save to database
+      await createRequest(requestData);
 
       Alert.alert(
-        'Request Created! 🚛',
-        'Your service request has been posted. Service providers in your area will be notified and can accept your request.',
+        'Request Created! 🚛💳',
+        'Your service request has been posted and the $5 request fee has been charged. Service providers in your area will be notified and can accept your request.',
         [
           {
             text: 'View Request',
@@ -329,8 +331,13 @@ export default function CreateRequestScreen() {
           },
         ]
       );
-    } catch {
-      Alert.alert('Error', 'Failed to create request. Please try again.');
+    } catch (error: any) {
+      console.error('Error creating request:', error);
+      Alert.alert(
+        'Request Failed',
+        error.message ||
+          'Failed to create request. Please check your payment method and try again.'
+      );
     } finally {
       setIsLoading(false);
     }

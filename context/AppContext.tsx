@@ -3,10 +3,24 @@ import React, {
   useContext,
   useState,
   useCallback,
+  useEffect,
   ReactNode,
 } from 'react';
+import { Alert } from 'react-native';
 import { ServiceRequest, Lead, ChatMessage, Chat } from '@/types';
 import { useAuth } from './AuthContext';
+import { requestService } from '@/utils/paymentOperations';
+import { fetchAllRequests, fetchUserRequests, fetchAvailableRequests, fetchProviderRequests } from '@/utils/requestOperations';
+import { 
+  createChatInDB, 
+  sendMessageToDB, 
+  fetchChatMessages, 
+  fetchUserChats, 
+  markMessagesAsRead as markMessagesAsReadDB,
+  subscribeToChats,
+  Chat as DBChat,
+  Message as DBMessage
+} from '@/utils/chatOperations';
 
 interface AppContextType {
   requests: ServiceRequest[];
@@ -15,12 +29,12 @@ interface AppContextType {
   messages: ChatMessage[];
   createRequest: (
     request: Omit<ServiceRequest, 'id' | 'createdAt' | 'leadFeeCharged'>
-  ) => void;
+  ) => Promise<ServiceRequest>;
   acceptRequest: (
     requestId: string,
     providerId: string,
     providerName: string
-  ) => void;
+  ) => Promise<boolean>;
   cancelRequest: (
     requestId: string,
     providerId: string,
@@ -34,8 +48,8 @@ interface AppContextType {
   getUserRequests: (userId: string) => ServiceRequest[];
   getProviderRequests: (providerId: string) => ServiceRequest[];
   getAvailableRequests: () => ServiceRequest[];
-  getUserChats: (userId: string) => Chat[];
-  getChatMessages: (requestId: string) => ChatMessage[];
+  getUserChats: (userId: string) => Promise<Chat[]>;
+  getChatMessages: (requestId: string) => Promise<ChatMessage[]>;
   sendMessage: (
     requestId: string,
     senderId: string,
@@ -43,8 +57,10 @@ interface AppContextType {
     senderRole: 'trucker' | 'provider',
     message: string,
     messageType?: 'text' | 'location' | 'image' | 'system'
-  ) => void;
-  markMessagesAsRead: (requestId: string, userId: string) => void;
+  ) => Promise<void>;
+  markMessagesAsRead: (requestId: string, userId: string) => Promise<void>;
+  refreshRequests: () => Promise<void>;
+  isLoadingRequests: boolean;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -110,148 +126,246 @@ const mockLeads: Lead[] = [
   },
 ];
 
-const mockChats: Chat[] = [
-  {
-    id: '1',
-    requestId: '2',
-    truckerId: '1',
-    truckerName: 'John Driver',
-    providerId: '2',
-    providerName: 'Mike Mechanic',
-    lastMessage: "I'll be there in 20 minutes",
-    lastMessageTime: '2024-01-19T15:30:00Z',
-    unreadCount: 2,
-    isActive: true,
-  },
-];
-
-const mockMessages: ChatMessage[] = [
-  {
-    id: '1',
-    requestId: '2',
-    senderId: '2',
-    senderName: 'Mike Mechanic',
-    senderRole: 'provider',
-    message:
-      "Hi John, I've accepted your repair request. I'm currently 15 minutes away from your location.",
-    timestamp: '2024-01-19T14:50:00Z',
-    messageType: 'text',
-    isRead: true,
-  },
-  {
-    id: '2',
-    requestId: '2',
-    senderId: '1',
-    senderName: 'John Driver',
-    senderRole: 'trucker',
-    message:
-      "Great! I'm parked at the truck stop. My truck is a blue Peterbilt.",
-    timestamp: '2024-01-19T14:52:00Z',
-    messageType: 'text',
-    isRead: true,
-  },
-  {
-    id: '3',
-    requestId: '2',
-    senderId: '2',
-    senderName: 'Mike Mechanic',
-    senderRole: 'provider',
-    message:
-      "Perfect, I can see it. I'll be there in 20 minutes. Do you have the engine codes?",
-    timestamp: '2024-01-19T15:30:00Z',
-    messageType: 'text',
-    isRead: true,
-  },
-  {
-    id: '4',
-    requestId: '2',
-    senderId: 'system',
-    senderName: 'System',
-    senderRole: 'provider',
-    message: 'Mike Mechanic has accepted your request',
-    timestamp: '2024-01-19T14:45:00Z',
-    messageType: 'system',
-    isRead: true,
-  },
-];
+// Chat data will be loaded from database
 
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [requests, setRequests] = useState<ServiceRequest[]>(mockRequests);
+  const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [leads, setLeads] = useState<Lead[]>(mockLeads);
-  const [chats, setChats] = useState<Chat[]>(mockChats);
-  const [messages, setMessages] = useState<ChatMessage[]>(mockMessages);
+  const [chats, setChats] = useState<Chat[]>([]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const [isLoadingChats, setIsLoadingChats] = useState(false);
 
   const { user } = useAuth();
 
+  // Load requests from database when user changes
+  useEffect(() => {
+    const loadRequests = async () => {
+      if (!user?.id) {
+        setRequests([]);
+        return;
+      }
+
+      setIsLoadingRequests(true);
+      try {
+        const allRequests = await fetchAllRequests();
+        setRequests(allRequests);
+      } catch (error) {
+        console.error('Error loading requests:', error);
+        setRequests([]);
+      } finally {
+        setIsLoadingRequests(false);
+      }
+    };
+
+    loadRequests();
+  }, [user?.id]);
+
+  // Set up realtime subscription for chats
+  useEffect(() => {
+    if (!user?.id) return;
+
+    let chatSubscription: any = null;
+
+    // Set up realtime subscription for chat updates
+    chatSubscription = subscribeToChats(
+      user.id,
+      // On new chat created
+      (newChat) => {
+        console.log('New chat created, adding to list:', newChat);
+        
+        // Convert DB chat to local Chat format
+        const convertedChat: Chat = {
+          id: newChat.id,
+          requestId: newChat.request_id,
+          truckerId: newChat.trucker_id,
+          truckerName: 'Loading...', // Will be populated later
+          providerId: newChat.provider_id,
+          providerName: 'Loading...', // Will be populated later
+          lastMessage: 'Chat created',
+          lastMessageTime: newChat.created_at,
+          unreadCount: 0,
+          isActive: true,
+        };
+
+        setChats(prev => {
+          // Avoid duplicates
+          const exists = prev.find(chat => chat.id === newChat.id);
+          if (exists) return prev;
+          return [convertedChat, ...prev];
+        });
+      },
+      // On chat updated
+      (updatedChat) => {
+        console.log('Chat updated via realtime:', updatedChat);
+        setChats(prev => prev.map(chat => 
+          chat.id === updatedChat.id 
+            ? { ...chat, lastMessageTime: updatedChat.updated_at }
+            : chat
+        ));
+      }
+    );
+
+    // Cleanup subscription
+    return () => {
+      if (chatSubscription) {
+        console.log('Cleaning up chat realtime subscription');
+        chatSubscription.unsubscribe();
+      }
+    };
+  }, [user?.id]);
+
+  // Chats are now loaded on-demand in the chat screen only
+
+  // Function to refresh requests from database
+  const refreshRequests = useCallback(async () => {
+    if (!user?.id) return;
+    
+    setIsLoadingRequests(true);
+    try {
+      const allRequests = await fetchAllRequests();
+      setRequests(allRequests);
+    } catch (error) {
+      console.error('Error refreshing requests:', error);
+    } finally {
+      setIsLoadingRequests(false);
+    }
+  }, [user?.id]);
+
   const createRequest = useCallback(
-    (
+    async (
       requestData: Omit<ServiceRequest, 'id' | 'createdAt' | 'leadFeeCharged'>
     ) => {
-      const newRequest: ServiceRequest = {
-        id: Date.now().toString(),
-        ...requestData,
-        createdAt: new Date().toISOString(),
-        leadFeeCharged: false,
-      };
-      setRequests((prev) => [newRequest, ...prev]);
+      if (!user?.id) {
+        throw new Error('User must be logged in to create a request');
+      }
+
+      try {
+        // Use payment-enabled request creation with $5 charge
+        const result = await requestService.createRequestWithPayment({
+          location: requestData.location,
+          coordinates: requestData.coordinates,
+          service_type: requestData.serviceType,
+          urgency: requestData.urgency,
+          description: requestData.description,
+          estimated_cost: requestData.estimatedCost,
+        }, user.id);
+        
+        if (!result.success || !result.requestId) {
+          throw new Error(result.error || 'Failed to create request');
+        }
+
+        // Create a ServiceRequest object with the data we have
+        console.log('Request created with ID:', user);
+        const newRequest: ServiceRequest = {
+          id: result.requestId,
+          truckerId: user.id,
+          truckerName: `${user.firstName} ${user.lastName}`.trim() || 'Unknown',
+          truckerPhone: user.phone || '',
+          serviceType: requestData.serviceType,
+          description: requestData.description,
+          location: requestData.location,
+          coordinates: requestData.coordinates,
+          status: 'pending',
+          urgency: requestData.urgency,
+          createdAt: new Date().toISOString(),
+          leadFeeCharged: true, // Payment was charged
+          estimatedCost: requestData.estimatedCost,
+        };
+        
+        // Refresh requests from database to get the latest data
+        await refreshRequests();
+        
+        return newRequest;
+      } catch (error) {
+        console.error('Failed to create request with payment:', error);
+        throw error;
+      }
     },
     [user]
   );
 
   const acceptRequest = useCallback(
-    (requestId: string, providerId: string, providerName: string) => {
-      const now = new Date().toISOString();
-      setRequests((prev) =>
-        prev.map((request) =>
-          request.id === requestId
-            ? {
-                ...request,
-                status: 'accepted' as const,
-                providerId,
-                providerName,
-                acceptedAt: now,
-                leadFeeCharged: true,
-              }
-            : request
-        )
-      );
-
-      // Create or update chat when request is accepted
-      const request = requests.find((r) => r.id === requestId);
-      if (request) {
-        const existingChat = chats.find((c) => c.requestId === requestId);
-        if (!existingChat) {
-          const newChat: Chat = {
-            id: Date.now().toString(),
-            requestId,
-            truckerId: request.truckerId,
-            truckerName: request.truckerName,
-            providerId,
-            providerName,
-            lastMessage: 'Request accepted',
-            lastMessageTime: now,
-            unreadCount: 0, // Will be calculated from actual messages
-            isActive: true,
-          };
-          setChats((prev) => [newChat, ...prev]);
-
-          // Send system message about acceptance
-          const systemMessage: ChatMessage = {
-            id: (Date.now() + 1).toString(),
-            requestId,
-            senderId: 'system',
-            senderName: 'System',
-            senderRole: 'provider',
-            message: `${providerName} has accepted your request`,
-            timestamp: now,
-            messageType: 'system',
-            isRead: false,
-          };
-          setMessages((prev) => [...prev, systemMessage]);
+    async (requestId: string, providerId: string, providerName: string) => {
+      try {
+        // Use payment-enabled request acceptance with $5 charge
+        const result = await requestService.acceptRequestWithPayment(requestId, providerId);
+        
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to accept request');
         }
+
+        // Refresh requests from database to get updated data
+        await refreshRequests();
+
+        // Show success alert after payment confirmation
+        setTimeout(() => {
+          Alert.alert(
+            'Request Accepted! 🎉',
+            'You have successfully accepted this request and been charged $5. The trucker has been notified and you can now start chatting.',
+            [{ text: 'OK' }]
+          );
+        }, 100);
+
+        const now = new Date().toISOString();
+        
+        // Create chat in database when request is accepted
+        const request = requests.find((r) => r.id === requestId);
+        if (request) {
+          try {
+            // Create chat in database
+            const newChat = await createChatInDB(requestId, request.truckerId, providerId);
+            if (newChat) {
+              // Add to local state
+              const convertedChat: Chat = {
+                id: newChat.id,
+                requestId: newChat.request_id,
+                truckerId: newChat.trucker_id,
+                truckerName: request.truckerName,
+                providerId: newChat.provider_id,
+                providerName,
+                lastMessage: 'Request accepted',
+                lastMessageTime: newChat.created_at,
+                unreadCount: 0,
+                isActive: true,
+              };
+              setChats((prev) => [convertedChat, ...prev]);
+
+              // Send system message about acceptance from the provider
+              const systemMessage = await sendMessageToDB(
+                requestId,
+                providerId,
+                `${providerName} has accepted your request`,
+                'text'
+              );
+              
+              if (systemMessage) {
+                const convertedMessage: ChatMessage = {
+                  id: systemMessage.id,
+                  requestId: systemMessage.request_id,
+                  senderId: systemMessage.sender_id,
+                  senderName: 'System',
+                  senderRole: 'provider',
+                  message: systemMessage.content,
+                  timestamp: systemMessage.timestamp,
+                  messageType: systemMessage.message_type as 'text' | 'location' | 'image' | 'system',
+                  isRead: systemMessage.is_read,
+                };
+                setMessages((prev) => [...prev, convertedMessage]);
+              }
+            }
+          } catch (error) {
+            console.error('Error creating chat in database:', error);
+          }
+        }
+
+        return true; // Success
+      } catch (error) {
+        console.error('Error accepting request:', error);
+        throw error;
       }
     },
-    [requests]
+    [requests, refreshRequests]
   );
 
   const cancelRequest = useCallback(
@@ -321,34 +435,95 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, [requests]);
 
   const getUserChats = useCallback(
-    (userId: string) => {
-      return chats
-        .filter(
-          (chat) => chat.truckerId === userId || chat.providerId === userId
-        )
-        .sort(
-          (a, b) =>
-            new Date(b.lastMessageTime || 0).getTime() -
-            new Date(a.lastMessageTime || 0).getTime()
-        );
+    async (userId: string) => {
+      // Return cached chats if available, otherwise fetch from database
+      if (chats.length > 0) {
+        return chats
+          .filter(
+            (chat) => chat.truckerId === userId || chat.providerId === userId
+          )
+          .sort(
+            (a, b) =>
+              new Date(b.lastMessageTime || 0).getTime() -
+              new Date(a.lastMessageTime || 0).getTime()
+          );
+      }
+      
+      // Return empty array if already loading to prevent multiple simultaneous fetches
+      if (isLoadingChats) {
+        return [];
+      }
+      
+      // Fetch from database if not cached
+      try {
+        const userChats = await fetchUserChats(userId);
+        const convertedChats: Chat[] = userChats.map((dbChat) => ({
+          id: dbChat.id,
+          requestId: dbChat.request_id,
+          truckerId: dbChat.trucker_id,
+          truckerName: dbChat.trucker?.name || 'Unknown Trucker',
+          providerId: dbChat.provider_id,
+          providerName: dbChat.provider?.name || 'Unknown Provider',
+          lastMessage: dbChat.last_message || '',
+          lastMessageTime: dbChat.last_message_time || dbChat.updated_at,
+          unreadCount: 0,
+          isActive: true, // Assume all chats are active for now
+        }));
+        return convertedChats;
+      } catch (error) {
+        console.error('Error fetching user chats:', error);
+        return [];
+      }
     },
-    [chats]
+    [chats, isLoadingChats]
   );
 
   const getChatMessages = useCallback(
-    (requestId: string) => {
-      return messages
-        .filter((message) => message.requestId === requestId)
-        .sort(
+    async (requestId: string) => {
+      // Check if we have messages for this request cached
+      const cachedMessages = messages.filter((message) => message.requestId === requestId);
+      if (cachedMessages.length > 0) {
+        return cachedMessages.sort(
           (a, b) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         );
+      }
+      
+      // Fetch from database if not cached
+      try {
+        const dbMessages = await fetchChatMessages(requestId);
+        const convertedMessages: ChatMessage[] = dbMessages.map((dbMessage) => ({
+          id: dbMessage.id,
+          requestId: dbMessage.request_id,
+          senderId: dbMessage.sender_id,
+          senderName: dbMessage.sender?.name || 'Unknown',
+          senderRole: dbMessage.sender?.role === 'trucker' ? 'trucker' : 'provider',
+          message: dbMessage.content,
+          timestamp: dbMessage.timestamp,
+          messageType: dbMessage.message_type as 'text' | 'location' | 'image' | 'system',
+          isRead: dbMessage.is_read,
+        }));
+        
+        // Add to messages state
+        setMessages((prev) => {
+          const filtered = prev.filter((m) => m.requestId !== requestId);
+          return [...filtered, ...convertedMessages];
+        });
+        
+        return convertedMessages.sort(
+          (a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
+      } catch (error) {
+        console.error('Error fetching chat messages:', error);
+        return [];
+      }
     },
     [messages]
   );
 
   const sendMessage = useCallback(
-    (
+    async (
       requestId: string,
       senderId: string,
       senderName: string,
@@ -356,66 +531,80 @@ export function AppProvider({ children }: { children: ReactNode }) {
       message: string,
       messageType: 'text' | 'location' | 'image' | 'system' = 'text'
     ) => {
-      const newMessage: ChatMessage = {
-        id: Date.now().toString(),
-        requestId,
-        senderId,
-        senderName,
-        senderRole,
-        message,
-        timestamp: new Date().toISOString(),
-        messageType,
-        isRead: false, // All messages start as unread
-      };
-      setMessages((prev) => [...prev, newMessage]);
+      try {
+        // Send message to database - handle system messages as text type for database
+        const dbMessageType = messageType === 'system' ? 'text' : messageType;
+        const dbMessage = await sendMessageToDB(requestId, senderId, message, dbMessageType);
+        
+        if (dbMessage) {
+          // Add to local state
+          const newMessage: ChatMessage = {
+            id: dbMessage.id,
+            requestId: dbMessage.request_id,
+            senderId: dbMessage.sender_id,
+            senderName,
+            senderRole,
+            message: dbMessage.content,
+            timestamp: dbMessage.timestamp,
+            messageType: messageType, // Use original messageType to preserve 'system' type
+            isRead: dbMessage.is_read,
+          };
+          setMessages((prev) => [...prev, newMessage]);
 
-      // Update chat with new message
-      setChats((prev) =>
-        prev.map((chat) =>
-          chat.requestId === requestId
-            ? {
-                ...chat,
-                lastMessage: message,
-                lastMessageTime: new Date().toISOString(),
-                // Increment unread count for all new messages (will be handled when marking as read)
-                unreadCount: chat.unreadCount + 1,
-              }
-            : chat
-        )
-      );
+          // Update chat with new message
+          setChats((prev) =>
+            prev.map((chat) =>
+              chat.requestId === requestId
+                ? {
+                    ...chat,
+                    lastMessage: message,
+                    lastMessageTime: dbMessage.timestamp,
+                    unreadCount: senderId !== user?.id ? chat.unreadCount + 1 : chat.unreadCount,
+                  }
+                : chat
+            )
+          );
+        }
+      } catch (error) {
+        console.error('Error sending message:', error);
+      }
     },
     [user?.id]
   );
 
   const markMessagesAsRead = useCallback(
-    (requestId: string, userId: string) => {
-      // Mark all unread messages in this conversation as read (except own messages)
-      setMessages((prev) =>
-        prev.map((message) =>
-          message.requestId === requestId &&
-          message.senderId !== userId &&
-          !message.isRead
-            ? { ...message, isRead: true }
-            : message
-        )
-      );
+    async (requestId: string, userId: string) => {
+      try {
+        // Mark messages as read in database
+        const success = await markMessagesAsReadDB(requestId, userId);
+        
+        if (success) {
+          // Update local state
+          setMessages((prev) =>
+            prev.map((message) =>
+              message.requestId === requestId &&
+              message.senderId !== userId &&
+              !message.isRead
+                ? { ...message, isRead: true }
+                : message
+            )
+          );
 
-      // Reset unread count for this chat (only count messages from others)
-      setChats((prev) =>
-        prev.map((chat) =>
-          chat.requestId === requestId
-            ? {
-                ...chat,
-                unreadCount: messages.filter(
-                  (m) =>
-                    m.requestId === requestId &&
-                    m.senderId !== userId &&
-                    m.isRead === false
-                ).length,
-              }
-            : chat
-        )
-      );
+          // Reset unread count for this chat
+          setChats((prev) =>
+            prev.map((chat) =>
+              chat.requestId === requestId
+                ? {
+                    ...chat,
+                    unreadCount: 0,
+                  }
+                : chat
+            )
+          );
+        }
+      } catch (error) {
+        console.error('Error marking messages as read:', error);
+      }
     },
     []
   );
@@ -439,6 +628,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         getChatMessages,
         sendMessage,
         markMessagesAsRead,
+        refreshRequests,
+        isLoadingRequests,
       }}
     >
       {children}

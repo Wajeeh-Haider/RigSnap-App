@@ -10,9 +10,11 @@ import {
   Modal,
   ActivityIndicator,
 } from 'react-native';
+import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
+import { paymentMethodService } from '@/utils/paymentOperations';
 import {
   Clock,
   CircleCheck as CheckCircle,
@@ -148,6 +150,32 @@ export default function BrowseRequestsScreen() {
       : availableRequests.filter((r) => r.serviceType === filter);
 
   const handleAcceptRequest = async (request: any) => {
+    // First check if user has a payment method
+    try {
+      // Check for payment methods
+      const paymentMethods = await paymentMethodService.fetchUserPaymentMethods(user.id);
+      
+      if (!paymentMethods || paymentMethods.length === 0) {
+        Alert.alert(
+          'Payment Method Required',
+          'You need to add a payment method to accept requests. Would you like to add one now?',
+          [
+            { text: 'Cancel', style: 'cancel' },
+            {
+              text: 'Add Payment Method',
+              onPress: () => {
+                // Navigate to profile/payment methods
+                router.push('/profile');
+              },
+            },
+          ]
+        );
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking payment methods:', error);
+    }
+
     Alert.alert(
       'Accept Request',
       `Are you sure you want to accept this ${request.serviceType.replace(
@@ -161,22 +189,26 @@ export default function BrowseRequestsScreen() {
           onPress: async () => {
             setIsAccepting(true);
             try {
-              acceptRequest(
+              await acceptRequest(
                 request.id,
                 user.id,
                 `${user.firstName} ${user.lastName}`
               );
               setSelectedRequest(null);
-              Alert.alert(
-                'Request Accepted! 🎉',
-                'You have successfully accepted this request. The trucker has been notified and you can now start chatting.',
-                [{ text: 'OK' }]
-              );
-            } catch {
-              Alert.alert(
-                'Error',
-                'Failed to accept request. Please try again.'
-              );
+              // Success alert will be shown by acceptRequest function after payment confirmation
+            } catch (error: any) {
+              console.error('Error accepting request:', error);
+              let errorMessage = 'Failed to accept request. Please try again.';
+              
+              if (error?.message?.includes('No default payment method')) {
+                errorMessage = 'Please add a payment method in your profile to accept requests.';
+              } else if (error?.message?.includes('card_declined')) {
+                errorMessage = 'Your card was declined. Please check your payment method.';
+              } else if (error?.message?.includes('insufficient_funds')) {
+                errorMessage = 'Insufficient funds. Please use a different payment method.';
+              }
+              
+              Alert.alert('Error', errorMessage);
             } finally {
               setIsAccepting(false);
             }
@@ -206,7 +238,7 @@ export default function BrowseRequestsScreen() {
                 { text: 'Cancel', style: 'cancel' },
                 {
                   text: 'Submit',
-                  onPress: async (reason) => {
+                  onPress: async (reason?: string) => {
                     if (!reason || reason.trim().length === 0) {
                       Alert.alert(
                         'Error',

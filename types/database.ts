@@ -191,6 +191,97 @@ export interface Database {
           created_at?: string
         }
       }
+      payment_methods: {
+        Row: {
+          id: string
+          user_id: string
+          stripe_payment_method_id: string
+          card_brand: string
+          last4: string
+          exp_month: number
+          exp_year: number
+          cardholder_name: string | null
+          is_default: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          stripe_payment_method_id: string
+          card_brand: string
+          last4: string
+          exp_month: number
+          exp_year: number
+          cardholder_name?: string | null
+          is_default?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          stripe_payment_method_id?: string
+          card_brand?: string
+          last4?: string
+          exp_month?: number
+          exp_year?: number
+          cardholder_name?: string | null
+          is_default?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      payment_transactions: {
+        Row: {
+          id: string
+          user_id: string
+          request_id: string | null
+          payment_method_id: string | null
+          stripe_payment_intent_id: string
+          amount_cents: number
+          currency: string
+          description: string
+          transaction_type: 'request_fee' | 'acceptance_fee' | 'service_payment' | 'refund'
+          status: 'pending' | 'succeeded' | 'failed' | 'canceled' | 'refunded'
+          user_role: 'trucker' | 'provider'
+          metadata: Json
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          request_id?: string | null
+          payment_method_id?: string | null
+          stripe_payment_intent_id: string
+          amount_cents: number
+          currency?: string
+          description: string
+          transaction_type: 'request_fee' | 'acceptance_fee' | 'service_payment' | 'refund'
+          status?: 'pending' | 'succeeded' | 'failed' | 'canceled' | 'refunded'
+          user_role: 'trucker' | 'provider'
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          request_id?: string | null
+          payment_method_id?: string | null
+          stripe_payment_intent_id?: string
+          amount_cents?: number
+          currency?: string
+          description?: string
+          transaction_type?: 'request_fee' | 'acceptance_fee' | 'service_payment' | 'refund'
+          status?: 'pending' | 'succeeded' | 'failed' | 'canceled' | 'refunded'
+          user_role?: 'trucker' | 'provider'
+          metadata?: Json
+          created_at?: string
+          updated_at?: string
+        }
+      }
     }
     Views: {
       [_ in never]: never

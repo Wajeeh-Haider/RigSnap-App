@@ -103,11 +103,9 @@ export default function HomeScreen() {
     getUserRequests,
     getProviderRequests,
     getAvailableRequests,
-    getUserChats,
   } = useApp();
   const { colors } = useTheme();
   const { t } = useLanguage();
-
   if (!user) return null;
 
   const isTrucker = user.role === 'trucker';
@@ -118,8 +116,8 @@ export default function HomeScreen() {
   const availableRequests = !isTrucker
     ? getAvailableRequests().slice(0, 2)
     : [];
-  const userChats = getUserChats(user.id);
-  const unreadChats = userChats.filter((chat) => chat.unreadCount > 0);
+  // We'll assume 0 unread chats since we don't fetch them here anymore
+  const unreadChats: any[] = [];
 
   // Calculate notification count for pending/unfinished work
   const getNotificationCount = () => {

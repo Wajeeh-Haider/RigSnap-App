@@ -87,7 +87,7 @@ const getServiceDisplayName = (serviceType: string) => {
 export default function JobDetailScreen() {
   const params = useLocalSearchParams();
   const { user } = useAuth();
-  const { requests, updateRequestStatus, acceptRequest, cancelRequest } =
+  const { requests, updateRequestStatus, acceptRequest, cancelRequest, refreshRequests } =
     useApp();
   const { colors } = useTheme();
   const [showCompleteModal, setShowCompleteModal] = useState(false);
@@ -104,6 +104,11 @@ export default function JobDetailScreen() {
 
   const requestId = params.requestId as string;
   const request = requests.find((r) => r.id === requestId);
+
+  // Refresh requests when component mounts to ensure we have latest data
+  React.useEffect(() => {
+    refreshRequests();
+  }, [requestId]);
 
   // Get user location on component mount
   React.useEffect(() => {
@@ -264,7 +269,7 @@ export default function JobDetailScreen() {
                 { text: 'Cancel', style: 'cancel' },
                 {
                   text: 'Submit',
-                  onPress: async (reason) => {
+                  onPress: async (reason:any) => {
                     if (!reason || reason.trim().length === 0) {
                       Alert.alert(
                         'Error',
@@ -382,7 +387,7 @@ export default function JobDetailScreen() {
       </View>
     );
   };
-
+console.log(request);
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View

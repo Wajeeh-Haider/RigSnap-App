@@ -1,10 +1,11 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
@@ -12,16 +13,35 @@ import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { MessageCircle, Truck, Shield } from 'lucide-react-native';
+import { Chat } from '@/types';
 
 export default function ChatListScreen() {
   const { user } = useAuth();
   const { getUserChats, messages } = useApp();
   const { colors } = useTheme();
   const { t } = useLanguage();
+  const [userChats, setUserChats] = useState<Chat[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const loadChats = async () => {
+      if (!user?.id) return;
+      
+      setIsLoading(true);
+      try {
+        const chats = await getUserChats(user.id);
+        setUserChats(chats);
+      } catch (error) {
+        console.error('Error loading chats:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadChats();
+  }, [user?.id]); // Remove getUserChats from dependencies
 
   if (!user) return null;
-
-  const userChats = getUserChats(user.id);
 
   // Calculate unread count from actual messages (only from other users)
   const totalUnreadCount = messages.filter(
@@ -86,7 +106,14 @@ export default function ChatListScreen() {
         </Text>
       </View>
 
-      {userChats.length === 0 ? (
+      {isLoading ? (
+        <View style={styles.emptyContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={[styles.emptyTitle, { color: colors.text }]}>
+            Loading chats...
+          </Text>
+        </View>
+      ) : userChats.length === 0 ? (
         <View style={styles.emptyContainer}>
           <MessageCircle size={48} color={colors.textSecondary} />
           <Text style={[styles.emptyTitle, { color: colors.text }]}>
