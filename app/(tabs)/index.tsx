@@ -684,7 +684,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 24,
-    paddingTop: 60,
+    paddingTop: 10,
     borderBottomWidth: 1,
   },
   greeting: {

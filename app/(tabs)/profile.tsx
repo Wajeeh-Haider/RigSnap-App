@@ -1237,7 +1237,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 60,
+    paddingTop: 10,
     paddingHorizontal: 24,
     paddingBottom: 24,
     flexDirection: 'row',
@@ -1504,7 +1504,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 24,
-    paddingTop: 60,
+    paddingTop: 10,
     borderBottomWidth: 1,
   },
   modalTitle: {

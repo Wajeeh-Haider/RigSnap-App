@@ -6,8 +6,15 @@ import { AppProvider } from '@/context/AppContext';
 import { ThemeProvider } from '@/context/ThemeContext';
 import { LanguageProvider } from '@/context/LanguageContext';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
+import { useEffect } from 'react';
+import * as NavigationBar from 'expo-navigation-bar';
 
 export default function RootLayout() {
+  useEffect(() => {
+    // Hide the Android bottom navigation bar
+    NavigationBar.setVisibilityAsync('hidden');
+    NavigationBar.setBehaviorAsync('overlay-swipe');
+  }, []);
   useFrameworkReady();
 
   return (

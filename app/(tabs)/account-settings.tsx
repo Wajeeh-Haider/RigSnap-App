@@ -1119,7 +1119,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     padding: 24,
-    paddingTop: 60,
+    paddingTop: 10,
     borderBottomWidth: 1,
   },
   backButton: {
@@ -1228,7 +1228,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 24,
-    paddingTop: 60,
+    paddingTop: 10,
     borderBottomWidth: 1,
   },
   modalTitle: {
