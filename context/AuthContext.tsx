@@ -54,9 +54,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   // Helper function to fetch user data from database
-  const fetchUserData = async (userId: string): Promise<User | null> => {
+  const fetchUserData = async (userId: string, retryCount = 0): Promise<User | null> => {
+    const maxRetries = 3;
+    const retryDelay = 1000; // 1 second
+
     try {
-      console.log('Fetching user data from database for user ID:', userId);
+      console.log(`Fetching user data from database for user ID: ${userId} (attempt ${retryCount + 1})`);
 
       const { data, error } = await supabase
         .from('users')
@@ -66,6 +69,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       if (error) {
         console.error('Database error:', error.code, error.message);
+
+        // If it's a network error and we haven't exceeded retries, try again
+        if ((error.code === 'PGRST301' || error.message.includes('network')) && retryCount < maxRetries) {
+          console.log(`Retrying user data fetch in ${retryDelay}ms...`);
+          await new Promise(resolve => setTimeout(resolve, retryDelay));
+          return fetchUserData(userId, retryCount + 1);
+        }
 
         // For any database error, use fallback user
         console.log('Database error occurred, using fallback user');
@@ -77,10 +87,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return await createFallbackUser(userId);
       }
 
-      console.log('User data found in database:', data?.email || 'no email');
+      console.log('User data found in database:', data?.email || 'no email', 'role:', data?.role);
       return convertDbUserToAppUser(data);
     } catch (error) {
       console.error('Error fetching user data:', error);
+
+      // If it's a network error and we haven't exceeded retries, try again
+      if (retryCount < maxRetries) {
+        console.log(`Retrying user data fetch after exception in ${retryDelay}ms...`);
+        await new Promise(resolve => setTimeout(resolve, retryDelay));
+        return fetchUserData(userId, retryCount + 1);
+      }
+
       console.log('Fetch exception, using fallback user');
       return await createFallbackUser(userId);
     }
@@ -96,13 +114,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!authUser) return null;
 
       const userMetadata = authUser.user_metadata || {};
-      const rawMetadata = authUser.user_metadata || {};
+      const rawMetadata = (authUser as any).raw_user_meta_data || {};
+
+      // Combine metadata from both sources
+      const combinedMetadata = { ...rawMetadata, ...userMetadata };
 
       let userRole: 'trucker' | 'provider' = 'trucker';
-      if (userMetadata.role) {
-        userRole = userMetadata.role;
-      } else if (rawMetadata.role) {
-        userRole = rawMetadata.role;
+      if (combinedMetadata.role) {
+        userRole = combinedMetadata.role;
       } else if (authUser.email) {
         userRole = authUser.email.includes('provider') ? 'provider' : 'trucker';
       }
@@ -111,55 +130,49 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         id: userId,
         email: authUser.email || '',
         firstName:
-          userMetadata.firstName ||
-          rawMetadata.firstName ||
+          combinedMetadata.firstName ||
           (userRole === 'trucker' ? 'John' : 'Mike'),
         lastName:
-          userMetadata.lastName ||
-          rawMetadata.lastName ||
+          combinedMetadata.lastName ||
           (userRole === 'trucker' ? 'Driver' : 'Mechanic'),
         phone:
-          userMetadata.phone ||
-          rawMetadata.phone ||
+          combinedMetadata.phone ||
           (userRole === 'trucker' ? '+1-555-0123' : '+1-555-0456'),
         role: userRole,
         rating: 4.5,
         joinDate: new Date().toISOString().split('T')[0],
         location:
-          userMetadata.location ||
-          rawMetadata.location ||
+          combinedMetadata.location ||
           (userRole === 'trucker' ? 'Dallas, TX' : 'Houston, TX'),
-        language: userMetadata.language || rawMetadata.language || 'en',
+        language: combinedMetadata.language || 'en',
         truckType:
           userRole === 'trucker'
-            ? userMetadata.truckType || rawMetadata.truckType || 'Semi-Trailer'
+            ? combinedMetadata.truckType || 'Semi-Trailer'
             : undefined,
         licenseNumber:
           userRole === 'trucker'
-            ? userMetadata.licenseNumber ||
-              rawMetadata.licenseNumber ||
-              'CDL-TX-123456'
+            ? combinedMetadata.licenseNumber || 'CDL-TX-123456'
             : undefined,
         services:
           userRole === 'provider'
-            ? userMetadata.services ||
-              rawMetadata.services || ['repair', 'mechanic']
+            ? combinedMetadata.services || ['repair', 'mechanic']
             : undefined,
         serviceRadius:
           userRole === 'provider'
-            ? userMetadata.serviceRadius || rawMetadata.serviceRadius || 25
+            ? combinedMetadata.serviceRadius || 25
             : undefined,
         certifications:
           userRole === 'provider'
-            ? userMetadata.certifications ||
-              rawMetadata.certifications || ['ASE Certified']
+            ? combinedMetadata.certifications || ['ASE Certified']
             : undefined,
       };
 
       console.log(
         'Created fallback user:',
         fallbackUser.email,
-        fallbackUser.role
+        fallbackUser.role,
+        'truckType:', fallbackUser.truckType,
+        'licenseNumber:', fallbackUser.licenseNumber
       );
       
       // IMPORTANT: Save fallback user to database so it can be found by requests
@@ -167,7 +180,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.log('💾 Saving fallback user to database...');
         const { data, error } = await supabase
           .from('users')
-          .insert({
+          .upsert({
             id: fallbackUser.id,
             email: fallbackUser.email,
             name: `${fallbackUser.firstName} ${fallbackUser.lastName}`,
@@ -182,6 +195,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             services: fallbackUser.services,
             service_radius: fallbackUser.serviceRadius,
             certifications: fallbackUser.certifications,
+          }, {
+            onConflict: 'id'
           })
           .select()
           .single();
@@ -205,7 +220,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    // const initTimeout: NodeJS.Timeout;
+    let initTimeout: number;
+    let profileCheckInterval: number;
 
     const initializeAuth = async () => {
       try {
@@ -220,29 +236,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             'Valid session found, fetching user data for:',
             session.user.email
           );
-          const userData = await fetchUserData(session.user.id);
-          if (userData) {
+
+          let userData = await fetchUserData(session.user.id);
+
+          // If no user data found, it might still be being created after signup
+          // Wait a bit and try again
+          if (!userData || (userData.firstName === 'User' && userData.lastName === '')) {
+            console.log('User data appears to be default/fallback, waiting for profile creation...');
+
+            // Check every 2 seconds for up to 10 seconds
+            let attempts = 0;
+            const maxAttempts = 5;
+
+            profileCheckInterval = setInterval(async () => {
+              if (!mounted) return;
+
+              attempts++;
+              console.log(`Checking for user profile (attempt ${attempts}/${maxAttempts})`);
+
+              const freshUserData = await fetchUserData(session.user.id);
+              if (freshUserData && (freshUserData.firstName !== 'User' || freshUserData.lastName !== '')) {
+                console.log('Found complete user profile, updating state');
+                setUser(freshUserData);
+                clearInterval(profileCheckInterval);
+              } else if (attempts >= maxAttempts) {
+                console.log('Profile check timeout, using current data');
+                if (userData) setUser(userData);
+                clearInterval(profileCheckInterval);
+              }
+            }, 2000);
+          } else {
             console.log(
               'User data loaded successfully:',
               userData.email,
               userData.role
             );
             setUser(userData);
-          } else {
-            console.log('No user data in DB, creating fallback user');
-            const fallbackUser = await createFallbackUser(session.user.id);
-            if (fallbackUser) {
-              console.log(
-                'Fallback user created:',
-                fallbackUser.email,
-                fallbackUser.role
-              );
-              setUser(fallbackUser);
-            } else {
-              console.log('Failed to create fallback user, signing out');
-              await supabase.auth.signOut();
-              setUser(null);
-            }
           }
         } else if (mounted) {
           console.log('No valid session found, user will be null');
@@ -262,8 +291,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Set timeout to prevent infinite loading
-    setTimeout(() => {
+    // Set timeout to prevent infinite loading (increased from 3 to 15 seconds)
+    initTimeout = setTimeout(() => {
       if (mounted && isLoading) {
         console.warn('=== AUTH TIMEOUT - FORCING COMPLETION ===');
         setIsLoading(false);
@@ -271,7 +300,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase.auth.signOut().catch(console.error);
         setUser(null);
       }
-    }, 3000);
+    }, 15000);
 
     initializeAuth();
 
@@ -305,11 +334,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
-      // mounted = false;
-      // if (initTimeout) {
-      //   clearTimeout(initTimeout);
-      // }
-      // subscription.unsubscribe();
+      mounted = false;
+      if (initTimeout) clearTimeout(initTimeout);
+      if (profileCheckInterval) clearInterval(profileCheckInterval);
+      subscription.unsubscribe();
     };
   }, []);
 
@@ -365,13 +393,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('Starting signup process for:', userData.email);
 
-      // Ultra-minimal signup to avoid all database errors
+      // Try signup with metadata - the database trigger should handle user creation
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
         options: {
           emailRedirectTo: 'myapp://auth/confirm',
-          // No metadata at all to avoid any database constraints
+          data: {
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            phone: userData.phone,
+            location: userData.location,
+            role: userData.role,
+            language: userData.language,
+            truckType: userData.truckType,
+            licenseNumber: userData.licenseNumber,
+            services: userData.services,
+            serviceRadius: userData.serviceRadius,
+            certifications: userData.certifications,
+          },
         },
       });
 
@@ -382,102 +422,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           code: error.code || 'no code'
         });
         
-        // If the error is about database saving, try manual user profile creation
-        if (error.message.includes('Database error saving new user')) {
-          console.log('Attempting manual user profile creation...');
-          
-          // Try signing up without metadata first
-          const { data: retryData, error: retryError } = await supabase.auth.signUp({
-            email: userData.email,
-            password: userData.password,
-          });
-          
-          if (retryError) {
-            console.error('Retry signup failed:', retryError);
-            return { success: false, error: retryError.message };
-          }
-          
-          if (retryData.user) {
-            console.log('Auth user created, now creating profile manually...');
-            
-            // Direct database insert instead of using RPC function (which might be broken)
-            const { error: profileError } = await supabase
-              .from('users')
-              .insert({
-                id: retryData.user.id,
-                email: retryData.user.email,
-                name: `${userData.firstName} ${userData.lastName}`,
-                role: userData.role,
-                location: userData.location || '',
-                phone: userData.phone || '',
-                language: userData.language || 'en',
-                truck_type: userData.role === 'trucker' ? userData.truckType : null,
-                license_number: userData.role === 'trucker' ? userData.licenseNumber : null,
-                services: userData.role === 'provider' ? userData.services : null,
-                service_radius: userData.role === 'provider' ? userData.serviceRadius : null,
-                certifications: userData.role === 'provider' ? userData.certifications : null,
-              });
-            
-            if (profileError) {
-              console.error('Manual profile creation failed:', profileError);
-              // Continue anyway - the auth user was created
-            } else {
-              console.log('Manual profile creation successful');
-            }
-            
-            const newUser: User = {
-              id: retryData.user.id,
-              email: retryData.user.email!,
-              firstName: userData.firstName,
-              lastName: userData.lastName,
-              phone: userData.phone || '',
-              role: userData.role,
-              rating: 0,
-              joinDate: new Date().toISOString().split('T')[0],
-              location: userData.location,
-              language: userData.language || 'en',
-              truckType: userData.role === 'trucker' ? userData.truckType : undefined,
-              licenseNumber: userData.role === 'trucker' ? userData.licenseNumber : undefined,
-              services: userData.role === 'provider' ? userData.services : undefined,
-              serviceRadius: userData.role === 'provider' ? userData.serviceRadius : undefined,
-              certifications: userData.role === 'provider' ? userData.certifications : undefined,
-            };
-
-            setUser(newUser);
-            return { success: true };
-          }
-        }
-        
         return { success: false, error: error.message };
       }
 
       if (data.user) {
         console.log('Auth user created successfully');
 
-        const newUser: User = {
-          id: data.user.id,
-          email: data.user.email!,
-          firstName: userData.firstName,
-          lastName: userData.lastName,
-          phone: userData.phone || '',
-          role: userData.role,
-          rating: 0,
-          joinDate: new Date().toISOString().split('T')[0],
-          location: userData.location,
-          language: userData.language || 'en',
-          truckType:
-            userData.role === 'trucker' ? userData.truckType : undefined,
-          licenseNumber:
-            userData.role === 'trucker' ? userData.licenseNumber : undefined,
-          services:
-            userData.role === 'provider' ? userData.services : undefined,
-          serviceRadius:
-            userData.role === 'provider' ? userData.serviceRadius : undefined,
-          certifications:
-            userData.role === 'provider' ? userData.certifications : undefined,
-        };
+        // Try to fetch the user data immediately to see if the trigger worked
+        const userDataFetched = await fetchUserData(data.user.id);
+        if (userDataFetched) {
+          console.log('User profile created by trigger');
+          setUser(userDataFetched);
+        } else {
+          console.log('Trigger may have failed, creating user locally');
+          // Create user object from signup data
+          const newUser: User = {
+            id: data.user.id,
+            email: data.user.email!,
+            firstName: userData.firstName,
+            lastName: userData.lastName,
+            phone: userData.phone || '',
+            role: userData.role,
+            rating: 0,
+            joinDate: new Date().toISOString().split('T')[0],
+            location: userData.location,
+            language: userData.language || 'en',
+            truckType: userData.role === 'trucker' ? userData.truckType : undefined,
+            licenseNumber: userData.role === 'trucker' ? userData.licenseNumber : undefined,
+            services: userData.role === 'provider' ? userData.services : undefined,
+            serviceRadius: userData.role === 'provider' ? userData.serviceRadius : undefined,
+            certifications: userData.role === 'provider' ? userData.certifications : undefined,
+          };
 
-        setUser(newUser);
+          setUser(newUser);
+        }
+
         return { success: true };
       }
 
