@@ -94,6 +94,7 @@ export default function JobDetailScreen() {
     acceptRequest,
     cancelRequest,
     refreshRequests,
+    sendMessage,
   } = useApp();
   const { colors } = useTheme();
   const [showCompleteModal, setShowCompleteModal] = useState(false);
@@ -179,11 +180,15 @@ export default function JobDetailScreen() {
   const isMyRequest = isTrucker
     ? request.truckerId === user.id
     : request.providerId === user.id;
-  const canComplete = request.status === 'in_progress' && !isTrucker;
+  const canComplete = request.status === 'in_progress' && user.role === 'provider' && request.providerId === user.id;
   const canRate = request.status === 'completed' && isTrucker;
   const canAccept =
     request.status === 'pending' && user.role === 'provider' && !isMyRequest;
   const canCancel =
+    request.status === 'accepted' &&
+    user.role === 'provider' &&
+    request.providerId === user.id;
+  const canStartWork =
     request.status === 'accepted' &&
     user.role === 'provider' &&
     request.providerId === user.id;
@@ -349,6 +354,38 @@ export default function JobDetailScreen() {
     );
   };
 
+  const handleStartWork = () => {
+    if (user.role !== 'provider') return;
+
+    Alert.alert(
+      'Start Work',
+      'Are you sure you want to start working on this request?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Start Work',
+          onPress: async () => {
+            await updateRequestStatus(requestId, 'in_progress');
+            // Send system message to chat
+            sendMessage(
+              requestId,
+              'system',
+              'System',
+              user.role,
+              'Request marked as in progress',
+              'system'
+            );
+            Alert.alert(
+              'Work Started',
+              'You have started working on this request. The trucker has been notified.',
+              [{ text: 'OK' }]
+            );
+          },
+        },
+      ]
+    );
+  };
+
   const handleCompleteJob = () => {
     if (user.role !== 'provider') return;
 
@@ -359,8 +396,17 @@ export default function JobDetailScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Complete',
-          onPress: () => {
-            updateRequestStatus(requestId, 'completed');
+          onPress: async () => {
+            await updateRequestStatus(requestId, 'completed');
+            // Send system message to chat
+            sendMessage(
+              requestId,
+              'system',
+              'System',
+              user.role,
+              'Request marked as completed',
+              'system'
+            );
             Alert.alert(
               'Job Completed',
               'The job has been marked as completed. The trucker will be notified.',
@@ -904,6 +950,17 @@ export default function JobDetailScreen() {
                   </Text>
                 </>
               )}
+            </TouchableOpacity>
+          )}
+
+          {/* Start Work Button for Providers */}
+          {canStartWork && (
+            <TouchableOpacity
+              style={styles.startWorkButton}
+              onPress={handleStartWork}
+            >
+              <CheckCircle2 size={20} color="white" />
+              <Text style={styles.startWorkButtonText}>Start Work</Text>
             </TouchableOpacity>
           )}
 
@@ -1691,6 +1748,20 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   completeButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  startWorkButton: {
+    backgroundColor: '#8b5cf6',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 8,
+  },
+  startWorkButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',

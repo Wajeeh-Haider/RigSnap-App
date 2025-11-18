@@ -197,7 +197,7 @@ export default function ChatDetailScreen() {
     }
   };
 
-  const handleStatusUpdate = (newStatus: 'in_progress' | 'completed') => {
+  const handleStatusUpdate = async (newStatus: 'in_progress' | 'completed') => {
     Alert.alert(
       'Update Status',
       `Mark this request as ${
@@ -207,8 +207,8 @@ export default function ChatDetailScreen() {
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Confirm',
-          onPress: () => {
-            updateRequestStatus(requestId, newStatus);
+          onPress: async () => {
+            await updateRequestStatus(requestId, newStatus);
             sendMessage(
               requestId,
               'system',

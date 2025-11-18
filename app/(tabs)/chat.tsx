@@ -114,13 +114,13 @@ export default function ChatListScreen() {
         <Text style={[styles.title, { color: colors.text }]}>
           {t('chat.title')}
         </Text>
-        {totalUnreadCount > 0 && (
+        {/* {totalUnreadCount > 0 && (
           <View style={styles.headerBadge}>
             <Text style={styles.headerBadgeText}>
               {totalUnreadCount} unread
             </Text>
           </View>
-        )}
+        )} */}
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
           {user.role === 'trucker'
             ? t('chat.messagesWillAppear')
@@ -198,7 +198,7 @@ export default function ChatListScreen() {
                   >
                     <ParticipantIcon size={24} color="white" />
                   </View>
-                  <View
+                  {/* <View
                     style={[
                       {
                         backgroundColor:
@@ -209,7 +209,7 @@ export default function ChatListScreen() {
                     ]}
                   >
                     <ParticipantIcon size={12} color="white" />
-                  </View>
+                  </View> */}
                   {hasUnread && <View style={styles.unreadIndicator} />}
                 </View>
 

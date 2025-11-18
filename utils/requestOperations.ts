@@ -340,6 +340,39 @@ const fetchUserData = async (userId: string): Promise<{ name: string; phone: str
   return { name: 'Unknown', phone: '' };
 };
 
+// Update request status in database
+export const updateRequestStatusInDB = async (
+  requestId: string,
+  status: 'pending' | 'accepted' | 'in_progress' | 'completed' | 'cancelled',
+  additionalFields?: { completed_at?: string; cancelled_at?: string; cancellation_reason?: string; cancelled_by?: string }
+): Promise<{ success: boolean; error?: string }> => {
+  try {
+    const updateData: any = { status };
+    
+    if (additionalFields) {
+      if (additionalFields.completed_at) updateData.completed_at = additionalFields.completed_at;
+      if (additionalFields.cancelled_at) updateData.cancelled_at = additionalFields.cancelled_at;
+      if (additionalFields.cancellation_reason) updateData.cancellation_reason = additionalFields.cancellation_reason;
+      if (additionalFields.cancelled_by) updateData.cancelled_by = additionalFields.cancelled_by;
+    }
+
+    const { error } = await supabase
+      .from('requests')
+      .update(updateData)
+      .eq('id', requestId);
+
+    if (error) {
+      console.error('Error updating request status:', error);
+      return { success: false, error: error.message };
+    }
+
+    return { success: true };
+  } catch (error) {
+    console.error('Exception updating request status:', error);
+    return { success: false, error: 'An unexpected error occurred' };
+  }
+};
+
 // Transform database request to ServiceRequest format
 const transformDatabaseRequestToServiceRequest = (dbRequest: any): ServiceRequest => {
   let coordinates;

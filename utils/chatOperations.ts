@@ -73,6 +73,26 @@ export const sendMessageToDB = async (
   try {
     console.log('Sending message to database:', { requestId, senderId, content, messageType });
 
+    // Handle system messages - don't insert into database, return fake message
+    if (senderId === 'system') {
+      const fakeMessage: Message = {
+        id: `system-${Date.now()}`,
+        request_id: requestId,
+        sender_id: senderId,
+        content: content,
+        message_type: messageType as any,
+        is_read: true, // System messages are always "read"
+        timestamp: new Date().toISOString(),
+        sender: {
+          id: 'system',
+          name: 'System',
+          role: 'system'
+        }
+      };
+      console.log('System message created (not stored in DB):', fakeMessage);
+      return fakeMessage;
+    }
+
     const { data, error } = await supabase
       .from('messages')
       .insert({

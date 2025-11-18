@@ -11,7 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { ServiceRequest, Lead, ChatMessage, Chat } from '@/types';
 import { useAuth } from './AuthContext';
 import { requestService } from '@/utils/paymentOperations';
-import { fetchAllRequests, fetchUserRequests, fetchAvailableRequests, fetchProviderRequests } from '@/utils/requestOperations';
+import { fetchAllRequests, fetchUserRequests, fetchAvailableRequests, fetchProviderRequests, updateRequestStatusInDB } from '@/utils/requestOperations';
 import { 
   createChatInDB, 
   sendMessageToDB, 
@@ -45,7 +45,7 @@ interface AppContextType {
   updateRequestStatus: (
     requestId: string,
     status: ServiceRequest['status']
-  ) => void;
+  ) => Promise<void>;
   addLead: (lead: Omit<Lead, 'id' | 'createdAt'>) => void;
   getUserRequests: (userId: string) => ServiceRequest[];
   getProviderRequests: (providerId: string) => ServiceRequest[];
@@ -512,7 +512,20 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const updateRequestStatus = useCallback(
-    (requestId: string, status: ServiceRequest['status']) => {
+    async (requestId: string, status: ServiceRequest['status']) => {
+      // Update database first
+      const additionalFields: any = {};
+      if (status === 'completed') {
+        additionalFields.completed_at = new Date().toISOString();
+      }
+
+      const result = await updateRequestStatusInDB(requestId, status, additionalFields);
+      if (!result.success) {
+        console.error('Failed to update request status in DB:', result.error);
+        // Still update local state for better UX, but log the error
+      }
+
+      // Update local state
       setRequests((prev) =>
         prev.map((request) =>
           request.id === requestId
@@ -661,8 +674,23 @@ export function AppProvider({ children }: { children: ReactNode }) {
         
         if (dbMessage) {
           console.log('📤 Message sent to database successfully:', dbMessage.id);
-          // Don't add to local state here - let the realtime subscription handle it
-          // This prevents duplicate messages
+          
+          // For system messages, add to local state manually since they're not stored in DB
+          if (messageType === 'system') {
+            const systemMessage = {
+              id: dbMessage.id,
+              requestId,
+              senderId,
+              senderName: 'System',
+              senderRole: 'system' as any,
+              content: message,
+              messageType,
+              isRead: true,
+              timestamp: dbMessage.timestamp,
+            };
+            setMessages((prev) => [...prev, systemMessage]);
+          }
+          // For regular messages, let the realtime subscription handle adding to local state
 
           // Update chat with new message
           setChats((prev) =>
@@ -672,7 +700,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                     ...chat,
                     lastMessage: message,
                     lastMessageTime: dbMessage.timestamp,
-                    unreadCount: senderId !== user?.id ? chat.unreadCount + 1 : chat.unreadCount,
+                    unreadCount: senderId !== user?.id && senderId !== 'system' ? chat.unreadCount + 1 : chat.unreadCount,
                   }
                 : chat
             )
