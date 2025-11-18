@@ -213,9 +213,14 @@ export const subscribeToChats = (
 /**
  * Fetch all messages for a specific chat/request
  */
-export const fetchChatMessages = async (requestId: string): Promise<Message[]> => {
+export const fetchChatMessages = async (requestId: string): Promise<any[]> => {
   try {
     console.log('Fetching messages for request:', requestId);
+
+    if (!requestId || requestId === 'undefined') {
+      console.error('Invalid requestId provided:', requestId);
+      return [];
+    }
 
     // First get the messages
     const { data: messagesData, error: messagesError } = await supabase
@@ -234,7 +239,7 @@ export const fetchChatMessages = async (requestId: string): Promise<Message[]> =
       return [];
     }
 
-    // For each message, fetch sender details manually
+    // For each message, fetch sender details manually and map to ChatMessage interface
     const messagesWithSender = await Promise.all(
       messagesData.map(async (message) => {
         let senderData = null;
@@ -247,7 +252,20 @@ export const fetchChatMessages = async (requestId: string): Promise<Message[]> =
             .eq('id', message.sender_id)
             .single();
           senderData = data;
-        }        return {
+        }
+
+        // Map database message to ChatMessage interface
+        return {
+          id: message.id,
+          requestId: message.request_id,
+          senderId: message.sender_id,
+          senderName: senderData?.name || 'Unknown User',
+          senderRole: senderData?.role || 'trucker',
+          content: message.content,
+          timestamp: message.timestamp || message.created_at,
+          messageType: message.message_type || 'text',
+          isRead: message.is_read || false,
+          // Keep original fields for compatibility
           ...message,
           sender: senderData
         };
@@ -286,9 +304,19 @@ export const fetchUserChats = async (userId: string): Promise<Chat[]> => {
       return [];
     }
 
-    // For each chat, fetch additional data manually
+    // Filter out chats with invalid request_id first
+    const validChatsData = chatsData.filter(chat => 
+      chat.request_id && chat.request_id !== 'undefined'
+    );
+
+    if (validChatsData.length === 0) {
+      console.log('No valid chats found for user');
+      return [];
+    }
+
+    // For each valid chat, fetch additional data manually
     const chatsWithDetails = await Promise.all(
-      chatsData.map(async (chat) => {
+      validChatsData.map(async (chat) => {
         // Get request details
         const { data: requestData } = await supabase
           .from('requests')
@@ -321,6 +349,19 @@ export const fetchUserChats = async (userId: string): Promise<Chat[]> => {
 
         return {
           ...chat,
+          // Map database fields to TypeScript interface - ensure request_id is valid
+          requestId: chat.request_id,
+          request_id: chat.request_id, // Keep for compatibility
+          truckerId: chat.trucker_id,
+          trucker_id: chat.trucker_id, // Keep for compatibility  
+          providerId: chat.provider_id,
+          provider_id: chat.provider_id, // Keep for compatibility
+          truckerName: truckerData?.name || 'Unknown User',
+          providerName: providerData?.name || 'Unknown User',
+          lastMessage: lastMessage?.content || '',
+          lastMessageTime: lastMessage?.timestamp || chat.updated_at,
+          unreadCount: 0, // Will be calculated later
+          isActive: requestData?.status !== 'completed' && requestData?.status !== 'cancelled',
           request: requestData,
           trucker: truckerData ? {
             ...truckerData,

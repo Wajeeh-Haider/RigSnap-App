@@ -7,6 +7,7 @@ import React, {
   ReactNode,
 } from 'react';
 import { Alert } from 'react-native';
+import { supabase } from '@/lib/supabase';
 import { ServiceRequest, Lead, ChatMessage, Chat } from '@/types';
 import { useAuth } from './AuthContext';
 import { requestService } from '@/utils/paymentOperations';
@@ -18,6 +19,7 @@ import {
   fetchUserChats, 
   markMessagesAsRead as markMessagesAsReadDB,
   subscribeToChats,
+  subscribeToMessages,
   Chat as DBChat,
   Message as DBMessage
 } from '@/utils/chatOperations';
@@ -138,34 +140,65 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const { user } = useAuth();
 
-  // Load requests from database when user changes
+  // Load requests and messages from database when user changes
   useEffect(() => {
-    const loadRequests = async () => {
+    const loadInitialData = async () => {
       if (!user?.id) {
         setRequests([]);
+        setMessages([]);
         return;
       }
 
       setIsLoadingRequests(true);
       try {
+        // Load requests
         const allRequests = await fetchAllRequests();
         setRequests(allRequests);
+
+        // Load all messages for user's chats to populate unread counts
+        const userChats = await fetchUserChats(user.id);
+        const allMessages: ChatMessage[] = [];
+        
+        for (const chat of userChats) {
+          try {
+            // Use request_id from database response
+            const requestId = chat.request_id || chat.requestId;
+            if (!requestId || requestId === 'undefined') {
+              console.warn('Chat has no valid request_id:', chat);
+              continue;
+            }
+            const chatMessages = await fetchChatMessages(requestId);
+            allMessages.push(...chatMessages);
+          } catch (error) {
+            console.error(`Error loading messages for chat ${requestId || 'unknown'}:`, error);
+          }
+        }
+        
+        // Remove duplicates and sort by timestamp
+        const uniqueMessages = allMessages.filter((message, index, self) => 
+          index === self.findIndex(m => m.id === message.id)
+        ).sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        
+        setMessages(uniqueMessages);
+        console.log(`Loaded ${uniqueMessages.length} unique messages for user ${user.id}`);
       } catch (error) {
-        console.error('Error loading requests:', error);
+        console.error('Error loading initial data:', error);
         setRequests([]);
+        setMessages([]);
       } finally {
         setIsLoadingRequests(false);
       }
     };
 
-    loadRequests();
+    loadInitialData();
   }, [user?.id]);
 
-  // Set up realtime subscription for chats
+  // Set up realtime subscription for chats and messages
   useEffect(() => {
     if (!user?.id) return;
 
     let chatSubscription: any = null;
+    let messageSubscription: any = null;
 
     // Set up realtime subscription for chat updates
     chatSubscription = subscribeToChats(
@@ -206,11 +239,86 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     );
 
-    // Cleanup subscription
+    // Set up global realtime subscription for ALL messages
+    // This keeps the chat list updated with latest messages and unread counts
+    messageSubscription = supabase
+      .channel('global-messages')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          const newMessage = payload.new;
+          console.log('🚀 NEW MESSAGE RECEIVED GLOBALLY:', newMessage);
+          
+          // Convert DB message to ChatMessage format
+          const convertedMessage: ChatMessage = {
+            id: newMessage.id,
+            requestId: newMessage.request_id,
+            senderId: newMessage.sender_id,
+            senderName: newMessage.sender_id === user.id ? `${user.firstName} ${user.lastName}`.trim() : 'Other User',
+            content: newMessage.content,
+            timestamp: newMessage.created_at,
+            messageType: newMessage.message_type || 'text',
+            isRead: newMessage.is_read || false
+          };
+
+          // Add to global messages array with better duplicate detection
+          setMessages(prev => {
+            const exists = prev.find(msg => msg.id === newMessage.id);
+            if (exists) {
+              console.log('⚠️ Message already exists, skipping:', newMessage.id);
+              return prev;
+            }
+            console.log('✅ Adding new message to global state:', convertedMessage);
+            // Sort messages by timestamp to maintain order
+            const newMessages = [...prev, convertedMessage];
+            return newMessages.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'messages',
+        },
+        (payload) => {
+          const updatedMessage = payload.new;
+          console.log('Message updated globally:', updatedMessage);
+          
+          // Update message in global array (for read status changes)
+          setMessages(prev => prev.map(msg => 
+            msg.id === updatedMessage.id 
+              ? { ...msg, isRead: updatedMessage.is_read }
+              : msg
+          ));
+        }
+      )
+      .subscribe((status) => {
+        console.log('📡 Global message subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Global realtime message subscription is ACTIVE!');
+        } else if (status === 'CLOSED') {
+          console.error('❌ Global message subscription CLOSED');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Global message subscription ERROR');
+        }
+      });
+
+    // Cleanup subscriptions
     return () => {
       if (chatSubscription) {
         console.log('Cleaning up chat realtime subscription');
         chatSubscription.unsubscribe();
+      }
+      if (messageSubscription) {
+        console.log('Cleaning up global message realtime subscription');
+        messageSubscription.unsubscribe();
       }
     };
   }, [user?.id]);
@@ -288,15 +396,30 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const acceptRequest = useCallback(
     async (requestId: string, providerId: string, providerName: string) => {
       try {
+        console.log('🚀 Starting request acceptance:', { requestId, providerId, providerName });
+        
         // Use payment-enabled request acceptance with $5 charge
         const result = await requestService.acceptRequestWithPayment(requestId, providerId);
+        
+        console.log('💳 Payment result:', result);
         
         if (!result.success) {
           throw new Error(result.error || 'Failed to accept request');
         }
 
+        console.log('✅ Payment successful, waiting for database update...');
+        
+        // Small delay to ensure database update is committed
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         // Refresh requests from database to get updated data
         await refreshRequests();
+        
+        console.log('🔄 Requests refreshed, checking updated status...');
+        
+        // Log the current status of the request after refresh
+        const updatedRequest = requests.find(r => r.id === requestId);
+        console.log('📊 Updated request status:', updatedRequest?.status);
 
         // Show success alert after payment confirmation
         setTimeout(() => {
@@ -346,7 +469,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
                   senderId: systemMessage.sender_id,
                   senderName: 'System',
                   senderRole: 'provider',
-                  message: systemMessage.content,
+                  content: systemMessage.content,
                   timestamp: systemMessage.timestamp,
                   messageType: systemMessage.message_type as 'text' | 'location' | 'image' | 'system',
                   isRead: systemMessage.is_read,
@@ -498,7 +621,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           senderId: dbMessage.sender_id,
           senderName: dbMessage.sender?.name || 'Unknown',
           senderRole: dbMessage.sender?.role === 'trucker' ? 'trucker' : 'provider',
-          message: dbMessage.content,
+          content: dbMessage.content, // Fixed: use content instead of message
           timestamp: dbMessage.timestamp,
           messageType: dbMessage.message_type as 'text' | 'location' | 'image' | 'system',
           isRead: dbMessage.is_read,
@@ -537,19 +660,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const dbMessage = await sendMessageToDB(requestId, senderId, message, dbMessageType);
         
         if (dbMessage) {
-          // Add to local state
-          const newMessage: ChatMessage = {
-            id: dbMessage.id,
-            requestId: dbMessage.request_id,
-            senderId: dbMessage.sender_id,
-            senderName,
-            senderRole,
-            message: dbMessage.content,
-            timestamp: dbMessage.timestamp,
-            messageType: messageType, // Use original messageType to preserve 'system' type
-            isRead: dbMessage.is_read,
-          };
-          setMessages((prev) => [...prev, newMessage]);
+          console.log('📤 Message sent to database successfully:', dbMessage.id);
+          // Don't add to local state here - let the realtime subscription handle it
+          // This prevents duplicate messages
 
           // Update chat with new message
           setChats((prev) =>

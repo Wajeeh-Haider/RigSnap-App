@@ -12,6 +12,7 @@ import {
   TextInput,
   // Image,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
@@ -87,8 +88,13 @@ const getServiceDisplayName = (serviceType: string) => {
 export default function JobDetailScreen() {
   const params = useLocalSearchParams();
   const { user } = useAuth();
-  const { requests, updateRequestStatus, acceptRequest, cancelRequest, refreshRequests } =
-    useApp();
+  const {
+    requests,
+    updateRequestStatus,
+    acceptRequest,
+    cancelRequest,
+    refreshRequests,
+  } = useApp();
   const { colors } = useTheme();
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
@@ -109,6 +115,13 @@ export default function JobDetailScreen() {
   React.useEffect(() => {
     refreshRequests();
   }, [requestId]);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshRequests();
+    }, [refreshRequests])
+  );
 
   // Get user location on component mount
   React.useEffect(() => {
@@ -221,12 +234,21 @@ export default function JobDetailScreen() {
   const handleAcceptRequest = async () => {
     setIsAccepting(true);
     try {
-      acceptRequest(request.id, user.id, `${user.firstName} ${user.lastName}`);
+      // Wait for payment confirmation before proceeding
+      await acceptRequest(
+        request.id,
+        user.id,
+        `${user.firstName} ${user.lastName}`
+      );
       setShowAcceptModal(false);
 
+      // Refresh local data to get updated request status
+      await refreshRequests();
+
+      // Only show success alert after payment is confirmed
       Alert.alert(
         'Request Accepted! 🎉',
-        'You have successfully accepted this request. The trucker has been notified and you can now start chatting.',
+        'Payment confirmed! You have successfully accepted this request and been charged $5. The trucker has been notified and you can now start chatting.',
         [
           {
             text: 'Start Chat',
@@ -243,8 +265,28 @@ export default function JobDetailScreen() {
           },
         ]
       );
-    } catch {
-      Alert.alert('Error', 'Failed to accept request. Please try again.');
+    } catch (error: any) {
+      console.error('Error accepting request:', error);
+
+      let errorMessage = 'Failed to accept request. Please try again.';
+
+      if (error?.message?.includes('Payment failed')) {
+        errorMessage = `Payment failed: ${
+          error.message.split('Payment failed: ')[1] ||
+          'Please check your payment method.'
+        }`;
+      } else if (error?.message?.includes('No default payment method')) {
+        errorMessage =
+          'Please add a payment method in your profile to accept requests.';
+      } else if (error?.message?.includes('card_declined')) {
+        errorMessage =
+          'Your card was declined. Please check your payment method.';
+      } else if (error?.message?.includes('insufficient_funds')) {
+        errorMessage =
+          'Insufficient funds. Please use a different payment method.';
+      }
+
+      Alert.alert('Payment Required', errorMessage);
     } finally {
       setIsAccepting(false);
     }
@@ -269,7 +311,7 @@ export default function JobDetailScreen() {
                 { text: 'Cancel', style: 'cancel' },
                 {
                   text: 'Submit',
-                  onPress: async (reason:any) => {
+                  onPress: async (reason: any) => {
                     if (!reason || reason.trim().length === 0) {
                       Alert.alert(
                         'Error',
@@ -387,7 +429,7 @@ export default function JobDetailScreen() {
       </View>
     );
   };
-console.log(request);
+  console.log(request);
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View
@@ -953,8 +995,6 @@ console.log(request);
                 style={[styles.acceptSubtitle, { color: colors.textSecondary }]}
               >
                 You are about to accept a{' '}
-                {getServiceDisplayName(request.serviceType).toLowerCase()}{' '}
-                request from {request.truckerName}re about to accept a{' '}
                 {getServiceDisplayName(request.serviceType).toLowerCase()}{' '}
                 request from {request.truckerName}
               </Text>

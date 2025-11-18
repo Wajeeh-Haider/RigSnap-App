@@ -10,6 +10,7 @@ import {
   Modal,
   ActivityIndicator,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
@@ -111,7 +112,7 @@ const filterOptions = [
 
 export default function BrowseRequestsScreen() {
   const { user } = useAuth();
-  const { getAvailableRequests, acceptRequest, cancelRequest } = useApp();
+  const { getAvailableRequests, acceptRequest, cancelRequest, refreshRequests } = useApp();
   const { colors } = useTheme();
   const [filter, setFilter] = useState<string>('all');
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -140,6 +141,13 @@ export default function BrowseRequestsScreen() {
   useEffect(() => {
     getUserLocation();
   }, []);
+  
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshRequests();
+    }, [refreshRequests])
+  );
 
   if (!user || user.role !== 'provider') return null;
 
@@ -189,11 +197,16 @@ export default function BrowseRequestsScreen() {
           onPress: async () => {
             setIsAccepting(true);
             try {
+              // Wait for payment confirmation before proceeding
               await acceptRequest(
                 request.id,
                 user.id,
                 `${user.firstName} ${user.lastName}`
               );
+              
+              // Refresh data to get updated request status
+              await refreshRequests();
+              
               setSelectedRequest(null);
               // Success alert will be shown by acceptRequest function after payment confirmation
             } catch (error: any) {

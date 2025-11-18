@@ -291,16 +291,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    // Set timeout to prevent infinite loading (increased from 3 to 15 seconds)
+    // Set timeout to prevent infinite loading (increased timeout and don't force sign out)
     initTimeout = setTimeout(() => {
       if (mounted && isLoading) {
         console.warn('=== AUTH TIMEOUT - FORCING COMPLETION ===');
         setIsLoading(false);
-        // Clear any invalid session state
-        supabase.auth.signOut().catch(console.error);
-        setUser(null);
+        // Don't sign out automatically - let user try again
+        // Only clear loading state
       }
-    }, 15000);
+    }, 30000);
 
     initializeAuth();
 

@@ -8,6 +8,7 @@ import {
   Share,
   Alert,
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -103,9 +104,18 @@ export default function HomeScreen() {
     getUserRequests,
     getProviderRequests,
     getAvailableRequests,
+    refreshRequests,
   } = useApp();
   const { colors } = useTheme();
   const { t } = useLanguage();
+  
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      refreshRequests();
+    }, [refreshRequests])
+  );
+  
   if (!user) return null;
 
   const isTrucker = user.role === 'trucker';

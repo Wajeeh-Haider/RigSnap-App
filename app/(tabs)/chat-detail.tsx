@@ -30,7 +30,6 @@ import {
   X,
 } from 'lucide-react-native';
 import { ChatMessage } from '@/types';
-import { subscribeToMessages } from '@/utils/chatOperations';
 
 export default function ChatDetailScreen() {
   const params = useLocalSearchParams();
@@ -42,107 +41,68 @@ export default function ChatDetailScreen() {
     markMessagesAsRead,
     requests,
     updateRequestStatus,
+    messages: globalMessages,
   } = useApp();
   const [messageText, setMessageText] = useState('');
   const [showCompletionModal, setShowCompletionModal] = useState(false);
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [isLoadingMessages, setIsLoadingMessages] = useState(true);
   const scrollViewRef = useRef<ScrollView>(null);
 
   const requestId = params.requestId as string;
   const request = requests.find((r) => r.id === requestId);
+  
+  // Filter messages for this specific chat from global messages
+  const messages = globalMessages.filter(msg => msg.requestId === requestId);
+  
+  // Debug logging
+  console.log(`💬 Chat Detail - Total global messages: ${globalMessages.length}`);
+  console.log(`💬 Chat Detail - Messages for request ${requestId}: ${messages.length}`);
 
-  // Load messages on component mount and set up realtime subscription
+  // Load messages and mark as read when entering the chat
   useEffect(() => {
-    const loadMessages = async () => {
-      if (!requestId) return;
+    const initializeChat = async () => {
+      if (!requestId || !user?.id) return;
       
-      setIsLoadingMessages(true);
-      try {
-        const chatMessages = await getChatMessages(requestId);
-        setMessages(chatMessages);
-        
-        // Mark messages as read when entering the chat
-        if (user) {
-          await markMessagesAsRead(requestId, user.id);
+      // If we don't have any messages for this chat, load them specifically
+      if (messages.length === 0) {
+        console.log(`🔄 Loading messages specifically for chat ${requestId}`);
+        try {
+          const chatMessages = await getChatMessages(requestId);
+          console.log(`📥 Loaded ${chatMessages.length} messages for current chat`);
+        } catch (error) {
+          console.error('Error loading chat messages:', error);
         }
-      } catch (error) {
-        console.error('Error loading messages:', error);
-      } finally {
-        setIsLoadingMessages(false);
       }
+      
+      // Mark messages as read when entering the chat
+      await markMessagesAsRead(requestId, user.id);
+      setIsLoadingMessages(false);
     };
 
-    loadMessages();
-
-    // Set up realtime subscription for new messages
-    let subscription: any = null;
-    
-    if (requestId) {
-      subscription = subscribeToMessages(
-        requestId,
-        // On new message received - INSTANT PROCESSING
-        (newMessage) => {
-          // Add message instantly without any delays
-          const messageToAdd = {
-            id: newMessage.id,
-            requestId: newMessage.request_id,
-            senderId: newMessage.sender_id,
-            senderName: newMessage.sender_id === user?.id ? user.firstName : 'Other User',
-            content: newMessage.content,
-            timestamp: newMessage.created_at,
-            messageType: newMessage.message_type || 'text',
-            isRead: newMessage.is_read || false
-          };
-
-          setMessages(prev => {
-            // Avoid duplicates and add instantly
-            const exists = prev.find(msg => msg.id === newMessage.id);
-            if (exists) return prev;
-            return [...prev, messageToAdd];
-          });
-          
-          // Instant scroll - no delay
-          requestAnimationFrame(() => {
-            scrollViewRef.current?.scrollToEnd({ animated: false });
-          });
-          
-          // Mark as read instantly if not from current user
-          if (newMessage.sender_id !== user?.id && user) {
-            markMessagesAsRead(requestId, user.id);
-          }
-        },
-        // On message updated (read status changed)
-        (updatedMessage) => {
-          console.log('Updating message read status:', updatedMessage);
-          setMessages(prev => prev.map(msg => 
-            msg.id === updatedMessage.id 
-              ? { ...msg, isRead: updatedMessage.is_read }
-              : msg
-          ));
-        }
-      );
-    }
-
-    // Cleanup subscription on unmount
-    return () => {
-      if (subscription) {
-        console.log('Cleaning up realtime subscription');
-        subscription.unsubscribe();
-      }
-    };
+    initializeChat();
   }, [requestId, user?.id]);
 
-  // Scroll to bottom when messages load or new messages arrive
+  // Auto-scroll when new messages arrive - multiple attempts for reliability
   useEffect(() => {
     if (messages.length > 0) {
+      // Immediate scroll
+      requestAnimationFrame(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: false });
+      });
+      
+      // Backup scroll after short delay
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
+      
+      // Final scroll after longer delay to ensure rendering is complete
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: false });
+      }, 300);
     }
-  }, [messages.length]);
+  }, [messages.length, requestId]);
 
   if (!user || !request) return null;
 
@@ -208,31 +168,10 @@ export default function ChatDetailScreen() {
     if (!messageText.trim()) return;
 
     const messageContent = messageText.trim();
-    const tempId = `temp-${Date.now()}`;
     setMessageText(''); // Clear input immediately for better UX
     
-    // OPTIMISTIC UPDATE - Show your message instantly
-    const optimisticMessage = {
-      id: tempId,
-      requestId,
-      senderId: user.id,
-      senderName: `${user.firstName} ${user.lastName}`,
-      content: messageContent,
-      timestamp: new Date().toISOString(),
-      messageType: 'text' as const,
-      isRead: false
-    };
-
-    // Add message to UI instantly
-    setMessages(prev => [...prev, optimisticMessage]);
-    
-    // Scroll immediately
-    requestAnimationFrame(() => {
-      scrollViewRef.current?.scrollToEnd({ animated: false });
-    });
-    
     try {
-      // Send to database in background
+      // Send message - global realtime subscription will handle adding it to UI
       await sendMessage(
         requestId,
         user.id,
@@ -241,14 +180,19 @@ export default function ChatDetailScreen() {
         messageContent
       );
       
-      // Remove temp message and let realtime add the real one
-      setMessages(prev => prev.filter(msg => msg.id !== tempId));
+      // Immediate scroll after sending message
+      requestAnimationFrame(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: false });
+      });
+      
+      // Backup scroll
+      setTimeout(() => {
+        scrollViewRef.current?.scrollToEnd({ animated: true });
+      }, 100);
       
     } catch (error) {
       console.error('Error sending message:', error);
-      // Remove failed message and restore input
-      setMessages(prev => prev.filter(msg => msg.id !== tempId));
-      setMessageText(messageContent);
+      setMessageText(messageContent); // Restore input on error
       Alert.alert('Error', 'Failed to send message. Please try again.');
     }
   };
@@ -355,7 +299,7 @@ export default function ChatDetailScreen() {
     if (message.messageType === 'system') {
       return (
         <View style={styles.systemMessage}>
-          <Text style={styles.systemMessageText}>{message.message}</Text>
+          <Text style={styles.systemMessageText}>{message.content || message.message}</Text>
         </View>
       );
     }
@@ -379,7 +323,7 @@ export default function ChatDetailScreen() {
               isOwn ? styles.ownMessageText : styles.otherMessageText,
             ]}
           >
-            {message.message}
+            {message.content || message.message}
           </Text>
 
           <View style={styles.messageFooter}>
@@ -578,9 +522,9 @@ export default function ChatDetailScreen() {
                 <View style={styles.dateHeader}>
                   <Text style={styles.dateText}>{date}</Text>
                 </View>
-                {dateMessages.map((message: any) => (
+                {dateMessages.map((message: any, index: number) => (
                   <MessageBubble
-                    key={message.id}
+                    key={`${message.id}-${message.timestamp}-${index}`}
                     message={message}
                     isOwn={message.senderId === user.id}
                   />

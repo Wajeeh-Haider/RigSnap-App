@@ -41,6 +41,28 @@ export default function ChatListScreen() {
     loadChats();
   }, [user?.id]); // Remove getUserChats from dependencies
 
+  // Refresh chat list when messages change to update last message display
+  useEffect(() => {
+    const refreshChats = async () => {
+      if (!user?.id || userChats.length === 0) return;
+      
+      try {
+        const updatedChats = await getUserChats(user.id);
+        // Filter out chats with invalid requestId
+        const validChats = updatedChats.filter(chat => {
+          return chat.requestId && chat.requestId !== 'undefined';
+        });
+        setUserChats(validChats);
+      } catch (error) {
+        console.error('Error refreshing chats:', error);
+      }
+    };
+
+    // Debounce the refresh to avoid too many calls
+    const timeoutId = setTimeout(refreshChats, 500);
+    return () => clearTimeout(timeoutId);
+  }, [messages.length, user?.id]); // Refresh when message count changes
+
   if (!user) return null;
 
   // Calculate unread count from actual messages (only from other users)

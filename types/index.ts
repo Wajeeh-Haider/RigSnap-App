@@ -64,8 +64,8 @@ export interface ChatMessage {
   requestId: string;
   senderId: string;
   senderName: string;
-  senderRole: 'trucker' | 'provider';
-  message: string;
+  senderRole?: 'trucker' | 'provider';
+  content: string;
   timestamp: string;
   messageType: 'text' | 'location' | 'image' | 'system';
   isRead: boolean;
