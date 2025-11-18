@@ -1143,7 +1143,7 @@ export default function ProfileScreen() {
                     }}
                     style={{
                       width: '100%',
-                      height: 120,
+                      height: 250,
                     }}
                     onFormComplete={(cardDetails) => {
                       setCardFormComplete(cardDetails.complete);
@@ -1226,7 +1226,7 @@ export default function ProfileScreen() {
         </View>
       </Modal>
       
-      <StripeCardComponent />
+      {/* <StripeCardComponent /> */}
       </ScrollView>
     </StripeProvider>
   );
@@ -1308,7 +1308,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   cancelButton: {
-    width: 44,
+    width: 64,
     height: 44,
     borderRadius: 22,
     alignItems: 'center',

@@ -17,22 +17,17 @@ export default function TabLayout() {
   const { messages } = useApp();
   const { colors } = useTheme();
   const { t } = useLanguage();
-  console.log('TabLayout - user:', user?.email, user?.role);
 
   if (!user) {
-    console.log('TabLayout - no user, returning null');
-    // Return null to let the main app handle authentication routing
     return null;
   }
 
-  console.log('TabLayout - rendering tabs for user:', user.role);
   const isTrucker = user.role === 'trucker';
 
   // For now, we'll show 0 unread count since we don't fetch chats here anymore
   // The actual unread count will be handled by the chat screen itself
   const unreadCount = 0;
 
-  console.log('TabLayout - unread count:', unreadCount);
   return (
     <SafeAreaView
       edges={['top']}

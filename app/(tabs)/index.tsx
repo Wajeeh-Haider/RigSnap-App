@@ -846,8 +846,9 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   statusText: {
-    fontSize: 10,
+    fontSize: 9,
     color: 'white',
+    textTransform: 'capitalize',
     fontWeight: '500',
   },
   requestActions: {
@@ -875,6 +876,7 @@ const styles = StyleSheet.create({
   requestDetails: {
     gap: 4,
     marginBottom: 12,
+    marginRight: 20,
   },
   detailRow: {
     flexDirection: 'row',
