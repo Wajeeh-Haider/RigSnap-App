@@ -112,7 +112,14 @@ const filterOptions = [
 
 export default function BrowseRequestsScreen() {
   const { user } = useAuth();
-  const { getAvailableRequests, acceptRequest, cancelRequest, refreshRequests } = useApp();
+  const {
+    getAvailableRequests,
+    getUserRequests,
+    getProviderRequests,
+    acceptRequest,
+    cancelRequest,
+    refreshRequests,
+  } = useApp();
   const { colors } = useTheme();
   const [filter, setFilter] = useState<string>('all');
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
@@ -141,7 +148,7 @@ export default function BrowseRequestsScreen() {
   useEffect(() => {
     getUserLocation();
   }, []);
-  
+
   // Refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
@@ -149,20 +156,28 @@ export default function BrowseRequestsScreen() {
     }, [refreshRequests])
   );
 
-  if (!user || user.role !== 'provider') return null;
+  if (!user) return null;
 
-  const availableRequests = getAvailableRequests();
+  const isTrucker = user.role === 'trucker';
+
+  // Get appropriate requests based on user role
+  const requests = isTrucker
+    ? getUserRequests(user.id)
+    : getAvailableRequests();
+
   const filteredRequests =
     filter === 'all'
-      ? availableRequests
-      : availableRequests.filter((r) => r.serviceType === filter);
+      ? requests
+      : requests.filter((r) => r.serviceType === filter);
 
   const handleAcceptRequest = async (request: any) => {
     // First check if user has a payment method
     try {
       // Check for payment methods
-      const paymentMethods = await paymentMethodService.fetchUserPaymentMethods(user.id);
-      
+      const paymentMethods = await paymentMethodService.fetchUserPaymentMethods(
+        user.id
+      );
+
       if (!paymentMethods || paymentMethods.length === 0) {
         Alert.alert(
           'Payment Method Required',
@@ -203,24 +218,27 @@ export default function BrowseRequestsScreen() {
                 user.id,
                 `${user.firstName} ${user.lastName}`
               );
-              
+
               // Refresh data to get updated request status
               await refreshRequests();
-              
+
               setSelectedRequest(null);
               // Success alert will be shown by acceptRequest function after payment confirmation
             } catch (error: any) {
               console.error('Error accepting request:', error);
               let errorMessage = 'Failed to accept request. Please try again.';
-              
+
               if (error?.message?.includes('No default payment method')) {
-                errorMessage = 'Please add a payment method in your profile to accept requests.';
+                errorMessage =
+                  'Please add a payment method in your profile to accept requests.';
               } else if (error?.message?.includes('card_declined')) {
-                errorMessage = 'Your card was declined. Please check your payment method.';
+                errorMessage =
+                  'Your card was declined. Please check your payment method.';
               } else if (error?.message?.includes('insufficient_funds')) {
-                errorMessage = 'Insufficient funds. Please use a different payment method.';
+                errorMessage =
+                  'Insufficient funds. Please use a different payment method.';
               }
-              
+
               Alert.alert('Error', errorMessage);
             } finally {
               setIsAccepting(false);
@@ -491,7 +509,7 @@ export default function BrowseRequestsScreen() {
               </View>
             </View>
 
-            <View style={styles.feeNotice}>
+            {/* <View style={styles.feeNotice}>
               <DollarSign size={20} color="#f59e0b" />
               <View style={styles.feeText}>
                 <Text style={styles.feeTitle}>Lead Fee Information</Text>
@@ -501,7 +519,7 @@ export default function BrowseRequestsScreen() {
                   both parties.
                 </Text>
               </View>
-            </View>
+            </View> */}
           </ScrollView>
 
           <View
@@ -569,6 +587,7 @@ export default function BrowseRequestsScreen() {
     );
   };
 
+
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View
@@ -578,10 +597,12 @@ export default function BrowseRequestsScreen() {
         ]}
       >
         <Text style={[styles.title, { color: colors.text }]}>
-          Available Requests
+          {isTrucker ? 'My Requests' : 'Available Requests'}
         </Text>
         <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          Find and accept service requests in your area
+          {isTrucker
+            ? 'Track and manage your service requests'
+            : 'Find and accept service requests in your area'}
         </Text>
       </View>
 
@@ -630,7 +651,7 @@ export default function BrowseRequestsScreen() {
           <View style={styles.emptyState}>
             <Filter size={48} color="#9ca3af" />
             <Text style={[styles.emptyStateText, { color: colors.text }]}>
-              No requests available
+              {isTrucker ? 'No requests found' : 'No requests available'}
             </Text>
             <Text
               style={[
@@ -639,7 +660,9 @@ export default function BrowseRequestsScreen() {
               ]}
             >
               {filter === 'all'
-                ? 'There are no pending requests at the moment'
+                ? isTrucker
+                  ? 'Create a new request to get started'
+                  : 'There are no pending requests at the moment'
                 : `No ${getFilterDisplayName(
                     filter
                   ).toLowerCase()} requests available right now`}
@@ -723,11 +746,19 @@ export default function BrowseRequestsScreen() {
                 </View>
 
                 <View style={styles.availableRequestFooter}>
-                  <Text
-                    style={[styles.tapToAccept, { color: colors.secondary }]}
-                  >
-                    Tap to view & accept
-                  </Text>
+                  {!isTrucker ? (
+                    <Text
+                      style={[styles.tapToAccept, { color: colors.secondary }]}
+                    >
+                      Tap to view & accept
+                    </Text>
+                  ) : (
+                    <Text
+                      style={[styles.tapToAccept, { color: colors.secondary }]}
+                    >
+                      Tap to view details
+                    </Text>
+                  )}
                   {request.estimatedCost && (
                     <Text
                       style={[styles.estimatedCost, { color: colors.success }]}
@@ -768,6 +799,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   filterContainer: {
+    paddingTop: 16,
     paddingBottom: 16,
     borderBottomWidth: 1,
   },
@@ -835,6 +867,8 @@ const styles = StyleSheet.create({
   badgeContainer: {
     flexDirection: 'row',
     gap: 6,
+    flexWrap: 'wrap',
+    maxWidth: '50%',
   },
   statusBadge: {
     flexDirection: 'row',
@@ -843,21 +877,31 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 6,
     gap: 4,
+    minWidth: 60,
+    justifyContent: 'center',
   },
   statusText: {
     fontSize: 10,
     color: 'white',
     fontWeight: '500',
+    textTransform: 'capitalize',
+    textAlign: 'center',
+    flexShrink: 1,
   },
   urgencyBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 6,
+    minWidth: 50,
+    justifyContent: 'center',
   },
   urgencyText: {
     fontSize: 10,
+    textTransform: 'capitalize',
     color: 'white',
     fontWeight: 'bold',
+    textAlign: 'center',
+    flexShrink: 1,
   },
   requestDescription: {
     fontSize: 14,
@@ -875,6 +919,8 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 12,
+    paddingRight:5,
+    paddingLeft:5,
   },
   availableRequestFooter: {
     flexDirection: 'row',
@@ -1010,6 +1056,9 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
+  },
+  viewButton: {
+    backgroundColor: '#2563eb20',
   },
   acceptButtonText: {
     fontSize: 16,

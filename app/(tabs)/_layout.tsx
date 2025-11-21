@@ -29,14 +29,14 @@ export default function TabLayout() {
   const unreadCount = 0;
 
   return (
-    <SafeAreaView
-      edges={['top']}
-      style={{
-        flex: 1,
-        backgroundColor: colors.background,
-        height: '100%',
-      }}
-    >
+    // <SafeAreaView
+    //   edges={['top']}
+    //   style={{
+    //     flex: 1,
+    //     backgroundColor: colors.background,
+    //     height: '100%',
+    //   }}
+    // >
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -166,6 +166,6 @@ export default function TabLayout() {
           }}
         />
       </Tabs>
-    </SafeAreaView>
+    // </SafeAreaView>
   );
 }

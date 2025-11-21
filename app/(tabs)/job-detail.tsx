@@ -180,14 +180,20 @@ export default function JobDetailScreen() {
   const isMyRequest = isTrucker
     ? request.truckerId === user.id
     : request.providerId === user.id;
-  const canComplete = request.status === 'in_progress' && user.role === 'provider' && request.providerId === user.id;
+  const canComplete =
+    request.status === 'in_progress' &&
+    user.role === 'provider' &&
+    request.providerId === user.id;
   const canRate = request.status === 'completed' && isTrucker;
   const canAccept =
     request.status === 'pending' && user.role === 'provider' && !isMyRequest;
   const canCancel =
-    request.status === 'accepted' &&
-    user.role === 'provider' &&
-    request.providerId === user.id;
+    (request.status === 'accepted' &&
+      user.role === 'provider' &&
+      request.providerId === user.id) ||
+    (request.status === 'pending' &&
+      user.role === 'trucker' &&
+      request.truckerId === user.id);
   const canStartWork =
     request.status === 'accepted' &&
     user.role === 'provider' &&
@@ -298,60 +304,122 @@ export default function JobDetailScreen() {
   };
 
   const handleCancelRequest = async () => {
-    Alert.alert(
-      'Cancel Request',
-      `Are you sure you want to cancel this ${getServiceDisplayName(
-        request.serviceType
-      ).toLowerCase()} request?\n\n⚠️ Warning: You will be charged a $5 penalty fee in addition to the original $5 lead fee (total $10). The trucker will receive a full refund.`,
-      [
-        { text: 'Keep Request', style: 'cancel' },
-        {
-          text: 'Cancel Request',
-          style: 'destructive',
-          onPress: () => {
-            Alert.prompt(
-              'Cancellation Reason',
-              'Please provide a reason for cancelling this request:',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Submit',
-                  onPress: async (reason: any) => {
-                    if (!reason || reason.trim().length === 0) {
-                      Alert.alert(
-                        'Error',
-                        'Please provide a reason for cancellation.'
-                      );
-                      return;
-                    }
+    const isProvider = user.role === 'provider';
+    const isTrucker = user.role === 'trucker';
 
-                    setIsCancelling(true);
-                    try {
-                      cancelRequest(request.id, user.id, reason.trim());
-                      Alert.alert(
-                        'Request Cancelled',
-                        'The request has been cancelled. The trucker has been notified and will receive a full refund. You have been charged a $5 penalty fee.',
-                        [{ text: 'OK', onPress: () => router.back() }]
-                      );
-                    } catch {
-                      Alert.alert(
-                        'Error',
-                        'Failed to cancel request. Please try again.'
-                      );
-                    } finally {
-                      setIsCancelling(false);
-                    }
+    if (isProvider) {
+      // Provider cancellation (existing logic)
+      Alert.alert(
+        'Cancel Request',
+        `Are you sure you want to cancel this ${getServiceDisplayName(
+          request.serviceType
+        ).toLowerCase()} request?\n\n⚠️ Warning: You will be charged a $5 penalty fee in addition to the original $5 lead fee (total $10). The trucker will receive a full refund.`,
+        [
+          { text: 'Keep Request', style: 'cancel' },
+          {
+            text: 'Cancel Request',
+            style: 'destructive',
+            onPress: () => {
+              Alert.prompt(
+                'Cancellation Reason',
+                'Please provide a reason for cancelling this request:',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Submit',
+                    onPress: async (reason: any) => {
+                      if (!reason || reason.trim().length === 0) {
+                        Alert.alert(
+                          'Error',
+                          'Please provide a reason for cancellation.'
+                        );
+                        return;
+                      }
+
+                      setIsCancelling(true);
+                      try {
+                        cancelRequest(request.id, user.id, reason.trim());
+                        Alert.alert(
+                          'Request Cancelled',
+                          'The request has been cancelled. The trucker has been notified and will receive a full refund. You have been charged a $5 penalty fee.',
+                          [{ text: 'OK', onPress: () => router.back() }]
+                        );
+                      } catch {
+                        Alert.alert(
+                          'Error',
+                          'Failed to cancel request. Please try again.'
+                        );
+                      } finally {
+                        setIsCancelling(false);
+                      }
+                    },
                   },
-                },
-              ],
-              'plain-text',
-              '',
-              'default'
-            );
+                ],
+                'plain-text',
+                '',
+                'default'
+              );
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    } else if (isTrucker) {
+      // Trucker cancellation (new logic)
+      Alert.alert(
+        'Cancel Request',
+        `Are you sure you want to cancel this ${getServiceDisplayName(
+          request.serviceType
+        ).toLowerCase()} request?\n\nThis will remove your request from the platform.`,
+        [
+          { text: 'Keep Request', style: 'cancel' },
+          {
+            text: 'Cancel Request',
+            style: 'destructive',
+            onPress: () => {
+              Alert.prompt(
+                'Cancellation Reason',
+                'Please provide a reason for cancelling this request:',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Submit',
+                    onPress: async (reason: any) => {
+                      if (!reason || reason.trim().length === 0) {
+                        Alert.alert(
+                          'Error',
+                          'Please provide a reason for cancellation.'
+                        );
+                        return;
+                      }
+
+                      setIsCancelling(true);
+                      try {
+                        cancelRequest(request.id, user.id, reason.trim());
+                        Alert.alert(
+                          'Request Cancelled',
+                          'Your request has been cancelled.',
+                          [{ text: 'OK', onPress: () => router.back() }]
+                        );
+                      } catch {
+                        Alert.alert(
+                          'Error',
+                          'Failed to cancel request. Please try again.'
+                        );
+                      } finally {
+                        setIsCancelling(false);
+                      }
+                    },
+                  },
+                ],
+                'plain-text',
+                '',
+                'default'
+              );
+            },
+          },
+        ]
+      );
+    }
   };
 
   const handleStartWork = () => {
@@ -1136,7 +1204,7 @@ export default function JobDetailScreen() {
                 )}
               </View>
 
-              <View
+              {/* <View
                 style={[
                   styles.feeNotice,
                   {
@@ -1158,7 +1226,7 @@ export default function JobDetailScreen() {
                     commitment from both parties.
                   </Text>
                 </View>
-              </View>
+              </View> */}
 
               <View
                 style={[
@@ -1529,21 +1597,29 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 12,
     gap: 4,
+    minWidth: 60,
+    justifyContent: 'center',
   },
   statusText: {
     color: 'white',
     fontSize: 10,
     fontWeight: 'bold',
+    textAlign: 'center',
+    flexShrink: 1,
   },
   urgencyBadge: {
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
+    minWidth: 50,
+    justifyContent: 'center',
   },
   urgencyText: {
     color: 'white',
     fontSize: 10,
     fontWeight: 'bold',
+    textAlign: 'center',
+    flexShrink: 1,
   },
   description: {
     fontSize: 16,

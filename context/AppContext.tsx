@@ -492,8 +492,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const cancelRequest = useCallback(
-    (requestId: string, providerId: string, reason: string) => {
+    async (requestId: string, providerId: string, reason: string) => {
       const now = new Date().toISOString();
+      
+      // Update database first
+      const result = await updateRequestStatusInDB(
+        requestId, 
+        'cancelled',
+        {
+          cancelled_at: now,
+          cancellation_reason: reason,
+          cancelled_by: 'provider'
+        }
+      );
+      
+      if (!result.success) {
+        console.error('Failed to cancel request in database:', result.error);
+        // Still update local state for better UX, but log the error
+      }
+      
+      // Update local state
       setRequests((prev) =>
         prev.map((request) =>
           request.id === requestId

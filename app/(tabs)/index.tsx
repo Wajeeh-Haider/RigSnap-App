@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Share,
   Alert,
+  RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { useAuth } from '@/context/AuthContext';
@@ -31,6 +32,7 @@ import {
   Bell,
   Users,
   Gift,
+  X,
 } from 'lucide-react-native';
 
 const getStatusColor = (status: string) => {
@@ -105,9 +107,11 @@ export default function HomeScreen() {
     getProviderRequests,
     getAvailableRequests,
     refreshRequests,
+    cancelRequest,
   } = useApp();
   const { colors } = useTheme();
   const { t } = useLanguage();
+  const [refreshing, setRefreshing] = React.useState(false);
   
   // Refresh data when screen comes into focus
   useFocusEffect(
@@ -115,6 +119,18 @@ export default function HomeScreen() {
       refreshRequests();
     }, [refreshRequests])
   );
+
+  // Handle pull-to-refresh
+  const onRefresh = React.useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await refreshRequests();
+    } catch (error) {
+      console.error('Error refreshing data:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [refreshRequests]);
   
   if (!user) return null;
 
@@ -302,9 +318,27 @@ https://rigsnap.app/download?ref=${referralCode}`;
     }
   };
 
+  const handleCancelRequest = async (requestId: string, reason: string) => {
+    try {
+      await cancelRequest(requestId, user.id, reason);
+      Alert.alert('Success', 'Your request has been cancelled successfully.');
+    } catch (error: any) {
+      Alert.alert('Error', error.message || 'Failed to cancel request. Please try again.');
+    }
+  };
+
   return (
     <ScrollView
       style={[styles.container, { backgroundColor: colors.background }]}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          colors={['#2563eb']}
+          tintColor="#2563eb"
+          title="Pull to refresh"
+        />
+      }
     >
       <View
         style={[
@@ -331,7 +365,7 @@ https://rigsnap.app/download?ref=${referralCode}`;
             {notificationCount > 0 && (
               <View style={styles.notificationBadge}>
                 <Text style={styles.notificationCount}>
-                  {notificationCount > 99 ? '99+' : notificationCount}
+                  {notificationCount > 10 ? '9+' : notificationCount}
                 </Text>
               </View>
             )}
@@ -500,7 +534,7 @@ https://rigsnap.app/download?ref=${referralCode}`;
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {isTrucker ? t('home.recentRequests') : t('home.recentJobs')}
           </Text>
-          <TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/browse-requests')}>
             <Text style={[styles.seeAll, { color: colors.primary }]}>
               See All
             </Text>
@@ -602,6 +636,41 @@ https://rigsnap.app/download?ref=${referralCode}`;
                         <Bell size={16} color={colors.primary} />
                       </TouchableOpacity>
                     )}
+                    {/* Cancel button for truckers on pending requests */}
+                    {isTrucker && request.status === 'pending' && (
+                      <TouchableOpacity
+                        style={[
+                          styles.cancelButton,
+                          { backgroundColor: colors.error + '20' },
+                        ]}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          Alert.prompt(
+                            'Cancel Request',
+                            'Are you sure you want to cancel this request?',
+                            [
+                              {
+                                text: 'Cancel',
+                                style: 'cancel'
+                              },
+                              {
+                                text: 'Confirm',
+                                style: 'destructive',
+                                onPress: (reason:any) => {
+                                  if (reason) {
+                                    handleCancelRequest(request.id, reason);
+                                  }
+                                }
+                              }
+                            ],
+                            'plain-text',
+                            ''
+                          );
+                        }}
+                      >
+                        <X size={16} color={colors.error} />
+                      </TouchableOpacity>
+                    )}
                     <Text
                       style={[styles.timeAgo, { color: colors.textSecondary }]}
                     >
@@ -695,6 +764,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
     paddingTop: 10,
+    paddingBottom: 10,
     borderBottomWidth: 1,
   },
   greeting: {
@@ -705,27 +775,30 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   notificationIconContainer: {
-    position: 'relative',
-    padding: 8,
-    borderRadius: 20,
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    backgroundColor: '#ef4444',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  notificationCount: {
-    color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
-  },
+  position: 'relative',
+  padding: 8,
+  borderRadius: 20,
+},
+
+notificationBadge: {
+  position: 'absolute',
+  top: 0,
+  right: 0,
+  backgroundColor: '#ef4444',
+  borderRadius: 20,
+  minWidth: 20,
+  height: 20,
+  paddingHorizontal: 6,       // allows width to grow for 3 digits
+  alignItems: 'center',
+  justifyContent: 'center',
+},
+
+notificationCount: {
+  color: 'white',
+  fontSize: 10,               // smaller to fit 3 digits
+  fontWeight: 'bold',
+},
+
   section: {
     padding: 24,
     paddingTop: 8,
@@ -844,12 +917,16 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     borderRadius: 6,
     gap: 4,
+    minWidth: 60,
+    justifyContent: 'center',
   },
   statusText: {
     fontSize: 9,
     color: 'white',
     textTransform: 'capitalize',
     fontWeight: '500',
+    textAlign: 'center',
+    flexShrink: 1,
   },
   requestActions: {
     flexDirection: 'row',
@@ -858,6 +935,10 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   chatButton: {
+    padding: 4,
+    borderRadius: 6,
+  },
+  cancelButton: {
     padding: 4,
     borderRadius: 6,
   },

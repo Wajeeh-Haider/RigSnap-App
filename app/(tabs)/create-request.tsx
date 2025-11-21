@@ -687,7 +687,7 @@ export default function CreateRequestScreen() {
           </Text>
         </View>
 
-        <View
+        {/* <View
           style={[
             styles.feeNotice,
             {
@@ -707,7 +707,7 @@ export default function CreateRequestScreen() {
               helps maintain platform quality.
             </Text>
           </View>
-        </View>
+        </View> */}
 
         <TouchableOpacity
           style={[
