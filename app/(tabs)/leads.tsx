@@ -384,7 +384,7 @@ export default function LeadsScreen() {
         )}
       </ScrollView>
 
-      {user.role === 'trucker' && (
+      {/* {user.role === 'trucker' && (
         <View
           style={[
             styles.infoCard,
@@ -427,7 +427,7 @@ export default function LeadsScreen() {
             </Text>
           </View>
         </View>
-      )}
+      )} */}
     </View>
   );
 }

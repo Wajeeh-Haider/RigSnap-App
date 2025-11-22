@@ -7,6 +7,7 @@ import {
   deletePaymentMethod,
   chargeTruckerForRequest,
   chargeProviderForAcceptance,
+  refundTrucker,
   PaymentMethod,
 } from './stripe';
 
@@ -127,69 +128,9 @@ export const requestService: RequestService = {
         };
       }
 
-      // Charge the trucker for creating the request
-      const paymentResult = await chargeTruckerForRequest(userId, request.id);
-      console.log('Payment result:', paymentResult);
-      if (!paymentResult.success) {
-        // Check if this is a network error (backend not accessible)
-        if (
-          paymentResult.error?.includes('Network error') ||
-          paymentResult.error?.includes('Failed to fetch')
-        ) {
-          console.warn(
-            'Backend not accessible, proceeding without payment for testing purposes'
-          );
-          // Continue without payment for testing - in production, this should fail
-        } else {
-          // Delete the request since payment failed for other reasons
-          await supabase.from('requests').delete().eq('id', request.id);
-
-          // Provide user-friendly error messages
-          let errorMessage = paymentResult.error || 'Payment failed';
-
-          if (errorMessage.includes('No such PaymentMethod')) {
-            errorMessage =
-              'Your payment method is invalid or expired. Please add a new payment method in your profile and try again.';
-          } else if (
-            errorMessage.includes('card_declined') ||
-            errorMessage.includes('declined')
-          ) {
-            errorMessage =
-              'Your card was declined. Please check your card details or try a different payment method.';
-          } else if (errorMessage.includes('insufficient_funds')) {
-            errorMessage =
-              'Your card has insufficient funds. Please use a different payment method.';
-          }
-
-          return {
-            success: false,
-            error: errorMessage,
-          };
-        }
-      }
-
-      // Create payment transaction record
-      const { error: transactionError } = await supabase
-        .from('payment_transactions')
-        .insert({
-          user_id: userId,
-          request_id: request.id,
-          payment_method_id: defaultPaymentMethod.id,
-          stripe_payment_intent_id: paymentResult.payment_intent_id || '',
-          amount_cents: 500, // $5.00 in cents
-          description: `RigSnap Request Fee - Request #${request.id}`,
-          transaction_type: 'request_fee',
-          user_role: 'trucker',
-          status: 'succeeded',
-        });
-
-      if (transactionError) {
-        console.error(
-          'Error creating payment transaction record:',
-          transactionError
-        );
-        // Don't fail the request creation for this
-      }
+      // NOTE: Trucker is NOT charged when creating a request
+      // The trucker will only be charged when a provider accepts their request
+      console.log('Request created successfully - no charge applied to trucker');
 
       return {
         success: true,
@@ -240,26 +181,116 @@ export const requestService: RequestService = {
         };
       }
 
-      // Charge the service provider for accepting the request
-      console.log('Attempting to charge provider for acceptance:', {
-        providerId,
+      // NEW FLOW: First charge the trucker $5
+      console.log('Step 1: Attempting to charge trucker for acceptance:', {
+        truckerId: currentRequest.trucker_id,
         requestId,
+        requestStatus: currentRequest.status,
       });
-      const paymentResult = await chargeProviderForAcceptance(
-        providerId,
+      
+      // Check if trucker has any existing acceptance_fee transactions for this request
+      const { data: existingTransactions } = await supabase
+        .from('payment_transactions')
+        .select('id, status, transaction_type, amount_cents, created_at')
+        .eq('user_id', currentRequest.trucker_id)
+        .eq('request_id', requestId)
+        .eq('transaction_type', 'acceptance_fee')
+        .order('created_at', { ascending: false });
+      
+      console.log('🔄 Existing acceptance_fee transactions for trucker:', existingTransactions);
+      
+      const truckerPaymentResult = await chargeTruckerForRequest(
+        currentRequest.trucker_id,
         requestId
       );
-      console.log('Payment result:', paymentResult);
+      console.log('Trucker payment result:', truckerPaymentResult);
 
-      if (!paymentResult.success) {
-        console.error('Payment failed:', paymentResult.error);
+      // If payment failed, check if it's because of insufficient funds or card issues
+      if (!truckerPaymentResult.success) {
+        console.error('🚨 Trucker payment failed during re-acceptance:', truckerPaymentResult.error);
+        
+        // Check if there are any recent refunds that might affect the charge
+        const { data: recentRefunds } = await supabase
+          .from('payment_transactions')
+          .select('id, status, transaction_type, amount_cents, created_at')
+          .eq('user_id', currentRequest.trucker_id)
+          .eq('request_id', requestId)
+          .eq('transaction_type', 'refund')
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Last 24 hours
+          .order('created_at', { ascending: false });
+        
+        console.log('🔄 Recent refund transactions:', recentRefunds);
+        
+        if (recentRefunds && recentRefunds.length > 0) {
+          console.log('💡 Trucker had recent refunds - this might be causing payment issues');
+        }
+      }
+
+      if (!truckerPaymentResult.success) {
+        console.error('Trucker payment failed:', truckerPaymentResult.error);
         return {
           success: false,
-          error: `Payment failed: ${paymentResult.error}`,
+          error: `Trucker payment failed: ${truckerPaymentResult.error}`,
         };
       }
 
-      console.log('Payment successful, proceeding with request update');
+      // Record trucker payment transaction
+      const { error: truckerTransactionError } = await supabase
+        .from('payment_transactions')
+        .insert({
+          user_id: currentRequest.trucker_id,
+          request_id: requestId,
+          payment_method_id: null, // Will be filled by chargeTruckerForRequest
+          stripe_payment_intent_id: truckerPaymentResult.payment_intent_id || '',
+          amount_cents: 500, // $5.00 in cents
+          description: `RigSnap Acceptance Fee (Trucker) - Request #${requestId}`,
+          transaction_type: 'acceptance_fee',
+          user_role: 'trucker',
+          status: 'succeeded',
+        });
+
+      if (truckerTransactionError) {
+        console.error('Error creating trucker payment transaction record:', truckerTransactionError);
+        // Continue with provider charging even if transaction record fails
+      }
+
+      console.log('Trucker payment successful, proceeding to charge provider');
+
+      // Step 2: Charge the service provider for accepting the request
+      console.log('Step 2: Attempting to charge provider for acceptance:', {
+        providerId,
+        requestId,
+      });
+      const providerPaymentResult = await chargeProviderForAcceptance(
+        providerId,
+        requestId
+      );
+      console.log('Provider payment result:', providerPaymentResult);
+
+      if (!providerPaymentResult.success) {
+        console.error('Provider payment failed:', providerPaymentResult.error);
+        
+        // REFUND LOGIC: If provider payment fails, refund the trucker
+        console.log('🔄 Refunding trucker due to provider payment failure');
+        const refundResult = await refundTrucker(
+          currentRequest.trucker_id,
+          requestId,
+          500 // $5.00 refund
+        );
+        
+        if (refundResult.success) {
+          console.log('✅ Trucker refund successful');
+        } else {
+          console.error('❌ Trucker refund failed:', refundResult.error);
+        }
+        
+        return {
+          success: false,
+          error: `Provider payment failed: ${providerPaymentResult.error}. Trucker has been refunded $5.`,
+        };
+      }
+
+      console.log('Both payments successful, proceeding with request update');
 
       // First, check the current status again to debug
       const { data: preUpdateCheck, error: preUpdateError } = await supabase
@@ -359,16 +390,16 @@ export const requestService: RequestService = {
 
       console.log('📊 Updated request data:', updateData[0]);
 
-      // Create payment transaction record
+      // Create provider payment transaction record
       const { error: transactionError } = await supabase
         .from('payment_transactions')
         .insert({
           user_id: providerId,
           request_id: requestId,
           payment_method_id: defaultPaymentMethod.id,
-          stripe_payment_intent_id: paymentResult.payment_intent_id || '',
+          stripe_payment_intent_id: providerPaymentResult.payment_intent_id || '',
           amount_cents: 500, // $5.00 in cents
-          description: `RigSnap Acceptance Fee - Request #${requestId}`,
+          description: `RigSnap Acceptance Fee (Provider) - Request #${requestId}`,
           transaction_type: 'acceptance_fee',
           user_role: 'provider',
           status: 'succeeded',

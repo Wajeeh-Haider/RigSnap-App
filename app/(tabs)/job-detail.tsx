@@ -99,11 +99,15 @@ export default function JobDetailScreen() {
   const { colors } = useTheme();
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
+  const [showProviderCancelModal, setShowProviderCancelModal] = useState(false);
+  const [showTruckerCancelModal, setShowTruckerCancelModal] = useState(false);
   const [rating, setRating] = useState(0);
   const [feedback, setFeedback] = useState('');
   const [isCompleting, setIsCompleting] = useState(false);
   const [isAccepting, setIsAccepting] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [showCancelReasonModal, setShowCancelReasonModal] = useState(false);
+  const [cancellationReason, setCancellationReason] = useState('');
   const [userLocation, setUserLocation] = useState<{
     latitude: number;
     longitude: number;
@@ -259,7 +263,7 @@ export default function JobDetailScreen() {
       // Only show success alert after payment is confirmed
       Alert.alert(
         'Request Accepted! 🎉',
-        'Payment confirmed! You have successfully accepted this request and been charged $5. The trucker has been notified and you can now start chatting.',
+        'Payment confirmed! Both you and the trucker have been charged $5. The trucker has been notified and you can now start chatting.',
         [
           {
             text: 'Start Chat',
@@ -281,10 +285,15 @@ export default function JobDetailScreen() {
 
       let errorMessage = 'Failed to accept request. Please try again.';
 
-      if (error?.message?.includes('Payment failed')) {
-        errorMessage = `Payment failed: ${
-          error.message.split('Payment failed: ')[1] ||
-          'Please check your payment method.'
+      if (error?.message?.includes('Trucker payment failed')) {
+        errorMessage = `Trucker payment failed: ${
+          error.message.split('Trucker payment failed: ')[1] ||
+          'The trucker\'s payment method may be invalid.'
+        }`;
+      } else if (error?.message?.includes('Provider payment failed')) {
+        errorMessage = `Your payment failed: ${
+          error.message.split('Provider payment failed: ')[1] ||
+          'Please check your payment method. The trucker has been refunded $5.'
         }`;
       } else if (error?.message?.includes('No default payment method')) {
         errorMessage =
@@ -303,122 +312,76 @@ export default function JobDetailScreen() {
     }
   };
 
+  // Function to handle cancellation with reason - moved outside handleCancelRequest for modal access
+  const processCancellation = async (reason: string) => {
+    console.log('🔄 processCancellation - Starting cancellation with reason:', reason);
+    if (!reason || reason.trim().length === 0) {
+      console.log('❌ processCancellation - Empty reason provided');
+      Alert.alert(
+        'Error',
+        'Please provide a reason for cancellation.'
+      );
+      return;
+    }
+
+    console.log('🔄 processCancellation - Setting isCancelling to true');
+    setIsCancelling(true);
+    try {
+      console.log('🔄 processCancellation - Calling cancelRequest with:', {
+        requestId: request.id,
+        userId: user.id,
+        reason: reason.trim()
+      });
+      const success = await cancelRequest(request.id, user.id, reason.trim());
+      console.log('🔄 processCancellation - cancelRequest result:', success);
+      if (success) {
+        const message = user.role === 'provider' 
+          ? 'The request has been cancelled. The trucker has been notified and will receive a full refund. You have been charged a $5 penalty fee.'
+          : 'Your request has been cancelled.';
+        console.log('✅ processCancellation - Success, showing alert:', message);
+        Alert.alert(
+          'Request Cancelled',
+          message,
+          [{ text: 'OK', onPress: () => router.back() }]
+        );
+      } else {
+        console.log('❌ processCancellation - cancelRequest returned false');
+      }
+      // Error alert is already shown in cancelRequest if payment fails
+    } catch (error) {
+      console.log('❌ processCancellation - Error occurred:', error);
+      Alert.alert(
+        'Error',
+        'Failed to cancel request. Please try again.'
+      );
+    } finally {
+      console.log('🔄 processCancellation - Setting isCancelling to false');
+      setIsCancelling(false);
+      setShowCancelReasonModal(false);
+      setCancellationReason('');
+    }
+  };
+
   const handleCancelRequest = async () => {
+    console.log("jereee")
     const isProvider = user.role === 'provider';
     const isTrucker = user.role === 'trucker';
+    console.log(user.role)
 
+    // Function to show reason input
+    const showReasonInput = () => {
+      console.log('📝 showReasonInput - Starting reason input flow');
+      // Skip Alert.prompt entirely and use custom modal for reliability
+      console.log('📝 showReasonInput - Using custom modal (Alert.prompt skipped for reliability)');
+      setCancellationReason('');
+      setShowCancelReasonModal(true);
+    };
+
+    // Show confirmation modal instead of Alert.alert for reliability
     if (isProvider) {
-      // Provider cancellation (existing logic)
-      Alert.alert(
-        'Cancel Request',
-        `Are you sure you want to cancel this ${getServiceDisplayName(
-          request.serviceType
-        ).toLowerCase()} request?\n\n⚠️ Warning: You will be charged a $5 penalty fee in addition to the original $5 lead fee (total $10). The trucker will receive a full refund.`,
-        [
-          { text: 'Keep Request', style: 'cancel' },
-          {
-            text: 'Cancel Request',
-            style: 'destructive',
-            onPress: () => {
-              Alert.prompt(
-                'Cancellation Reason',
-                'Please provide a reason for cancelling this request:',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Submit',
-                    onPress: async (reason: any) => {
-                      if (!reason || reason.trim().length === 0) {
-                        Alert.alert(
-                          'Error',
-                          'Please provide a reason for cancellation.'
-                        );
-                        return;
-                      }
-
-                      setIsCancelling(true);
-                      try {
-                        cancelRequest(request.id, user.id, reason.trim());
-                        Alert.alert(
-                          'Request Cancelled',
-                          'The request has been cancelled. The trucker has been notified and will receive a full refund. You have been charged a $5 penalty fee.',
-                          [{ text: 'OK', onPress: () => router.back() }]
-                        );
-                      } catch {
-                        Alert.alert(
-                          'Error',
-                          'Failed to cancel request. Please try again.'
-                        );
-                      } finally {
-                        setIsCancelling(false);
-                      }
-                    },
-                  },
-                ],
-                'plain-text',
-                '',
-                'default'
-              );
-            },
-          },
-        ]
-      );
+      setShowProviderCancelModal(true);
     } else if (isTrucker) {
-      // Trucker cancellation (new logic)
-      Alert.alert(
-        'Cancel Request',
-        `Are you sure you want to cancel this ${getServiceDisplayName(
-          request.serviceType
-        ).toLowerCase()} request?\n\nThis will remove your request from the platform.`,
-        [
-          { text: 'Keep Request', style: 'cancel' },
-          {
-            text: 'Cancel Request',
-            style: 'destructive',
-            onPress: () => {
-              Alert.prompt(
-                'Cancellation Reason',
-                'Please provide a reason for cancelling this request:',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Submit',
-                    onPress: async (reason: any) => {
-                      if (!reason || reason.trim().length === 0) {
-                        Alert.alert(
-                          'Error',
-                          'Please provide a reason for cancellation.'
-                        );
-                        return;
-                      }
-
-                      setIsCancelling(true);
-                      try {
-                        cancelRequest(request.id, user.id, reason.trim());
-                        Alert.alert(
-                          'Request Cancelled',
-                          'Your request has been cancelled.',
-                          [{ text: 'OK', onPress: () => router.back() }]
-                        );
-                      } catch {
-                        Alert.alert(
-                          'Error',
-                          'Failed to cancel request. Please try again.'
-                        );
-                      } finally {
-                        setIsCancelling(false);
-                      }
-                    },
-                  },
-                ],
-                'plain-text',
-                '',
-                'default'
-              );
-            },
-          },
-        ]
-      );
+      setShowTruckerCancelModal(true);
     }
   };
 
@@ -543,7 +506,7 @@ export default function JobDetailScreen() {
       </View>
     );
   };
-  console.log(request);
+  // console.log(request);
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View
@@ -1097,7 +1060,7 @@ export default function JobDetailScreen() {
             ]}
           >
             <Text style={[styles.modalTitle, { color: colors.text }]}>
-              Accept Request
+              Accept Requesta
             </Text>
             <TouchableOpacity
               onPress={() => setShowAcceptModal(false)}
@@ -1204,30 +1167,7 @@ export default function JobDetailScreen() {
                 )}
               </View>
 
-              {/* <View
-                style={[
-                  styles.feeNotice,
-                  {
-                    backgroundColor: colors.warning + '20',
-                    borderColor: colors.warning + '40',
-                  },
-                ]}
-              >
-                <DollarSign size={20} color={colors.warning} />
-                <View style={styles.feeText}>
-                  <Text style={[styles.feeTitle, { color: colors.warning }]}>
-                    Lead Fee Notice
-                  </Text>
-                  <Text
-                    style={[styles.feeDescription, { color: colors.warning }]}
-                  >
-                    A $5 lead fee will be charged to both you and the trucker
-                    when you accept this request. This ensures serious
-                    commitment from both parties.
-                  </Text>
-                </View>
-              </View> */}
-
+           
               <View
                 style={[
                   styles.benefitsSection,
@@ -1514,6 +1454,349 @@ export default function JobDetailScreen() {
                   </Text>
                 </>
               )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Cancellation Reason Modal */}
+      <Modal
+        visible={showCancelReasonModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowCancelReasonModal(false)}
+      >
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: colors.background },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                backgroundColor: colors.surface,
+                borderBottomColor: colors.border,
+              },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Cancellation Reason
+            </Text>
+            <TouchableOpacity
+              onPress={() => setShowCancelReasonModal(false)}
+              style={styles.closeButton}
+            >
+              <X size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.feedbackSection}>
+              <Text style={[styles.feedbackTitle, { color: colors.text }]}>
+                Please provide a reason for cancellation
+              </Text>
+              <TextInput
+                style={[
+                  styles.feedbackInput,
+                  {
+                    borderColor: colors.border,
+                    color: colors.text,
+                    backgroundColor: colors.card,
+                  },
+                ]}
+                placeholder="Enter cancellation reason..."
+                placeholderTextColor={colors.textSecondary}
+                multiline
+                value={cancellationReason}
+                onChangeText={setCancellationReason}
+                maxLength={200}
+              />
+              <Text style={[styles.characterCount, { color: colors.textSecondary }]}>
+                {cancellationReason.length}/200
+              </Text>
+            </View>
+          </ScrollView>
+
+          <View
+            style={[
+              styles.modalActions,
+              {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.border,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={[styles.cancelButton, { backgroundColor: colors.card }]}
+              onPress={() => setShowCancelReasonModal(false)}
+            >
+              <Text
+                style={[styles.cancelButtonText, { color: colors.textSecondary }]}
+              >
+                Cancel
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.confirmAcceptButton,
+                { backgroundColor: '#ef4444' },
+                !cancellationReason.trim() && styles.confirmAcceptButtonDisabled,
+              ]}
+              onPress={() => processCancellation(cancellationReason.trim())}
+              disabled={!cancellationReason.trim()}
+            >
+              {isCancelling ? (
+                <ActivityIndicator color="white" size="small" />
+              ) : (
+                <>
+                  <X size={16} color="white" />
+                  <Text style={styles.confirmAcceptButtonText}>
+                    Confirm Cancellation
+                  </Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Provider Cancellation Confirmation Modal */}
+      <Modal
+        visible={showProviderCancelModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowProviderCancelModal(false)}
+      >
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: colors.background },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                backgroundColor: colors.surface,
+                borderBottomColor: colors.border,
+              },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Cancel Request
+            </Text>
+            <TouchableOpacity
+              onPress={() => setShowProviderCancelModal(false)}
+              style={styles.closeButton}
+            >
+              <X size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.acceptModalContent}>
+              <View style={styles.acceptIcon}>
+                <AlertTriangle size={48} color="#ef4444" />
+              </View>
+
+              <Text style={[styles.acceptTitle, { color: colors.text }]}>
+                Are you sure you want to cancel this request?
+              </Text>
+              <Text
+                style={[styles.acceptSubtitle, { color: colors.textSecondary }]}
+              >
+                You are about to cancel a{' '}
+                {getServiceDisplayName(request.serviceType).toLowerCase()}{' '}
+                request from {request.truckerName}
+              </Text>
+
+              <View
+                style={[
+                  styles.requestSummary,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
+              >
+                <View style={styles.summaryItem}>
+                  <Text
+                    style={[
+                      styles.summaryLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    ⚠️ Warning:
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: colors.text }]}>
+                    You will be charged a $5 penalty fee in addition to the original $5 lead fee (total $10).
+                  </Text>
+                </View>
+                <View style={styles.summaryItem}>
+                  <Text
+                    style={[
+                      styles.summaryLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Refund:
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: colors.success }]}>
+                    The trucker will receive a full refund.
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+
+          <View
+            style={[
+              styles.modalActions,
+              {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.border,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={[styles.cancelButton, { backgroundColor: colors.card }]}
+              onPress={() => setShowProviderCancelModal(false)}
+            >
+              <Text
+                style={[styles.cancelButtonText, { color: colors.textSecondary }]}
+              >
+                Keep Request
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.confirmAcceptButton,
+                { backgroundColor: '#ef4444' },
+              ]}
+              onPress={() => {
+                setShowProviderCancelModal(false);
+                setCancellationReason('');
+                setShowCancelReasonModal(true);
+              }}
+            >
+              <X size={16} color="white" />
+              <Text style={styles.confirmAcceptButtonText}>
+                Cancel Request
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Trucker Cancellation Confirmation Modal */}
+      <Modal
+        visible={showTruckerCancelModal}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => setShowTruckerCancelModal(false)}
+      >
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: colors.background },
+          ]}
+        >
+          <View
+            style={[
+              styles.modalHeader,
+              {
+                backgroundColor: colors.surface,
+                borderBottomColor: colors.border,
+              },
+            ]}
+          >
+            <Text style={[styles.modalTitle, { color: colors.text }]}>
+              Cancel Request
+            </Text>
+            <TouchableOpacity
+              onPress={() => setShowTruckerCancelModal(false)}
+              style={styles.closeButton}
+            >
+              <X size={24} color={colors.textSecondary} />
+            </TouchableOpacity>
+          </View>
+
+          <ScrollView style={styles.modalContent}>
+            <View style={styles.acceptModalContent}>
+              <View style={styles.acceptIcon}>
+                <AlertTriangle size={48} color="#ef4444" />
+              </View>
+
+              <Text style={[styles.acceptTitle, { color: colors.text }]}>
+                Are you sure you want to cancel this request?
+              </Text>
+              <Text
+                style={[styles.acceptSubtitle, { color: colors.textSecondary }]}
+              >
+                You are about to cancel your{' '}
+                {getServiceDisplayName(request.serviceType).toLowerCase()}{' '}
+                request
+              </Text>
+
+              <View
+                style={[
+                  styles.requestSummary,
+                  { backgroundColor: colors.card, borderColor: colors.border },
+                ]}
+              >
+                <View style={styles.summaryItem}>
+                  <Text
+                    style={[
+                      styles.summaryLabel,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    ⚠️ Note:
+                  </Text>
+                  <Text style={[styles.summaryValue, { color: colors.text }]}>
+                    This will remove your request from the platform.
+                  </Text>
+                </View>
+              </View>
+            </View>
+          </ScrollView>
+
+          <View
+            style={[
+              styles.modalActions,
+              {
+                backgroundColor: colors.surface,
+                borderTopColor: colors.border,
+              },
+            ]}
+          >
+            <TouchableOpacity
+              style={[styles.cancelButton, { backgroundColor: colors.card }]}
+              onPress={() => setShowTruckerCancelModal(false)}
+            >
+              <Text
+                style={[styles.cancelButtonText, { color: colors.textSecondary }]}
+              >
+                Keep Request
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[
+                styles.confirmAcceptButton,
+                { backgroundColor: '#ef4444' },
+              ]}
+              onPress={() => {
+                setShowTruckerCancelModal(false);
+                setCancellationReason('');
+                setShowCancelReasonModal(true);
+              }}
+            >
+              <X size={16} color="white" />
+              <Text style={styles.confirmAcceptButtonText}>
+                Cancel Request
+              </Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1915,6 +2198,9 @@ const styles = StyleSheet.create({
   summaryValue: {
     fontSize: 14,
     fontWeight: 'bold',
+    width:'90%',
+    paddingLeft:5,
+    paddingRight:5
   },
   feeNotice: {
     width: '100%',

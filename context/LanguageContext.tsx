@@ -120,6 +120,7 @@ const translations: Record<string, Record<string, string>> = {
     'leads.refunded': 'Refunded',
     'leads.penalties': 'Penalties',
     'leads.pending': 'Pending',
+    'leads.charged': 'Charged',
     'leads.transactionHistory': 'Transaction History',
     'leads.noLeadFeesYet': 'No lead fees yet',
     'leads.leadFeesWillAppear': 'Lead fees will appear here when service providers accept your requests',

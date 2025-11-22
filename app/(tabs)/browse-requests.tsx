@@ -280,13 +280,16 @@ export default function BrowseRequestsScreen() {
 
                     setIsCancelling(true);
                     try {
-                      cancelRequest(request.id, user.id, reason.trim());
-                      setSelectedRequest(null);
-                      Alert.alert(
-                        'Request Cancelled',
-                        'The request has been cancelled. The trucker has been notified and will receive a full refund. You have been charged a $5 penalty fee.',
-                        [{ text: 'OK' }]
-                      );
+                      const success = await cancelRequest(request.id, user.id, reason.trim());
+                      if (success) {
+                        setSelectedRequest(null);
+                        Alert.alert(
+                          'Request Cancelled',
+                          'The request has been cancelled. The trucker has been notified and will receive a full refund. You have been charged a $5 penalty fee.',
+                          [{ text: 'OK' }]
+                        );
+                      }
+                      // Error alert is already shown in cancelRequest if payment fails
                     } catch {
                       Alert.alert(
                         'Error',

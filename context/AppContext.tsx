@@ -11,6 +11,7 @@ import { supabase } from '@/lib/supabase';
 import { ServiceRequest, Lead, ChatMessage, Chat } from '@/types';
 import { useAuth } from './AuthContext';
 import { requestService } from '@/utils/paymentOperations';
+import { chargeProviderPenalty, refundTrucker } from '@/utils/stripe';
 import { fetchAllRequests, fetchUserRequests, fetchAvailableRequests, fetchProviderRequests, updateRequestStatusInDB } from '@/utils/requestOperations';
 import { 
   createChatInDB, 
@@ -41,7 +42,7 @@ interface AppContextType {
     requestId: string,
     providerId: string,
     reason: string
-  ) => void;
+  ) => Promise<boolean>;
   updateRequestStatus: (
     requestId: string,
     status: ServiceRequest['status']
@@ -162,7 +163,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         for (const chat of userChats) {
           try {
             // Use request_id from database response
-            const requestId = chat.request_id || chat.requestId;
+            const requestId = chat.request_id;
             if (!requestId || requestId === 'undefined') {
               console.warn('Chat has no valid request_id:', chat);
               continue;
@@ -170,7 +171,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
             const chatMessages = await fetchChatMessages(requestId);
             allMessages.push(...chatMessages);
           } catch (error) {
-            console.error(`Error loading messages for chat ${requestId || 'unknown'}:`, error);
+            console.error(`Error loading messages for chat ${chat.request_id || 'unknown'}:`, error);
           }
         }
         
@@ -492,41 +493,273 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
 
   const cancelRequest = useCallback(
-    async (requestId: string, providerId: string, reason: string) => {
+    async (requestId: string, userId: string, reason: string) => {
+      console.log('cancelRequest called with:', { requestId, userId, reason });
       const now = new Date().toISOString();
       
-      // Update database first
-      const result = await updateRequestStatusInDB(
-        requestId, 
-        'cancelled',
-        {
-          cancelled_at: now,
-          cancellation_reason: reason,
-          cancelled_by: 'provider'
+      // Find the request to check if it was accepted
+      const request = requests.find(r => r.id === requestId);
+      if (!request) {
+        console.error('Request not found:', requestId);
+        return false;
+      }
+      console.log('Found request:', request);
+
+      // Check if this is a provider cancelling an accepted request
+      const isProviderCancellingAccepted = request.status === 'accepted' && 
+                                           request.providerId === userId;
+      console.log('isProviderCancellingAccepted:', isProviderCancellingAccepted);
+
+      let penaltyResult = null;
+      let refundResult: { success: boolean; refund_id?: string; error?: string } | null = null;
+
+      // Handle penalty and refund for provider cancelling accepted request
+      if (isProviderCancellingAccepted) {
+        console.log('🎯 CANCELLATION FLOW: Provider is cancelling an accepted request - processing penalty and refund');
+        console.log('📋 CANCELLATION DETAILS:');
+        console.log('  - Request ID:', requestId);
+        console.log('  - Provider ID:', userId);
+        console.log('  - Trucker ID:', request.truckerId);
+        console.log('  - Current Status:', request.status);
+        console.log('  - Cancellation Reason:', reason);
+        
+        // Debug: Check existing transactions for this request
+        console.log('🔍 DEBUG: Checking existing payment transactions for this request...');
+        const { data: existingTransactions } = await supabase
+          .from('payment_transactions')
+          .select('*')
+          .eq('request_id', requestId)
+          .order('created_at', { ascending: true });
+        
+        console.log('🔍 DEBUG: Existing transactions:', JSON.stringify(existingTransactions, null, 2));
+        
+        try {
+          // Charge provider penalty fee
+          console.log('💸 STEP 1: Charging provider penalty...');
+          penaltyResult = await chargeProviderPenalty(userId, requestId);
+          if (!penaltyResult.success) {
+            console.error('Failed to charge provider penalty:', penaltyResult.error);
+            Alert.alert(
+              'Payment Error',
+              'Failed to process penalty fee. Please check your payment method.'
+            );
+            return false;
+          }
+
+          // Refund trucker
+          console.log('💰 STEP 2: Processing trucker refund...');
+          console.log('💰 Trucker ID:', request.truckerId);
+          console.log('💰 Request ID:', requestId);
+          refundResult = await refundTrucker(request.truckerId, requestId, 500); // $5.00 refund
+          if (!refundResult.success) {
+            console.error('Failed to refund trucker:', refundResult.error);
+            // Continue with cancellation even if refund fails, but log the error
+          } else if (refundResult.refund_id === 'no_payment_found') {
+            console.log('No trucker payment to refund - trucker was not charged for this request');
+            // Continue with cancellation, no refund needed
+          } else if (refundResult.refund_id === 'no_actual_payment') {
+            console.log('No actual payment was processed - no refund needed');
+            // Continue with cancellation, no refund needed
+          } else if (refundResult.refund_id === 'payment_pending') {
+            console.log('Trucker payment is still pending - no refund needed');
+            // Continue with cancellation, no refund needed
+          }
+
+          // Record the penalty and refund transactions in database
+          try {
+            // Record penalty charge (use acceptance_fee as it's a provider fee)
+            await supabase.from('payment_transactions').insert({
+              user_id: userId,
+              request_id: requestId,
+              amount_cents: 500, // $5.00 in cents
+              currency: 'usd',
+              transaction_type: 'acceptance_fee',
+              status: 'succeeded',
+              description: `Cancellation penalty for request #${requestId}`,
+              stripe_payment_intent_id: penaltyResult.payment_intent_id,
+              user_role: 'provider',
+              created_at: now,
+              updated_at: now
+            });
+
+            // Record trucker refund
+            if (refundResult.success && refundResult.refund_id && 
+                refundResult.refund_id !== 'no_payment_found' && 
+                refundResult.refund_id !== 'no_actual_payment' && 
+                refundResult.refund_id !== 'payment_pending' &&
+                refundResult.refund_id !== 'invalid_payment_intent' &&
+                refundResult.refund_id !== 'test_bypass') {
+              
+              console.log('Recording refund transaction:', {
+                user_id: request.truckerId,
+                request_id: requestId,
+                refund_id: refundResult.refund_id
+              });
+              
+              await supabase.from('payment_transactions').insert({
+                user_id: request.truckerId,
+                request_id: requestId,
+                amount_cents: -500, // Negative for refund
+                currency: 'usd',
+                transaction_type: 'refund',
+                status: 'succeeded',
+                description: `Cancellation refund for request #${requestId}`,
+                stripe_payment_intent_id: refundResult.refund_id,
+                user_role: 'trucker',
+                created_at: now,
+                updated_at: now
+              });
+            } else {
+              console.log('Skipping refund transaction recording:', refundResult);
+            }
+
+            // Update leads to reflect the transactions
+              setLeads(prev => [
+                {
+                  id: `penalty_${requestId}_${Date.now()}`,
+                  requestId: requestId,
+                  userId: userId,
+                userRole: 'provider' as const,
+                  amount: 5.00,
+                  status: 'charged' as const,
+                  createdAt: now,
+                  description: `Cancellation penalty for request #${requestId}`
+                },
+                ...(refundResult?.success && refundResult?.refund_id && 
+                   refundResult?.refund_id !== 'no_payment_found' && 
+                   refundResult?.refund_id !== 'no_actual_payment' && 
+                   refundResult?.refund_id !== 'payment_pending' &&
+                   refundResult?.refund_id !== 'invalid_payment_intent' &&
+                   refundResult?.refund_id !== 'test_bypass' ? [{
+                  id: `refund_${requestId}_${Date.now()}`,
+                  requestId: requestId,
+                  userId: request.truckerId,
+                  userRole: 'trucker' as const,
+                  amount: -5.00,
+                  status: 'refunded' as const,
+                  createdAt: now,
+                  description: `Cancellation refund for request #${requestId}`
+                }] : []),
+                ...prev
+              ]);
+
+          } catch (dbError) {
+            console.error('Failed to record transactions in database:', dbError);
+          }
+
+        } catch (error) {
+          console.error('Error processing penalty/refund:', error);
+          return false;
         }
-      );
-      
-      if (!result.success) {
-        console.error('Failed to cancel request in database:', result.error);
-        // Still update local state for better UX, but log the error
       }
       
+      // Determine the new status
+      let newStatus: ServiceRequest['status'];
+      let additionalFields: any = {};
+      
+      if (isProviderCancellingAccepted) {
+        console.log('🎯 CANCELLATION FLOW: Provider is cancelling an accepted request - processing penalty and refund');
+        console.log('📋 CANCELLATION DETAILS:');
+        console.log('  - Request ID:', requestId);
+        console.log('  - Provider ID:', userId);
+        console.log('  - Trucker ID:', request.truckerId);
+        console.log('  - Current Status:', request.status);
+        console.log('  - Cancellation Reason:', reason);
+        
+        // When provider cancels accepted request, reset to pending
+        newStatus = 'pending';
+        additionalFields = {
+          provider_id: null, // Clear provider assignment
+          accepted_at: null, // Clear acceptance timestamp
+          cancelled_at: null, // Clear cancellation timestamp
+          cancellation_reason: reason,
+          cancelled_by: 'provider'
+        };
+      } else {
+        // Normal cancellation
+        newStatus = 'cancelled';
+        additionalFields = {
+          cancelled_at: now,
+          cancellation_reason: reason,
+          cancelled_by: user?.role === 'provider' ? 'provider' : 'trucker'
+        };
+      }
+      
+      // Update database first
+      let updateResult;
+      
+      console.log('Updating database with status:', newStatus);
+      
+      if (isProviderCancellingAccepted) {
+        // When provider cancels accepted request, we need to reset to pending and clear provider fields
+        console.log('Provider cancelling accepted request - resetting to pending');
+        const { error } = await supabase
+          .from('requests')
+          .update({
+            status: 'pending',
+            provider_id: null,
+            accepted_at: null,
+            cancelled_at: null,
+            cancellation_reason: reason,
+            cancelled_by: 'provider'
+          })
+          .eq('id', requestId);
+        
+        console.log('Database update result:', { error: error?.message });
+        updateResult = { success: !error, error: error?.message };
+      } else {
+        // Normal cancellation
+        console.log('Normal cancellation - setting to cancelled');
+        const { error } = await supabase
+          .from('requests')
+          .update({
+            status: 'cancelled',
+            cancelled_at: now,
+            cancellation_reason: reason,
+            cancelled_by: user?.role === 'provider' ? 'provider' : 'trucker'
+          })
+          .eq('id', requestId);
+        
+        console.log('Database update result:', { error: error?.message });
+        updateResult = { success: !error, error: error?.message };
+      }
+      
+      if (!updateResult.success) {
+        console.error('Failed to cancel request in database:', updateResult.error);
+        return false; // Return false if database update failed
+      }
+      
+      console.log('Database update successful');
+      
       // Update local state
+      console.log('Updating local state for request:', requestId);
       setRequests((prev) =>
         prev.map((request) =>
           request.id === requestId
             ? {
                 ...request,
-                status: 'cancelled' as const,
-                cancelledAt: now,
-                cancellationReason: reason,
-                cancelledBy: 'provider',
+                status: newStatus,
+                ...(isProviderCancellingAccepted ? {
+                  providerId: undefined,
+                  providerName: undefined,
+                  acceptedAt: undefined,
+                  cancelledAt: undefined,
+                  cancellationReason: reason,
+                  cancelledBy: 'provider',
+                } : {
+                  cancelledAt: now,
+                  cancellationReason: reason,
+                  cancelledBy: user?.role === 'provider' ? 'provider' : 'trucker',
+                }),
               }
             : request
         )
       );
+
+      console.log('cancelRequest completed successfully');
+      return true;
     },
-    [requests]
+    [requests, user]
   );
 
   const updateRequestStatus = useCallback(

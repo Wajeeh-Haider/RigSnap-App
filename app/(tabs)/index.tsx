@@ -320,8 +320,11 @@ https://rigsnap.app/download?ref=${referralCode}`;
 
   const handleCancelRequest = async (requestId: string, reason: string) => {
     try {
-      await cancelRequest(requestId, user.id, reason);
-      Alert.alert('Success', 'Your request has been cancelled successfully.');
+      const success = await cancelRequest(requestId, user.id, reason);
+      if (success) {
+        Alert.alert('Success', 'Your request has been cancelled successfully.');
+      }
+      // Error alert is already shown in cancelRequest if payment fails
     } catch (error: any) {
       Alert.alert('Error', error.message || 'Failed to cancel request. Please try again.');
     }
@@ -647,7 +650,7 @@ https://rigsnap.app/download?ref=${referralCode}`;
                           e.stopPropagation();
                           Alert.prompt(
                             'Cancel Request',
-                            'Are you sure you want to cancel this request?',
+                            'Are you sure you want to cancel  this request?',
                             [
                               {
                                 text: 'Cancel',

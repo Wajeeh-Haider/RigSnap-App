@@ -56,21 +56,17 @@ export default function ChatDetailScreen() {
   // Filter messages for this specific chat from global messages
   const messages = globalMessages.filter(msg => msg.requestId === requestId);
   
-  // Debug logging
-  console.log(`💬 Chat Detail - Total global messages: ${globalMessages.length}`);
-  console.log(`💬 Chat Detail - Messages for request ${requestId}: ${messages.length}`);
 
-  // Load messages and mark as read when entering the chat
   useEffect(() => {
     const initializeChat = async () => {
       if (!requestId || !user?.id) return;
       
       // If we don't have any messages for this chat, load them specifically
       if (messages.length === 0) {
-        console.log(`🔄 Loading messages specifically for chat ${requestId}`);
+        // console.log(`🔄 Loading messages specifically for chat ${requestId}`);
         try {
           const chatMessages = await getChatMessages(requestId);
-          console.log(`📥 Loaded ${chatMessages.length} messages for current chat`);
+          // console.log(`📥 Loaded ${chatMessages.length} messages for current chat`);
         } catch (error) {
           console.error('Error loading chat messages:', error);
         }
