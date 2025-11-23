@@ -60,20 +60,31 @@ const getLeadTypeColor = (description: string) => {
 
 export default function LeadsScreen() {
   const { user } = useAuth();
-  const { leads } = useApp();
+  const { leads, requests } = useApp();
   const { colors } = useTheme();
   const { t } = useLanguage();
-  const [filter, setFilter] = useState<
-    'all' | 'charged' | 'pending' | 'refunded'
-  >('all');
+  const [filter, setFilter] = useState<'all' | 'charged' | 'pending' | 'refunded'>('all');
 
   if (!user) return null;
 
   const userLeads = leads.filter((lead) => lead.userId === user.id);
+  
+  // Get request information for each lead
+  const leadsWithRequestInfo = userLeads.map((lead) => {
+    const request = requests.find((req) => req.id === lead.requestId);
+    return {
+      ...lead,
+      requestTitle: request?.description || 'Service Request',
+      requestType: request?.serviceType || 'service',
+      requestLocation: request?.location || 'Unknown Location',
+      requestUrgency: request?.urgency || 'medium',
+    };
+  });
+
   const filteredLeads =
     filter === 'all'
-      ? userLeads
-      : userLeads.filter((lead) => lead.status === filter);
+      ? leadsWithRequestInfo
+      : leadsWithRequestInfo.filter((lead) => lead.status === filter);
 
   const stats = {
     totalSpent: userLeads
@@ -277,6 +288,8 @@ export default function LeadsScreen() {
               const leadTypeColor = getLeadTypeColor(lead.description);
               const isRefund = lead.amount < 0;
               const isPenalty = lead.description.includes('penalty');
+              const isPending = lead.status === 'pending';
+              const isRefunded = lead.status === 'refunded';
 
               return (
                 <View
@@ -331,23 +344,35 @@ export default function LeadsScreen() {
                   <Text
                     style={[styles.leadDescription, { color: colors.text }]}
                   >
-                    {lead.description}
+                    {lead.requestTitle}
                   </Text>
 
                   <View style={styles.leadFooter}>
-                    <Text
-                      style={[
-                        styles.requestId,
-                        { color: colors.textSecondary },
-                      ]}
-                    >
-                      Request #{lead.requestId.slice(-8)}
-                    </Text>
+                    <View style={styles.requestInfo}>
+                      <Text
+                        style={[
+                          styles.serviceType,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
+                        {lead.requestType.charAt(0).toUpperCase() + lead.requestType.slice(1)}
+                      </Text>
+                      <Text
+                        style={[
+                          styles.location,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
+                        📍 {lead.requestLocation}
+                      </Text>
+                    </View>
                     <View
                       style={[
                         styles.roleIndicator,
                         {
-                          backgroundColor: isRefund
+                          backgroundColor: isPending
+                            ? '#fef3c7'
+                            : isRefunded
                             ? '#dcfce7'
                             : isPenalty
                             ? '#fef2f2'
@@ -359,7 +384,9 @@ export default function LeadsScreen() {
                         style={[
                           styles.roleText,
                           {
-                            color: isRefund
+                            color: isPending
+                              ? '#92400e'
+                              : isRefunded
                               ? '#166534'
                               : isPenalty
                               ? '#dc2626'
@@ -367,8 +394,10 @@ export default function LeadsScreen() {
                           },
                         ]}
                       >
-                        {isRefund
-                          ? 'Refund'
+                        {isPending
+                          ? 'Pending'
+                          : isRefunded
+                          ? 'Refunded'
                           : isPenalty
                           ? 'Penalty'
                           : lead.userRole === 'trucker'
@@ -604,16 +633,28 @@ const styles = StyleSheet.create({
   },
   requestId: {
     fontSize: 12,
-    fontFamily: 'monospace',
+    fontWeight: '500',
+  },
+  requestInfo: {
+    flex: 1,
+  },
+  serviceType: {
+    fontSize: 12,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  location: {
+    fontSize: 11,
+    fontWeight: '400',
   },
   roleIndicator: {
-    paddingHorizontal: 8,
+    paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 6,
+    borderRadius: 12,
   },
   roleText: {
-    fontSize: 10,
-    fontWeight: '500',
+    fontSize: 12,
+    fontWeight: '600',
   },
   infoCard: {
     flexDirection: 'row',

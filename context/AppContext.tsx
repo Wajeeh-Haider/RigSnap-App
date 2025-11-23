@@ -13,6 +13,7 @@ import { useAuth } from './AuthContext';
 import { requestService } from '@/utils/paymentOperations';
 import { chargeProviderPenalty, refundTrucker } from '@/utils/stripe';
 import { fetchAllRequests, fetchUserRequests, fetchAvailableRequests, fetchProviderRequests, updateRequestStatusInDB } from '@/utils/requestOperations';
+import { fetchUserLeads, fetchAllLeads, createLead } from '@/utils/leadOperations';
 import { 
   createChatInDB, 
   sendMessageToDB, 
@@ -156,6 +157,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const allRequests = await fetchAllRequests();
         setRequests(allRequests);
 
+        // Load leads for the current user
+        const userLeads = await fetchUserLeads(user.id);
+        setLeads(userLeads);
+        console.log(`Loaded ${userLeads.length} leads for user ${user.id}`);
+
         // Load all messages for user's chats to populate unread counts
         const userChats = await fetchUserChats(user.id);
         const allMessages: ChatMessage[] = [];
@@ -185,6 +191,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         console.error('Error loading initial data:', error);
         setRequests([]);
+        setLeads([]);
         setMessages([]);
       } finally {
         setIsLoadingRequests(false);
@@ -334,6 +341,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
     try {
       const allRequests = await fetchAllRequests();
       setRequests(allRequests);
+      
+      // Also refresh leads for the current user
+      const userLeads = await fetchUserLeads(user.id);
+      setLeads(userLeads);
+      console.log(`Refreshed ${userLeads.length} leads for user ${user.id}`);
     } catch (error) {
       console.error('Error refreshing requests:', error);
     } finally {
@@ -794,13 +806,18 @@ export function AppProvider({ children }: { children: ReactNode }) {
     []
   );
 
-  const addLead = useCallback((leadData: Omit<Lead, 'id' | 'createdAt'>) => {
-    const newLead: Lead = {
-      id: Date.now().toString(),
-      ...leadData,
-      createdAt: new Date().toISOString(),
-    };
-    setLeads((prev) => [newLead, ...prev]);
+  const addLead = useCallback(async (leadData: Omit<Lead, 'id' | 'createdAt'>) => {
+    try {
+      const newLead = await createLead(leadData);
+      if (newLead) {
+        setLeads((prev) => [newLead, ...prev]);
+        console.log('Lead created successfully:', newLead);
+      } else {
+        console.error('Failed to create lead in database');
+      }
+    } catch (error) {
+      console.error('Error creating lead:', error);
+    }
   }, []);
 
   const getUserRequests = useCallback(
