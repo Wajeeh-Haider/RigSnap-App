@@ -5,6 +5,7 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
+  Modal,
 } from 'react-native';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
@@ -65,6 +66,7 @@ export default function LeadsScreen() {
   const { colors } = useTheme();
   const { t } = useLanguage();
   const [filter, setFilter] = useState<'all' | 'charged' | 'pending' | 'refunded' | 'penalty'>('all');
+  const [showSpendingBreakdown, setShowSpendingBreakdown] = useState(false);
 
   if (!user) return null;
 
@@ -167,12 +169,13 @@ export default function LeadsScreen() {
       </View>
 
       <View style={styles.statsContainer}>
-        <View
+        <TouchableOpacity
           style={[
             styles.statCard,
             styles.totalCard,
             { backgroundColor: colors.surface, borderColor: colors.border },
           ]}
+          onPress={() => setShowSpendingBreakdown(true)}
         >
           <View style={styles.statIcon}>
             <DollarSign size={24} color="#10b981" />
@@ -185,7 +188,7 @@ export default function LeadsScreen() {
               {t('leads.netSpent')}
             </Text>
           </View>
-        </View>
+        </TouchableOpacity>
 
         <View style={styles.statRow}>
           <View
@@ -638,6 +641,101 @@ export default function LeadsScreen() {
           </View>
         </View>
       )} */}
+
+      {/* Spending Breakdown Modal */}
+      <Modal
+        visible={showSpendingBreakdown}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => setShowSpendingBreakdown(false)}
+      >
+        <View style={[styles.modalContainer, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
+          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+            <View style={styles.modalHeader}>
+              <Text style={[styles.modalTitle, { color: colors.text }]}>
+                Spending Breakdown
+              </Text>
+              <TouchableOpacity
+                onPress={() => setShowSpendingBreakdown(false)}
+                style={styles.closeButton}
+              >
+                <CloseCircle size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView style={styles.modalBody}>
+              <View style={styles.breakdownItem}>
+                <View style={styles.breakdownRow}>
+                  <Text style={[styles.breakdownLabel, { color: colors.text }]}>
+                    Total Spent:
+                  </Text>
+                  <Text style={[styles.breakdownAmount, { color: colors.text }]}>
+                    ${stats.totalSpent}
+                  </Text>
+                </View>
+                <Text style={[styles.breakdownDetail, { color: colors.textSecondary }]}>
+                  Charged leads (positive amounts)
+                </Text>
+              </View>
+
+              <View style={styles.breakdownItem}>
+                <View style={styles.breakdownRow}>
+                  <Text style={[styles.breakdownLabel, { color: colors.text }]}>
+                    Total Refunded:
+                  </Text>
+                  <Text style={[styles.breakdownAmount, { color: '#10b981' }]}>
+                    -${stats.totalRefunded}
+                  </Text>
+                </View>
+                <Text style={[styles.breakdownDetail, { color: colors.textSecondary }]}>
+                  Refunds and negative amounts
+                </Text>
+              </View>
+
+              <View style={[styles.breakdownDivider, { backgroundColor: colors.border }]} />
+
+              <View style={styles.breakdownItem}>
+                <View style={styles.breakdownRow}>
+                  <Text style={[styles.breakdownLabel, { color: colors.text, fontWeight: 'bold' }]}>
+                    Net Spent:
+                  </Text>
+                  <Text style={[styles.breakdownAmount, { color: colors.text, fontWeight: 'bold', fontSize: 18 }]}>
+                    ${netSpent}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.breakdownItem}>
+                <View style={styles.breakdownRow}>
+                  <Text style={[styles.breakdownLabel, { color: colors.text }]}>
+                    Pending Amount:
+                  </Text>
+                  <Text style={[styles.breakdownAmount, { color: '#f59e0b' }]}>
+                    ${stats.pendingAmount}
+                  </Text>
+                </View>
+                <Text style={[styles.breakdownDetail, { color: colors.textSecondary }]}>
+                  Awaiting processing
+                </Text>
+              </View>
+
+              <View style={styles.breakdownItem}>
+                <View style={styles.breakdownRow}>
+                  <Text style={[styles.breakdownLabel, { color: colors.text }]}>
+                    This Month:
+                  </Text>
+                  <Text style={[styles.breakdownAmount, { color: colors.text }]}>
+                    {stats.thisMonth} leads
+                  </Text>
+                </View>
+                <Text style={[styles.breakdownDetail, { color: colors.textSecondary }]}>
+                  Leads processed this month
+                </Text>
+              </View>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -863,5 +961,59 @@ const styles = StyleSheet.create({
   infoDescription: {
     fontSize: 12,
     lineHeight: 16,
+  },
+  // Modal styles
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 24,
+    maxHeight: '80%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingBottom: 16,
+    borderBottomWidth: 1,
+  },
+  modalTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  modalBody: {
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+  },
+  breakdownItem: {
+    marginBottom: 20,
+  },
+  breakdownRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  breakdownLabel: {
+    fontSize: 16,
+  },
+  breakdownAmount: {
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  breakdownDetail: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  breakdownDivider: {
+    height: 1,
+    marginVertical: 16,
   },
 });
