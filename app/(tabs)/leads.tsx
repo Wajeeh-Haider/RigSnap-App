@@ -63,9 +63,20 @@ export default function LeadsScreen() {
   const { leads, requests } = useApp();
   const { colors } = useTheme();
   const { t } = useLanguage();
-  const [filter, setFilter] = useState<'all' | 'charged' | 'pending' | 'refunded'>('all');
+  const [filter, setFilter] = useState<'all' | 'charged' | 'pending' | 'refunded' | 'penalty'>('all');
 
   if (!user) return null;
+
+  // Reset filter to 'all' if provider has 'pending' or 'refunded' selected
+  // Reset filter to 'all' if trucker has 'penalty' selected
+  React.useEffect(() => {
+    if (user.role === 'provider' && (filter === 'pending' || filter === 'refunded')) {
+      setFilter('all');
+    }
+    if (user.role === 'trucker' && filter === 'penalty') {
+      setFilter('all');
+    }
+  }, [user.role, filter]);
 
   const userLeads = leads.filter((lead) => lead.userId === user.id);
   
@@ -84,6 +95,8 @@ export default function LeadsScreen() {
   const filteredLeads =
     filter === 'all'
       ? leadsWithRequestInfo
+      : filter === 'penalty'
+      ? leadsWithRequestInfo.filter((lead) => lead.description.includes('penalty'))
       : leadsWithRequestInfo.filter((lead) => lead.status === filter);
 
   const stats = {
@@ -227,33 +240,62 @@ export default function LeadsScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterScroll}
         >
-          {['all', 'charged', 'pending', 'refunded'].map((filterType) => (
-            <TouchableOpacity
-              key={filterType}
-              style={[
-                styles.filterButton,
-                { backgroundColor: colors.card, borderColor: colors.border },
-                filter === filterType && {
-                  backgroundColor: colors.primary,
-                  borderColor: colors.primary,
-                },
-              ]}
-              onPress={() => setFilter(filterType as any)}
-            >
-              <Text
-                style={[
-                  styles.filterText,
-                  { color: colors.textSecondary },
-                  filter === filterType && { color: 'white' },
-                ]}
-              >
-                {filterType === 'all'
-                  ? 'All'
-                  : t(`leads.${filterType}`) ||
-                    filterType.charAt(0).toUpperCase() + filterType.slice(1)}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {user.role === 'trucker' 
+            ? ['all', 'charged', 'pending', 'refunded'].map((filterType) => (
+                <TouchableOpacity
+                  key={filterType}
+                  style={[
+                    styles.filterButton,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                    filter === filterType && {
+                      backgroundColor: colors.primary,
+                      borderColor: colors.primary,
+                    },
+                  ]}
+                  onPress={() => setFilter(filterType as any)}
+                >
+                  <Text
+                    style={[
+                      styles.filterText,
+                      { color: colors.textSecondary },
+                      filter === filterType && { color: 'white' },
+                    ]}
+                  >
+                    {filterType === 'all'
+                      ? 'All'
+                      : t(`leads.${filterType}`) ||
+                        filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))
+            : ['all', 'charged', 'penalty'].map((filterType) => (
+                <TouchableOpacity
+                  key={filterType}
+                  style={[
+                    styles.filterButton,
+                    { backgroundColor: colors.card, borderColor: colors.border },
+                    filter === filterType && {
+                      backgroundColor: colors.primary,
+                      borderColor: colors.primary,
+                    },
+                  ]}
+                  onPress={() => setFilter(filterType as any)}
+                >
+                  <Text
+                    style={[
+                      styles.filterText,
+                      { color: colors.textSecondary },
+                      filter === filterType && { color: 'white' },
+                    ]}
+                  >
+                    {filterType === 'all'
+                      ? 'All'
+                      : t(`leads.${filterType}`) ||
+                        filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+                  </Text>
+                </TouchableOpacity>
+              ))
+          }
         </ScrollView>
       </View>
 

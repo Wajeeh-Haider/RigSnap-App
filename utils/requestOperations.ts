@@ -61,7 +61,7 @@ export const fetchAllRequests = async (): Promise<ServiceRequest[]> => {
 
     console.log('Fetched requests:', requestsData.length);
     console.log('Fetched users:', usersData?.length || 0);
-    console.log('Request statuses:', requestsData.map(r => ({ id: r.id.slice(0, 8), status: r.status })));
+    // console.log('Request statuses:', requestsData.map(r => ({ id: r.id.slice(0, 8), status: r.status })));
 
     // Transform requests and add user data
     const requests = requestsData.map((dbRequest) => {
