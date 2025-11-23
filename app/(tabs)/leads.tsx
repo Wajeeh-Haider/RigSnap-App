@@ -18,6 +18,7 @@ import {
   TrendingUp,
   RefreshCw,
   TriangleAlert as AlertTriangle,
+  AlertCircle,
 } from 'lucide-react-native';
 
 const getStatusColor = (status: string) => {
@@ -97,6 +98,8 @@ export default function LeadsScreen() {
       ? leadsWithRequestInfo
       : filter === 'penalty'
       ? leadsWithRequestInfo.filter((lead) => lead.description.includes('penalty'))
+      : filter === 'pending' && user.role === 'trucker'
+      ? requests.filter((request) => request.truckerId === user.id && request.status === 'pending')
       : leadsWithRequestInfo.filter((lead) => lead.status === filter);
 
   const stats = {
@@ -181,19 +184,21 @@ export default function LeadsScreen() {
             </Text>
           </View>
 
-          <View
-            style={[
-              styles.statCard,
-              { backgroundColor: colors.surface, borderColor: colors.border },
-            ]}
-          >
-            <Text style={[styles.statNumber, { color: '#10b981' }]}>
-              ${stats.totalRefunded}
-            </Text>
-            <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
-              {t('leads.refunded')}
-            </Text>
-          </View>
+          {user.role === 'trucker' && (
+            <View
+              style={[
+                styles.statCard,
+                { backgroundColor: colors.surface, borderColor: colors.border },
+              ]}
+            >
+              <Text style={[styles.statNumber, { color: '#10b981' }]}>
+                ${stats.totalRefunded}
+              </Text>
+              <Text style={[styles.statLabel, { color: colors.textSecondary }]}>
+                {t('leads.refunded')}
+              </Text>
+            </View>
+          )}
 
           {user.role === 'provider' && (
             <View
@@ -302,7 +307,123 @@ export default function LeadsScreen() {
       <ScrollView
         style={[styles.content, { backgroundColor: colors.background }]}
       >
-        {filteredLeads.length === 0 ? (
+        {filter === 'pending' && user.role === 'trucker' ? (
+          // Show pending service requests for truckers
+          <View style={styles.leadsContainer}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('leads.pendingRequests')}
+            </Text>
+            {filteredLeads.length === 0 ? (
+              <View style={styles.emptyState}>
+                <Clock size={48} color="#9ca3af" />
+                <Text style={[styles.emptyStateText, { color: colors.text }]}>
+                  No pending requests
+                </Text>
+                <Text
+                  style={[
+                    styles.emptyStateSubtext,
+                    { color: colors.textSecondary },
+                  ]}
+                >
+                  Your pending service requests will appear here
+                </Text>
+              </View>
+            ) : (
+              filteredLeads.map((request) => {
+                const urgencyColor = request.urgency === 'high' ? '#ef4444' : request.urgency === 'medium' ? '#f59e0b' : '#10b981';
+                
+                return (
+                  <View
+                    key={request.id}
+                    style={[
+                      styles.leadCard,
+                      {
+                        backgroundColor: colors.surface,
+                        borderColor: colors.border,
+                      },
+                    ]}
+                  >
+                    <View style={styles.leadHeader}>
+                      <View style={styles.leadInfo}>
+                        <View style={styles.leadTypeContainer}>
+                          <AlertCircle size={16} color={urgencyColor} />
+                          <View style={styles.statusContainer}>
+                            <Clock size={14} color="#f59e0b" />
+                            <Text
+                              style={[
+                                styles.statusText,
+                                { color: '#f59e0b' },
+                              ]}
+                            >
+                              PENDING
+                            </Text>
+                          </View>
+                        </View>
+                        <Text
+                          style={[
+                            styles.leadAmount,
+                            { color: '#1e293b' },
+                          ]}
+                        >
+                          ${request.estimatedCost?.toFixed(2) || '0.00'}
+                        </Text>
+                      </View>
+                      <Text style={styles.leadDate}>
+                        {new Date(request.createdAt).toLocaleDateString()}
+                      </Text>
+                    </View>
+
+                    <Text
+                      style={[styles.leadDescription, { color: colors.text }]}
+                    >
+                      {request.description}
+                    </Text>
+
+                    <View style={styles.leadFooter}>
+                      <View style={styles.requestInfo}>
+                        <Text
+                          style={[
+                            styles.serviceType,
+                            { color: colors.textSecondary },
+                          ]}
+                        >
+                          {request.serviceType.charAt(0).toUpperCase() + request.serviceType.slice(1)}
+                        </Text>
+                        <Text
+                          style={[
+                            styles.location,
+                            { color: colors.textSecondary },
+                          ]}
+                        >
+                          📍 {request.location}
+                        </Text>
+                      </View>
+                      <View
+                        style={[
+                          styles.roleIndicator,
+                          {
+                            backgroundColor: '#fef3c7',
+                          },
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.roleText,
+                            {
+                              color: '#92400e',
+                            },
+                          ]}
+                        >
+                          Service Request
+                        </Text>
+                      </View>
+                    </View>
+                  </View>
+                );
+              })
+            )}
+          </View>
+        ) : filteredLeads.length === 0 ? (
           <View style={styles.emptyState}>
             <DollarSign size={48} color="#9ca3af" />
             <Text style={[styles.emptyStateText, { color: colors.text }]}>
