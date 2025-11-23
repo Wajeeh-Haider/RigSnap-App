@@ -93,13 +93,31 @@ export default function LeadsScreen() {
     };
   });
 
+  const pendingServiceRequests = user.role === 'trucker' 
+    ? requests
+        .filter((request) => request.truckerId === user.id && request.status === 'pending')
+        .map((request) => ({
+          id: request.id,
+          requestId: request.id,
+          userId: request.truckerId,
+          amount: request.estimatedCost || 0,
+          status: 'pending',
+          description: request.description,
+          createdAt: request.createdAt,
+          requestTitle: request.description,
+          requestType: request.serviceType,
+          requestLocation: request.location,
+          requestUrgency: request.urgency,
+        }))
+    : [];
+
   const filteredLeads =
     filter === 'all'
       ? leadsWithRequestInfo
       : filter === 'penalty'
       ? leadsWithRequestInfo.filter((lead) => lead.description.includes('penalty'))
-      : filter === 'pending' && user.role === 'trucker'
-      ? requests.filter((request) => request.truckerId === user.id && request.status === 'pending')
+      : filter === 'refunded'
+      ? leadsWithRequestInfo.filter((lead) => lead.status === 'charged' && lead.amount < 0)
       : leadsWithRequestInfo.filter((lead) => lead.status === filter);
 
   const stats = {
@@ -313,7 +331,7 @@ export default function LeadsScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {t('leads.pendingRequests')}
             </Text>
-            {filteredLeads.length === 0 ? (
+            {pendingServiceRequests.length === 0 ? (
               <View style={styles.emptyState}>
                 <Clock size={48} color="#9ca3af" />
                 <Text style={[styles.emptyStateText, { color: colors.text }]}>
@@ -329,8 +347,8 @@ export default function LeadsScreen() {
                 </Text>
               </View>
             ) : (
-              filteredLeads.map((request) => {
-                const urgencyColor = request.urgency === 'high' ? '#ef4444' : request.urgency === 'medium' ? '#f59e0b' : '#10b981';
+              pendingServiceRequests.map((request) => {
+                const urgencyColor = request.requestUrgency === 'high' ? '#ef4444' : request.requestUrgency === 'medium' ? '#f59e0b' : '#10b981';
                 
                 return (
                   <View
@@ -365,7 +383,7 @@ export default function LeadsScreen() {
                             { color: '#1e293b' },
                           ]}
                         >
-                          ${request.estimatedCost?.toFixed(2) || '0.00'}
+                          ${request.amount.toFixed(2)}
                         </Text>
                       </View>
                       <Text style={styles.leadDate}>
@@ -387,7 +405,7 @@ export default function LeadsScreen() {
                             { color: colors.textSecondary },
                           ]}
                         >
-                          {request.serviceType.charAt(0).toUpperCase() + request.serviceType.slice(1)}
+                          {request.requestType.charAt(0).toUpperCase() + request.requestType.slice(1)}
                         </Text>
                         <Text
                           style={[
@@ -395,7 +413,7 @@ export default function LeadsScreen() {
                             { color: colors.textSecondary },
                           ]}
                         >
-                          📍 {request.location}
+                          📍 {request.requestLocation}
                         </Text>
                       </View>
                       <View
