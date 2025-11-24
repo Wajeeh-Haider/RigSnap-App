@@ -47,7 +47,7 @@ interface NotificationSettings {
 
 export default function AccountSettingsScreen() {
   const { user } = useAuth();
-  const { isDarkMode, toggleDarkMode, colors } = useTheme();
+  const { isDarkMode, toggleDarkMode, followDeviceTheme, toggleFollowDeviceTheme, colors } = useTheme();
   const { currentLanguage, setLanguage, languages, getCurrentLanguage } =
     useLanguage();
   const { t } = useLanguage();
@@ -578,6 +578,21 @@ export default function AccountSettingsScreen() {
               description="Switch to dark theme"
               value={isDarkMode}
               onToggle={toggleDarkMode}
+              showSwitch={!followDeviceTheme}
+              onPress={followDeviceTheme ? toggleDarkMode : undefined}
+              rightContent={followDeviceTheme ? 
+                <Text style={[styles.autoThemeText, { color: colors.textSecondary }]}>
+                  Auto
+                </Text> : 
+                undefined
+              }
+            />
+            <SettingItem
+              icon={Moon}
+              title="Follow Device Theme"
+              description="Automatically switch theme based on device settings"
+              value={followDeviceTheme}
+              onToggle={toggleFollowDeviceTheme}
             />
           </View>
         </View>
@@ -1478,5 +1493,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: 'white',
+  },
+  autoThemeText: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginRight: 8,
   },
 });

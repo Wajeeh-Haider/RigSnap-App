@@ -6,11 +6,14 @@ import {
   useEffect,
   ReactNode,
 } from 'react';
+import { Appearance, AppState } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 interface ThemeContextType {
   isDarkMode: boolean;
   toggleDarkMode: () => void;
+  followDeviceTheme: boolean;
+  toggleFollowDeviceTheme: () => void;
   colors: {
     background: string;
     surface: string;
@@ -60,26 +63,76 @@ const darkColors = {
 const ThemeContext = createContext<ThemeContextType | null>(null);
 
 const THEME_STORAGE_KEY = '@rigsnap_theme';
+const FOLLOW_DEVICE_THEME_KEY = '@rigsnap_follow_device_theme';
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const [followDeviceTheme, setFollowDeviceTheme] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
+
   useEffect(() => {
-    loadThemePreference();
+    loadThemePreferences();
   }, []);
 
-  const loadThemePreference = async () => {
+  useEffect(() => {
+    if (followDeviceTheme) {
+      // Listen to device theme changes
+      const subscription = Appearance.addChangeListener(({ colorScheme }) => {
+        setIsDarkMode(colorScheme === 'dark');
+      });
+
+      // Listen to app state changes (when app comes back from background)
+      const appStateSubscription = AppState.addEventListener('change', (nextAppState) => {
+        if (nextAppState === 'active') {
+          // Refresh theme when app becomes active
+          const colorScheme = Appearance.getColorScheme();
+          setIsDarkMode(colorScheme === 'dark');
+        }
+      });
+
+      return () => {
+        subscription.remove();
+        appStateSubscription.remove();
+      };
+    }
+  }, [followDeviceTheme]);
+
+  const loadThemePreferences = async () => {
     try {
-      const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
-      if (savedTheme !== null) {
-        setIsDarkMode(JSON.parse(savedTheme));
+      // Load follow device theme preference
+      const savedFollowDevice = await AsyncStorage.getItem(FOLLOW_DEVICE_THEME_KEY);
+      const shouldFollowDevice = savedFollowDevice !== null ? JSON.parse(savedFollowDevice) : true;
+      setFollowDeviceTheme(shouldFollowDevice);
+
+      if (shouldFollowDevice) {
+        // Use device theme
+        const colorScheme = Appearance.getColorScheme();
+        setIsDarkMode(colorScheme === 'dark');
+      } else {
+        // Load manual theme preference
+        const savedTheme = await AsyncStorage.getItem(THEME_STORAGE_KEY);
+        if (savedTheme !== null) {
+          setIsDarkMode(JSON.parse(savedTheme));
+        }
       }
     } catch (error) {
-      console.error('Failed to load theme preference:', error);
+      console.error('Failed to load theme preferences:', error);
+      // Fallback to device theme
+      const colorScheme = Appearance.getColorScheme();
+      setIsDarkMode(colorScheme === 'dark');
+    } finally {
+      setIsLoading(false);
     }
   };
 
   const toggleDarkMode = async () => {
     try {
+      if (followDeviceTheme) {
+        // If following device theme, turn it off and set manual theme
+        setFollowDeviceTheme(false);
+        await AsyncStorage.setItem(FOLLOW_DEVICE_THEME_KEY, JSON.stringify(false));
+      }
+      
       const newTheme = !isDarkMode;
       setIsDarkMode(newTheme);
       await AsyncStorage.setItem(THEME_STORAGE_KEY, JSON.stringify(newTheme));
@@ -88,13 +141,36 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const toggleFollowDeviceTheme = async () => {
+    try {
+      const newFollowDevice = !followDeviceTheme;
+      setFollowDeviceTheme(newFollowDevice);
+      await AsyncStorage.setItem(FOLLOW_DEVICE_THEME_KEY, JSON.stringify(newFollowDevice));
+
+      if (newFollowDevice) {
+        // Switch to device theme
+        const colorScheme = Appearance.getColorScheme();
+        setIsDarkMode(colorScheme === 'dark');
+      }
+    } catch (error) {
+      console.error('Failed to save follow device theme preference:', error);
+    }
+  };
+
   const colors = isDarkMode ? darkColors : lightColors;
+
+  // Show loading state while determining initial theme
+  if (isLoading) {
+    return null; // Or you could return a loading spinner here
+  }
 
   return (
     <ThemeContext.Provider
       value={{
         isDarkMode,
         toggleDarkMode,
+        followDeviceTheme,
+        toggleFollowDeviceTheme,
         colors,
       }}
     >
