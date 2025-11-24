@@ -1060,7 +1060,7 @@ export default function JobDetailScreen() {
             ]}
           >
             <Text style={[styles.modalTitle, { color: colors.text }]}>
-              Accept Requesta
+              Accept Request
             </Text>
             <TouchableOpacity
               onPress={() => setShowAcceptModal(false)}

@@ -411,7 +411,7 @@ export default function BrowseRequestsScreen() {
                       ]}
                     >
                       <StatusIcon size={12} color="white" />
-                      <Text style={styles.statusText}>{request.status}</Text>
+                      <Text style={styles.statusText}>{request.status.replace('_', ' ').toUpperCase()}</Text>
                     </View>
                     <View
                       style={[
@@ -703,7 +703,7 @@ export default function BrowseRequestsScreen() {
                       ]}
                     >
                       <StatusIcon size={12} color="white" />
-                      <Text style={styles.statusText}>{request.status}</Text>
+                      <Text style={styles.statusText}>{request.status.replace('_', ' ').toUpperCase()}</Text>
                     </View>
                     <View
                       style={[

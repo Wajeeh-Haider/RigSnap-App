@@ -470,7 +470,7 @@ https://rigsnap.app/download?ref=${referralCode}`;
                       ]}
                     >
                       <StatusIcon size={12} color="white" />
-                      <Text style={styles.statusText}>{request.status}</Text>
+                      <Text style={styles.statusText}>{request.status.replace('_', ' ').toUpperCase()}</Text>
                     </View>
                   </View>
                   <Text
@@ -618,7 +618,7 @@ https://rigsnap.app/download?ref=${referralCode}`;
                       ]}
                     >
                       <StatusIcon size={12} color="white" />
-                      <Text style={styles.statusText}>{request.status}</Text>
+                      <Text style={styles.statusText}>{request.status.replace('_', ' ').toUpperCase()}</Text>
                     </View>
                   </View>
                   <View style={styles.requestActions}>
@@ -822,6 +822,8 @@ notificationCount: {
   },
   actionButtonsContainer: {
     flexDirection: 'row',
+    marginBottom:-16,
+    marginTop:10,
     gap: 12,
   },
   actionButton: {

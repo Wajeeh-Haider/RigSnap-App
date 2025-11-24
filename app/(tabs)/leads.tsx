@@ -501,7 +501,7 @@ export default function LeadsScreen() {
                               { color: getStatusColor(lead.status) },
                             ]}
                           >
-                            {lead.status.toUpperCase()}
+                            {lead.status.replace('_', ' ').toUpperCase()}
                           </Text>
                         </View>
                       </View>
@@ -811,6 +811,7 @@ const styles = StyleSheet.create({
   },
   filterContainer: {
     paddingBottom: 16,
+    paddingTop: 16,
     borderBottomWidth: 1,
   },
   filterScroll: {
