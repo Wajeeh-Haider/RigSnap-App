@@ -544,6 +544,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (updates.certifications !== undefined)
           dbUpdates.certifications = updates.certifications;
 
+        // Always include role to preserve it
+        dbUpdates.role = updatedUser.role;
+
         dbUpdates.updated_at = new Date().toISOString();
 
         const { data: updatedData, error: updateError } = await supabase
@@ -558,6 +561,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             updateError.message
           );
           // Don't fail the update - local state is already updated
+        } else if (!updatedData || updatedData.length === 0) {
+          // User doesn't exist in database, insert it
+          console.log('User not found in database, inserting...');
+          const insertData = {
+            id: user.id,
+            email: updatedUser.email,
+            name: `${updatedUser.firstName} ${updatedUser.lastName}`.trim(),
+            role: updatedUser.role,
+            location: updatedUser.location,
+            phone: updatedUser.phone,
+            truck_type: updatedUser.truckType,
+            license_number: updatedUser.licenseNumber,
+            services: updatedUser.services,
+            service_radius: updatedUser.serviceRadius,
+            certifications: updatedUser.certifications,
+            language: updatedUser.language,
+            rating: updatedUser.rating,
+            join_date: updatedUser.joinDate,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          };
+          const { error: insertError } = await supabase
+            .from('users')
+            .insert(insertData);
+          if (insertError) {
+            console.warn('Database insert failed:', insertError.message);
+          } else {
+            console.log('User inserted successfully');
+          }
         } else {
           console.log('Database updated successfully');
         }
