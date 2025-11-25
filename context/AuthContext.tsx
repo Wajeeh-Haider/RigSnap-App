@@ -518,7 +518,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(updatedUser);
       console.log('Local user state updated successfully');
 
-      // Try to update database in background (don't fail if it doesn't work)
+      // Try to update database and surface failures so the UI can react
       try {
         const dbUpdates: any = {};
 
@@ -556,11 +556,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           .select();
 
         if (updateError) {
-          console.warn(
-            'Database update failed (using local state):',
-            updateError.message
-          );
-          // Don't fail the update - local state is already updated
+          console.error('Database update failed:', updateError);
+          // Return failure so caller knows DB update didn't persist
+          return { success: false, error: updateError.message };
         } else if (!updatedData || updatedData.length === 0) {
           // User doesn't exist in database, insert it
           console.log('User not found in database, inserting...');
@@ -586,7 +584,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             .from('users')
             .insert(insertData);
           if (insertError) {
-            console.warn('Database insert failed:', insertError.message);
+            console.error('Database insert failed:', insertError);
+            return { success: false, error: insertError.message };
           } else {
             console.log('User inserted successfully');
           }
@@ -594,8 +593,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           console.log('Database updated successfully');
         }
       } catch (dbError) {
-        console.warn('Database update error (using local state):', dbError);
-        // Don't fail the update - local state is already updated
+        console.error('Database update error:', dbError);
+        return { success: false, error: dbError?.message || String(dbError) };
       }
 
       console.log('=== PROFILE UPDATE COMPLETE ===');
