@@ -16,6 +16,7 @@ import {
 import { Link, router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { useTheme } from '@/context/ThemeContext';
 import {
   Truck,
   Wrench,
@@ -122,6 +123,7 @@ export default function SignupScreen() {
   const [showLanguageModal, setShowLanguageModal] = useState(false);
   const { signup } = useAuth();
   const { languages, currentLanguage, setLanguage } = useLanguage();
+  const { colors } = useTheme();
 
   const handleInputChange = (field: string, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
@@ -250,26 +252,26 @@ export default function SignupScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Truck size={40} color="#2563eb" strokeWidth={2} />
-            <Text style={styles.title}>Join RigSnap</Text>
+            <Truck size={40} color={colors.primary} strokeWidth={2} />
+            <Text style={[styles.title, { color: colors.text }]}>Join RigSnap</Text>
           </View>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Create your account to get started
           </Text>
         </View>
 
-        <View style={styles.form}>
+        <View style={[styles.form, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
           {/* Language Selection */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Language</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Language</Text>
             <TouchableOpacity
-              style={styles.languageSelector}
+              style={[styles.languageSelector, { backgroundColor: colors.card, borderColor: colors.border }]}
               onPress={() => {
                 // Update form data to match current language when opening modal
                 setFormData((prev) => ({ ...prev, language: currentLanguage }));
@@ -277,18 +279,18 @@ export default function SignupScreen() {
               }}
             >
               <View style={styles.languageContent}>
-                <Globe size={20} color="#6b7280" />
-                <Text style={styles.languageText}>
+                <Globe size={20} color={colors.textSecondary} />
+                <Text style={[styles.languageText, { color: colors.text }]}>
                   {selectedLanguage?.flag} {selectedLanguage?.nativeName}
                 </Text>
               </View>
-              <ChevronDown size={20} color="#6b7280" />
+              <ChevronDown size={20} color={colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           {/* Role Selection */}
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>I am a</Text>
+            <Text style={[styles.label, { color: colors.text }]}>I am a</Text>
             <View style={styles.roleContainer}>
               {roles.map((role) => {
                 const Icon = role.icon;
@@ -299,9 +301,10 @@ export default function SignupScreen() {
                     key={role.id}
                     style={[
                       styles.roleCard,
+                      { backgroundColor: colors.card, borderColor: colors.border },
                       isSelected && {
                         borderColor: role.color,
-                        backgroundColor: role.color + '10',
+                        backgroundColor: role.color + '20',
                       },
                     ]}
                     onPress={() => handleInputChange('role', role.id)}
@@ -309,7 +312,7 @@ export default function SignupScreen() {
                     <View style={styles.roleHeader}>
                       <Icon
                         size={24}
-                        color={isSelected ? role.color : '#6b7280'}
+                        color={isSelected ? role.color : colors.textSecondary}
                       />
                       {isSelected && (
                         <View style={styles.checkmark}>
@@ -325,7 +328,7 @@ export default function SignupScreen() {
                     >
                       {role.title}
                     </Text>
-                    <Text style={styles.roleDescription}>
+                    <Text style={[styles.roleDescription, { color: colors.textSecondary }]}>
                       {role.description}
                     </Text>
                   </TouchableOpacity>
@@ -336,11 +339,11 @@ export default function SignupScreen() {
 
           <View style={styles.nameRow}>
             <View style={[styles.inputGroup, { flex: 1, marginRight: 8 }]}>
-              <Text style={styles.label}>First Name</Text>
-              <View style={styles.inputContainer}>
-                <User size={20} color="#6b7280" style={styles.inputIcon} />
+              <Text style={[styles.label, { color: colors.text }]}>First Name</Text>
+              <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <User size={20} color={colors.textSecondary} style={styles.inputIcon} />
                 <TextInput
-                  style={styles.inputWithIcon}
+                  style={[styles.inputWithIcon, { color: colors.text }]}
                   value={formData.firstName}
                   onChangeText={(value) =>
                     handleInputChange('firstName', value)
@@ -352,11 +355,11 @@ export default function SignupScreen() {
             </View>
 
             <View style={[styles.inputGroup, { flex: 1, marginLeft: 8 }]}>
-              <Text style={styles.label}>Last Name</Text>
-              <View style={styles.inputContainer}>
-                <User size={20} color="#6b7280" style={styles.inputIcon} />
+              <Text style={[styles.label, { color: colors.text }]}>Last Name</Text>
+              <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <User size={20} color={colors.textSecondary} style={styles.inputIcon} />
                 <TextInput
-                  style={styles.inputWithIcon}
+                  style={[styles.inputWithIcon, { color: colors.text }]}
                   value={formData.lastName}
                   onChangeText={(value) => handleInputChange('lastName', value)}
                   placeholder="Driver"
@@ -367,11 +370,11 @@ export default function SignupScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
-            <View style={styles.inputContainer}>
-              <Mail size={20} color="#6b7280" style={styles.inputIcon} />
+            <Text style={[styles.label, { color: colors.text }]}>Email</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Mail size={20} color={colors.textSecondary} style={styles.inputIcon} />
               <TextInput
-                style={styles.inputWithIcon}
+                style={[styles.inputWithIcon, { color: colors.text }]}
                 value={formData.email}
                 onChangeText={(value) => handleInputChange('email', value)}
                 placeholder="john@example.com"
@@ -383,11 +386,11 @@ export default function SignupScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Phone</Text>
-            <View style={styles.inputContainer}>
-              <Phone size={20} color="#6b7280" style={styles.inputIcon} />
+            <Text style={[styles.label, { color: colors.text }]}>Phone</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Phone size={20} color={colors.textSecondary} style={styles.inputIcon} />
               <TextInput
-                style={styles.inputWithIcon}
+                style={[styles.inputWithIcon, { color: colors.text }]}
                 value={formData.phone}
                 onChangeText={(value) => handleInputChange('phone', value)}
                 placeholder="+1-555-0123"
@@ -398,11 +401,11 @@ export default function SignupScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Location</Text>
-            <View style={styles.inputContainer}>
-              <MapPin size={20} color="#6b7280" style={styles.inputIcon} />
+            <Text style={[styles.label, { color: colors.text }]}>Location</Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <MapPin size={20} color={colors.textSecondary} style={styles.inputIcon} />
               <TextInput
-                style={styles.inputWithIcon}
+                style={[styles.inputWithIcon, { color: colors.text }]}
                 value={formData.location}
                 onChangeText={(value) => handleInputChange('location', value)}
                 placeholder="Dallas, TX"
@@ -415,9 +418,9 @@ export default function SignupScreen() {
           {formData.role === 'trucker' && (
             <>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Truck Type</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Truck Type</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
                   value={formData.truckType}
                   onChangeText={(value) =>
                     handleInputChange('truckType', value)
@@ -427,9 +430,9 @@ export default function SignupScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>License Number</Text>
+                <Text style={[styles.label, { color: colors.text }]}>License Number</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
                   value={formData.licenseNumber}
                   onChangeText={(value) =>
                     handleInputChange('licenseNumber', value)
@@ -445,8 +448,8 @@ export default function SignupScreen() {
           {formData.role === 'provider' && (
             <>
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Services Offered</Text>
-                <Text style={styles.helperText}>
+                <Text style={[styles.label, { color: colors.text }]}>Services Offered</Text>
+                <Text style={[styles.helperText, { color: colors.textSecondary }]}>
                   Select all services you provide
                 </Text>
                 <View style={styles.servicesGrid}>
@@ -459,9 +462,10 @@ export default function SignupScreen() {
                         key={service.id}
                         style={[
                           styles.serviceCard,
+                          { backgroundColor: colors.card, borderColor: colors.border },
                           isSelected && {
                             borderColor: service.color,
-                            backgroundColor: service.color + '10',
+                            backgroundColor: service.color + '20',
                           },
                         ]}
                         onPress={() => toggleService(service.id)}
@@ -469,7 +473,7 @@ export default function SignupScreen() {
                         <View style={styles.serviceHeader}>
                           <Icon
                             size={20}
-                            color={isSelected ? service.color : '#6b7280'}
+                            color={isSelected ? service.color : colors.textSecondary}
                           />
                           {isSelected && (
                             <View
@@ -485,12 +489,13 @@ export default function SignupScreen() {
                         <Text
                           style={[
                             styles.serviceName,
+                            { color: colors.text },
                             isSelected && { color: service.color },
                           ]}
                         >
                           {service.name}
                         </Text>
-                        <Text style={styles.serviceDescription}>
+                        <Text style={[styles.serviceDescription, { color: colors.textSecondary }]}>
                           {service.description}
                         </Text>
                       </TouchableOpacity>
@@ -500,9 +505,9 @@ export default function SignupScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Service Radius (miles)</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Service Radius (miles)</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
                   value={formData.serviceRadius}
                   onChangeText={(value) =>
                     handleInputChange('serviceRadius', value)
@@ -513,9 +518,9 @@ export default function SignupScreen() {
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.label}>Certifications (optional)</Text>
+                <Text style={[styles.label, { color: colors.text }]}>Certifications (optional)</Text>
                 <TextInput
-                  style={styles.input}
+                  style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
                   value={formData.certifications}
                   onChangeText={(value) =>
                     handleInputChange('certifications', value)
@@ -523,7 +528,7 @@ export default function SignupScreen() {
                   placeholder="e.g., ASE Certified, DOT Inspector"
                   multiline
                 />
-                <Text style={styles.helperText}>
+                <Text style={[styles.helperText, { color: colors.textSecondary }]}>
                   Separate multiple certifications with commas
                 </Text>
               </View>
@@ -531,9 +536,9 @@ export default function SignupScreen() {
           )}
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Password</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
               value={formData.password}
               onChangeText={(value) => handleInputChange('password', value)}
               placeholder="Minimum 6 characters"
@@ -543,9 +548,9 @@ export default function SignupScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Confirm Password</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Confirm Password</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
               value={formData.confirmPassword}
               onChangeText={(value) =>
                 handleInputChange('confirmPassword', value)
@@ -557,7 +562,7 @@ export default function SignupScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.signupButton, isLoading && styles.buttonDisabled]}
+            style={[styles.signupButton, { backgroundColor: colors.primary }, isLoading && styles.buttonDisabled]}
             onPress={handleSignup}
             disabled={isLoading}
           >
@@ -569,9 +574,9 @@ export default function SignupScreen() {
           </TouchableOpacity>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Already have an account? </Text>
+            <Text style={[styles.footerText, { color: colors.textSecondary }]}>Already have an account? </Text>
             <Link href="/(auth)/login" style={styles.link}>
-              <Text style={styles.linkText}>Sign In</Text>
+              <Text style={[styles.linkText, { color: colors.primary }]}>Sign In</Text>
             </Link>
           </View>
         </View>
@@ -584,14 +589,14 @@ export default function SignupScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowLanguageModal(false)}
       >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Select Language</Text>
+        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
+          <View style={[styles.modalHeader, { backgroundColor: colors.surface, borderBottomColor: colors.border }]}>
+            <Text style={[styles.modalTitle, { color: colors.text }]}>Select Language</Text>
             <TouchableOpacity
               onPress={() => setShowLanguageModal(false)}
               style={styles.closeButton}
             >
-              <Text style={styles.closeButtonText}>✕</Text>
+              <Text style={[styles.closeButtonText, { color: colors.textSecondary }]}>✕</Text>
             </TouchableOpacity>
           </View>
 
@@ -601,8 +606,9 @@ export default function SignupScreen() {
                 key={language.code}
                 style={[
                   styles.languageOption,
+                  { backgroundColor: colors.surface },
                   currentLanguage === language.code &&
-                    styles.selectedLanguageOption,
+                    [styles.selectedLanguageOption, { borderColor: colors.primary, backgroundColor: colors.primary + '20' }],
                 ]}
                 onPress={() => {
                   setLanguage(language.code);
@@ -616,19 +622,20 @@ export default function SignupScreen() {
                     <Text
                       style={[
                         styles.languageName,
+                        { color: colors.text },
                         currentLanguage === language.code &&
-                          styles.selectedLanguageName,
+                          [styles.selectedLanguageName, { color: colors.primary }],
                       ]}
                     >
                       {language.name}
                     </Text>
-                    <Text style={styles.languageNativeName}>
+                    <Text style={[styles.languageNativeName, { color: colors.textSecondary }]}>
                       {language.nativeName}
                     </Text>
                   </View>
                 </View>
                 {currentLanguage === language.code && (
-                  <Check size={20} color="#2563eb" />
+                  <Check size={20} color={colors.primary} />
                 )}
               </TouchableOpacity>
             ))}
@@ -642,7 +649,6 @@ export default function SignupScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   scrollContent: {
     flexGrow: 1,
@@ -661,19 +667,15 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 28,
     fontWeight: 'bold',
-    color: '#1e293b',
     marginLeft: 12,
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748b',
     textAlign: 'center',
   },
   form: {
-    backgroundColor: 'white',
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -685,12 +687,10 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 8,
   },
   helperText: {
     fontSize: 12,
-    color: '#6b7280',
     marginBottom: 8,
   },
   languageSelector: {
@@ -698,10 +698,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1,
-    borderColor: '#d1d5db',
     borderRadius: 12,
     padding: 16,
-    backgroundColor: '#f9fafb',
   },
   languageContent: {
     flexDirection: 'row',
@@ -710,17 +708,14 @@ const styles = StyleSheet.create({
   },
   languageText: {
     fontSize: 16,
-    color: '#374151',
   },
   roleContainer: {
     gap: 12,
   },
   roleCard: {
-    backgroundColor: '#f9fafb',
     borderRadius: 12,
     padding: 16,
     borderWidth: 2,
-    borderColor: '#e5e7eb',
   },
   roleHeader: {
     flexDirection: 'row',
@@ -732,19 +727,16 @@ const styles = StyleSheet.create({
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#dbeafe',
     alignItems: 'center',
     justifyContent: 'center',
   },
   roleTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#1e293b',
     marginBottom: 4,
   },
   roleDescription: {
     fontSize: 14,
-    color: '#6b7280',
     lineHeight: 20,
   },
   nameRow: {
@@ -755,9 +747,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#d1d5db',
     borderRadius: 12,
-    backgroundColor: '#f9fafb',
   },
   inputIcon: {
     marginLeft: 12,
@@ -771,24 +761,21 @@ const styles = StyleSheet.create({
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    backgroundColor: '#f9fafb',
   },
   servicesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+
+    gap: 10,
   },
   serviceCard: {
     width: '48%',
-    backgroundColor: '#f9fafb',
     borderRadius: 12,
     padding: 16,
     borderWidth: 2,
-    borderColor: '#e5e7eb',
     minHeight: 120,
   },
   serviceHeader: {
@@ -807,16 +794,13 @@ const styles = StyleSheet.create({
   serviceName: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#1e293b',
     marginBottom: 4,
   },
   serviceDescription: {
     fontSize: 12,
-    color: '#6b7280',
     lineHeight: 16,
   },
   signupButton: {
-    backgroundColor: '#2563eb',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -838,19 +822,16 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 16,
-    color: '#6b7280',
   },
   link: {
     marginLeft: 4,
   },
   linkText: {
     fontSize: 16,
-    color: '#2563eb',
     fontWeight: '600',
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   modalHeader: {
     flexDirection: 'row',
@@ -858,21 +839,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
     paddingTop: 10,
-    backgroundColor: 'white',
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
   },
   modalTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#1e293b',
   },
   closeButton: {
     padding: 8,
   },
   closeButtonText: {
     fontSize: 18,
-    color: '#6b7280',
   },
   languageList: {
     flex: 1,
@@ -882,11 +859,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: 'white',
     borderRadius: 12,
     padding: 16,
     marginBottom: 8,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -894,8 +869,6 @@ const styles = StyleSheet.create({
   },
   selectedLanguageOption: {
     borderWidth: 2,
-    borderColor: '#2563eb',
-    backgroundColor: '#dbeafe',
   },
   languageOptionContent: {
     flexDirection: 'row',
@@ -910,16 +883,13 @@ const styles = StyleSheet.create({
   },
   languageName: {
     fontSize: 16,
-    color: '#374151',
     fontWeight: '500',
     marginBottom: 2,
   },
   selectedLanguageName: {
-    color: '#2563eb',
     fontWeight: '600',
   },
   languageNativeName: {
     fontSize: 14,
-    color: '#6b7280',
   },
 });

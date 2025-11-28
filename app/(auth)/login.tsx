@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { Truck } from 'lucide-react-native';
 
 export default function LoginScreen() {
@@ -20,6 +21,7 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
+  const { colors } = useTheme();
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -55,27 +57,27 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={styles.container}
+      style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
             <Truck size={48} color="#2563eb" strokeWidth={2} />
-            <Text style={styles.title}>RigSnap</Text>
+            <Text style={[styles.title, { color: colors.text }]}>RigSnap</Text>
           </View>
-          <Text style={styles.subtitle}>
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
             Connect truckers with reliable service providers
           </Text>
         </View>
 
-        <View style={styles.form}>
-          <Text style={styles.formTitle}>Welcome Back</Text>
+        <View style={[styles.form, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
+          <Text style={[styles.formTitle, { color: colors.text }]}>Welcome Back</Text>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Email</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Email</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
               value={email}
               onChangeText={setEmail}
               placeholder="Enter your email"
@@ -86,9 +88,9 @@ export default function LoginScreen() {
           </View>
 
           <View style={styles.inputGroup}>
-            <Text style={styles.label}>Password</Text>
+            <Text style={[styles.label, { color: colors.text }]}>Password</Text>
             <TextInput
-              style={styles.input}
+              style={[styles.input, { backgroundColor: colors.card, borderColor: colors.border, color: colors.text }]}
               value={password}
               onChangeText={setPassword}
               placeholder="Enter your password"
@@ -98,7 +100,7 @@ export default function LoginScreen() {
           </View>
 
           <TouchableOpacity
-            style={[styles.loginButton, isLoading && styles.buttonDisabled]}
+            style={[styles.loginButton, { backgroundColor: colors.primary }, isLoading && styles.buttonDisabled]}
             onPress={handleLogin}
             disabled={isLoading}
           >
@@ -110,9 +112,9 @@ export default function LoginScreen() {
           </TouchableOpacity>
 
           <View style={styles.footer}>
-            <Text style={styles.footerText}>Dont have an account? </Text>
+            <Text style={[styles.footerText, { color: colors.textSecondary }]}>Dont have an account? </Text>
             <Link href="/(auth)/signup" style={styles.link}>
-              <Text style={styles.linkText}>Sign Up</Text>
+              <Text style={[styles.linkText, { color: colors.primary }]}>Sign Up</Text>
             </Link>
           </View>
         </View>
@@ -124,7 +126,6 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
   },
   scrollContent: {
     flexGrow: 1,
@@ -143,20 +144,16 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#1e293b',
     marginLeft: 12,
   },
   subtitle: {
     fontSize: 16,
-    color: '#64748b',
     textAlign: 'center',
     maxWidth: 280,
   },
   form: {
-    backgroundColor: 'white',
     borderRadius: 16,
     padding: 24,
-    shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
@@ -165,7 +162,6 @@ const styles = StyleSheet.create({
   formTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#1e293b',
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -175,19 +171,15 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#d1d5db',
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
-    backgroundColor: '#f9fafb',
   },
   loginButton: {
-    backgroundColor: '#2563eb',
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -242,14 +234,12 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 16,
-    color: '#6b7280',
   },
   link: {
     marginLeft: 4,
   },
   linkText: {
     fontSize: 16,
-    color: '#2563eb',
     fontWeight: '600',
   },
 });
