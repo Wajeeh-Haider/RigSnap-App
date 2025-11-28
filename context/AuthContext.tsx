@@ -592,7 +592,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } else {
           console.log('Database updated successfully');
         }
-      } catch (dbError) {
+      } catch (dbError: any) {
         console.error('Database update error:', dbError);
         return { success: false, error: dbError?.message || String(dbError) };
       }
