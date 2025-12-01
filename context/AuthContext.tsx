@@ -7,6 +7,7 @@ import React, {
 } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User } from '@/types';
+import { otpService } from '@/utils/otpService';
 
 interface AuthContextType {
   user: User | null;
@@ -17,6 +18,13 @@ interface AuthContextType {
     password: string
   ) => Promise<{ success: boolean; error?: string }>;
   signup: (userData: any) => Promise<{ success: boolean; error?: string }>;
+  verifyOtp: (
+    email: string,
+    token: string
+  ) => Promise<{ success: boolean; error?: string }>;
+  resendOtp: (
+    email: string
+  ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   updateProfile: (
     updates: Partial<User>
@@ -392,12 +400,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       console.log('Starting signup process for:', userData.email);
 
-      // Try signup with metadata - the database trigger should handle user creation
+      // Step 1: Create user with Supabase Auth (no email confirmation)
       const { data, error } = await supabase.auth.signUp({
         email: userData.email,
         password: userData.password,
         options: {
-          emailRedirectTo: 'myapp://auth/confirm',
+          emailRedirectTo: undefined, // Disable email confirmation
           data: {
             firstName: userData.firstName,
             lastName: userData.lastName,
@@ -410,6 +418,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             services: userData.services,
             serviceRadius: userData.serviceRadius,
             certifications: userData.certifications,
+            email_confirmed: false, // Mark as unconfirmed initially
           },
         },
       });
@@ -425,43 +434,117 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.user) {
-        console.log('Auth user created successfully');
-
-        // Try to fetch the user data immediately to see if the trigger worked
-        const userDataFetched = await fetchUserData(data.user.id);
-        if (userDataFetched) {
-          console.log('User profile created by trigger');
-          setUser(userDataFetched);
-        } else {
-          console.log('Trigger may have failed, creating user locally');
-          // Create user object from signup data
-          const newUser: User = {
-            id: data.user.id,
-            email: data.user.email!,
-            firstName: userData.firstName,
-            lastName: userData.lastName,
-            phone: userData.phone || '',
-            role: userData.role,
-            rating: 0,
-            joinDate: new Date().toISOString().split('T')[0],
-            location: userData.location,
-            language: userData.language || 'en',
-            truckType: userData.role === 'trucker' ? userData.truckType : undefined,
-            licenseNumber: userData.role === 'trucker' ? userData.licenseNumber : undefined,
-            services: userData.role === 'provider' ? userData.services : undefined,
-            serviceRadius: userData.role === 'provider' ? userData.serviceRadius : undefined,
-            certifications: userData.role === 'provider' ? userData.certifications : undefined,
-          };
-
-          setUser(newUser);
+        console.log('Auth user created successfully, sending OTP');
+        
+        // Step 2: Generate and send OTP using our custom service
+        const otpResult = await otpService.generateAndSendOTP(userData.email);
+        
+        if (!otpResult.success) {
+          return { success: false, error: otpResult.error || 'Failed to send OTP' };
         }
-
+        
+        // Step 3: Don't set user state until OTP is verified, but keep session active
+        console.log('User created with ID:', data.user.id, 'Email:', data.user.email);
+        console.log('User session maintained for OTP verification');
+        
         return { success: true };
       }
 
       return { success: false, error: 'Signup failed' };
     } catch (error: any) {
       console.error('Signup exception:', error);
+      return {
+        success: false,
+        error: error.message || 'An unexpected error occurred',
+      };
+    }
+  };
+
+  const verifyOtp = async (
+    email: string,
+    token: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      console.log('Verifying OTP for:', email);
+      
+      // Step 1: Verify OTP using our custom service
+      const otpResult = await otpService.verifyOTP(email, token);
+      
+      if (!otpResult.success) {
+        return { success: false, error: otpResult.error };
+      }
+      
+      console.log('OTP verified successfully, completing user signup');
+      
+      // Step 2: Find the user and sign them in properly
+      try {
+        // First check current session
+        const { data: sessionData } = await supabase.auth.getSession();
+        
+        if (sessionData.session?.user?.email === email) {
+          console.log('User already has active session');
+          const userData = await fetchUserData(sessionData.session.user.id);
+          if (userData) {
+            setUser(userData);
+            await otpService.consumeOTP(email);
+            return { success: true };
+          }
+        }
+        
+        // Try to sign in the user with their credentials after OTP verification
+        console.log('Attempting to complete authentication for:', email);
+        
+        // Fallback: Try to find user by email in the database
+        const { data: users, error: dbError } = await supabase
+          .from('users')
+          .select('*')
+          .eq('email', email)
+          .limit(1);
+        
+        if (dbError) {
+          console.log('Database query error:', dbError.message);
+          return { success: false, error: 'Failed to verify user' };
+        }
+        
+        if (users && users.length > 0) {
+          const dbUser = users[0];
+          console.log('Found user in database:', dbUser.email);
+          
+          // Convert database user to app user format
+          const userData = convertDbUserToAppUser(dbUser);
+          setUser(userData);
+          console.log('User verified and signed in successfully');
+          await otpService.consumeOTP(email);
+          return { success: true };
+        }
+        
+        return { success: false, error: 'User not found after OTP verification' };
+        
+      } catch (error: any) {
+        console.error('User verification error:', error);
+        return { success: false, error: 'Failed to complete verification' };
+      }
+    } catch (error: any) {
+      console.error('OTP verification exception:', error);
+      return {
+        success: false,
+        error: error.message || 'An unexpected error occurred',
+      };
+    }
+  };
+
+  const resendOtp = async (
+    email: string
+  ): Promise<{ success: boolean; error?: string }> => {
+    try {
+      console.log('Resending OTP for:', email);
+      
+      // Use our custom OTP service to generate and send new OTP
+      const result = await otpService.generateAndSendOTP(email);
+      
+      return result;
+    } catch (error: any) {
+      console.error('OTP resend exception:', error);
       return {
         success: false,
         error: error.message || 'An unexpected error occurred',
@@ -616,6 +699,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         login,
         signup,
+        verifyOtp,
+        resendOtp,
         logout,
         updateProfile,
       }}

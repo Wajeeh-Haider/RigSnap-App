@@ -232,7 +232,13 @@ export default function SignupScreen() {
 
       const result = await signup(userData);
       if (result.success) {
-        router.replace('/(tabs)');
+        // Navigate to OTP verification screen
+        router.push({
+          pathname: '/(auth)/verify-otp',
+          params: {
+            email: formData.email,
+          },
+        });
       } else {
         Alert.alert(
           'Signup Failed',
