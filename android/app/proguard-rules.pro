@@ -11,4 +11,12 @@
 -keep class com.swmansion.reanimated.** { *; }
 -keep class com.facebook.react.turbomodule.** { *; }
 
+# Stripe React Native
+-keep class com.reactnativestripesdk.** { *; }
+-keep class com.stripe.android.** { *; }
+
+# Material Components
+-keep class com.google.android.material.** { *; }
+-keep class androidx.** { *; }
+
 # Add any project specific keep options here:
