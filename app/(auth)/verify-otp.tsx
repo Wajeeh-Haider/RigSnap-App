@@ -44,6 +44,23 @@ export default function VerifyOtpScreen() {
       return;
     }
 
+    // Auto-send OTP when component mounts (for users redirected from login)
+    const autoSendOtp = async () => {
+      try {
+        console.log('Auto-sending OTP for unverified user:', email);
+        const result = await resendOtp(email);
+        if (result.success) {
+          console.log('OTP sent automatically to:', email);
+        } else {
+          console.log('Failed to auto-send OTP:', result.error);
+        }
+      } catch (error) {
+        console.error('Error auto-sending OTP:', error);
+      }
+    };
+
+    autoSendOtp();
+
     // Start countdown timer
     const timer = setInterval(() => {
       setResendTimer((prev) => {
@@ -56,7 +73,7 @@ export default function VerifyOtpScreen() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [email]);
+  }, [email, resendOtp]);
 
   const handleOtpChange = (value: string, index: number) => {
     if (value.length > 1) {
@@ -179,12 +196,14 @@ export default function VerifyOtpScreen() {
               Check your email
             </Text>
             
-            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-              We've sent a 6-digit verification code to{'\n'}
-              <Text style={{ color: colors.primary, fontWeight: '600' }}>{email}</Text>
-            </Text>
-
-            <View style={styles.otpContainer}>
+        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+          We've sent a 6-digit verification code to{'\n'}
+          <Text style={{ color: colors.primary, fontWeight: '600' }}>{email}</Text>
+          {'\n\n'}
+          <Text style={{ fontSize: 14, color: colors.textSecondary }}>
+            Please verify your email to continue using RigSnap
+          </Text>
+        </Text>            <View style={styles.otpContainer}>
               {otp.map((digit, index) => (
                 <TextInput
                   key={index}

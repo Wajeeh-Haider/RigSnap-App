@@ -16,7 +16,7 @@ interface AuthContextType {
   login: (
     email: string,
     password: string
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{ success: boolean; error?: string; requiresVerification?: boolean }>;
   signup: (userData: any) => Promise<{ success: boolean; error?: string }>;
   verifyOtp: (
     email: string,
@@ -351,7 +351,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (
     email: string,
     password: string
-  ): Promise<{ success: boolean; error?: string }> => {
+  ): Promise<{ success: boolean; error?: string; requiresVerification?: boolean }> => {
     try {
       console.log('Starting login process for:', email);
       const { data, error } = await supabase.auth.signInWithPassword({
@@ -370,7 +370,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (data.user) {
-        console.log('User authenticated, fetching user data from database');
+        console.log('User authenticated, checking verification status');
+        
+        // Check if user has completed email verification
+        const userMetadata = data.user.user_metadata || {};
+        const rawMetadata = (data.user as any).raw_user_meta_data || {};
+        const combinedMetadata = { ...rawMetadata, ...userMetadata };
+        
+        const isEmailConfirmed = combinedMetadata.email_confirmed;
+        
+        if (isEmailConfirmed === false) {
+          console.log('User email not verified, requiring OTP verification');
+          // Don't set user state - keep them signed in but require verification
+          return { 
+            success: false, 
+            error: 'Please verify your email address to continue', 
+            requiresVerification: true 
+          };
+        }
+        
+        console.log('User verified, fetching user data from database');
         const userData = await fetchUserData(data.user.id);
         if (userData) {
           console.log('User data found:', userData.role);
@@ -482,7 +501,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const { data: sessionData } = await supabase.auth.getSession();
         
         if (sessionData.session?.user?.email === email) {
-          console.log('User already has active session');
+          console.log('User already has active session, updating verification status');
+          
+          // Update user metadata to mark email as confirmed
+          const { error: updateError } = await supabase.auth.updateUser({
+            data: { email_confirmed: true }
+          });
+          
+          if (updateError) {
+            console.error('Failed to update user verification status:', updateError);
+          } else {
+            console.log('User verification status updated successfully');
+          }
+          
           const userData = await fetchUserData(sessionData.session.user.id);
           if (userData) {
             setUser(userData);

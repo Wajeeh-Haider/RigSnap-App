@@ -40,6 +40,24 @@ export default function LoginScreen() {
         setTimeout(() => {
           router.replace('/(tabs)');
         }, 100);
+      } else if (result.requiresVerification) {
+        console.log('Login requires email verification, redirecting to OTP screen');
+        Alert.alert(
+          'Email Verification Required',
+          'Please verify your email address to continue. A verification code will be sent to your email.',
+          [
+            {
+              text: 'Cancel',
+              style: 'cancel',
+            },
+            {
+              text: 'Verify Email',
+              onPress: () => {
+                router.push(`/(auth)/verify-otp?email=${encodeURIComponent(email)}`);
+              },
+            },
+          ]
+        );
       } else {
         console.log('Login failed:', result.error);
         Alert.alert(
