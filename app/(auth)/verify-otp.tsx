@@ -10,6 +10,8 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  TouchableWithoutFeedback,
+  Keyboard,
 } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
@@ -152,114 +154,121 @@ export default function VerifyOtpScreen() {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
     >
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <ArrowLeft size={24} color={colors.text} />
-        </TouchableOpacity>
-        <Text style={[styles.title, { color: colors.text }]}>
-          Verify Email
-        </Text>
-      </View>
-
-      <View style={[styles.content, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
-        <View style={styles.iconContainer}>
-          <Mail size={48} color={colors.primary} />
-        </View>
-
-        <Text style={[styles.heading, { color: colors.text }]}>
-          Check your email
-        </Text>
-        
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          We've sent a 6-digit verification code to{'\n'}
-          <Text style={{ color: colors.primary, fontWeight: '600' }}>{email}</Text>
-        </Text>
-
-        <View style={styles.otpContainer}>
-          {otp.map((digit, index) => (
-            <TextInput
-              key={index}
-              ref={(ref) => {
-                if (ref) inputRefs.current[index] = ref;
-              }}
-              style={[
-                styles.otpInput,
-                {
-                  backgroundColor: colors.card,
-                  borderColor: digit ? colors.primary : colors.border,
-                  color: colors.text,
-                },
-                digit && { borderWidth: 2 },
-              ]}
-              value={digit}
-              onChangeText={(value) => handleOtpChange(value, index)}
-              onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key, index)}
-              keyboardType="numeric"
-              maxLength={index === 0 ? 6 : 1} // Allow paste on first input
-              textAlign="center"
-              selectTextOnFocus
-              autoFocus={index === 0}
-            />
-          ))}
-        </View>
-
-        <TouchableOpacity
-          style={[
-            styles.verifyButton,
-            { backgroundColor: isVerified ? colors.success || '#4CAF50' : colors.primary },
-            (!isOtpComplete || isLoading) && !isVerified && styles.buttonDisabled,
-          ]}
-          onPress={handleVerifyOtp}
-          disabled={(!isOtpComplete || isLoading) && !isVerified}
-        >
-          {isLoading ? (
-            <ActivityIndicator color="white" />
-          ) : isVerified ? (
-            <>
-              <CheckCircle size={20} color="white" />
-              <Text style={styles.verifyButtonText}>Continue to App</Text>
-            </>
-          ) : (
-            <>
-              <CheckCircle size={20} color="white" />
-              <Text style={styles.verifyButtonText}>Verify Code</Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        <View style={styles.resendContainer}>
-          {!canResend ? (
-            <Text style={[styles.timerText, { color: colors.textSecondary }]}>
-              Resend code in {resendTimer}s
-            </Text>
-          ) : (
+      <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+        <View style={styles.innerContainer}>
+          <View style={styles.header}>
             <TouchableOpacity
-              style={styles.resendButton}
-              onPress={handleResendOtp}
-              disabled={isResending}
+              style={styles.backButton}
+              onPress={() => router.back()}
             >
-              {isResending ? (
-                <ActivityIndicator size="small" color={colors.primary} />
+              <ArrowLeft size={24} color={colors.text} />
+            </TouchableOpacity>
+            <Text style={[styles.title, { color: colors.text }]}>
+              Verify Email
+            </Text>
+          </View>
+
+          <View style={[styles.content, { backgroundColor: colors.surface, shadowColor: colors.shadow }]}>
+            <View style={styles.iconContainer}>
+              <Mail size={48} color={colors.primary} />
+            </View>
+
+            <Text style={[styles.heading, { color: colors.text }]}>
+              Check your email
+            </Text>
+            
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+              We've sent a 6-digit verification code to{'\n'}
+              <Text style={{ color: colors.primary, fontWeight: '600' }}>{email}</Text>
+            </Text>
+
+            <View style={styles.otpContainer}>
+              {otp.map((digit, index) => (
+                <TextInput
+                  key={index}
+                  ref={(ref) => {
+                    if (ref) inputRefs.current[index] = ref;
+                  }}
+                  style={[
+                    styles.otpInput,
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: digit ? colors.primary : colors.border,
+                      color: colors.text,
+                    },
+                    digit && { borderWidth: 2 },
+                  ]}
+                  value={digit}
+                  onChangeText={(value) => handleOtpChange(value, index)}
+                  onKeyPress={({ nativeEvent: { key } }) => handleKeyPress(key, index)}
+                  keyboardType="numeric"
+                  maxLength={index === 0 ? 6 : 1} // Allow paste on first input
+                  textAlign="center"
+                  selectTextOnFocus
+                  autoFocus={index === 0}
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                />
+              ))}
+            </View>
+
+            <TouchableOpacity
+              style={[
+                styles.verifyButton,
+                { backgroundColor: isVerified ? colors.success || '#4CAF50' : colors.primary },
+                (!isOtpComplete || isLoading) && !isVerified && styles.buttonDisabled,
+              ]}
+              onPress={handleVerifyOtp}
+              disabled={(!isOtpComplete || isLoading) && !isVerified}
+            >
+              {isLoading ? (
+                <ActivityIndicator color="white" />
+              ) : isVerified ? (
+                <>
+                  <CheckCircle size={20} color="white" />
+                  <Text style={styles.verifyButtonText}>Continue to App</Text>
+                </>
               ) : (
                 <>
-                  <RefreshCw size={16} color={colors.primary} />
-                  <Text style={[styles.resendText, { color: colors.primary }]}>
-                    Resend Code
-                  </Text>
+                  <CheckCircle size={20} color="white" />
+                  <Text style={styles.verifyButtonText}>Verify Code</Text>
                 </>
               )}
             </TouchableOpacity>
-          )}
-        </View>
 
-        <Text style={[styles.helpText, { color: colors.textSecondary }]}>
-          Didn't receive the code? Check your spam folder or try resending.
-        </Text>
-      </View>
+            <View style={styles.resendContainer}>
+              {!canResend ? (
+                <Text style={[styles.timerText, { color: colors.textSecondary }]}>
+                  Resend code in {resendTimer}s
+                </Text>
+              ) : (
+                <TouchableOpacity
+                  style={styles.resendButton}
+                  onPress={handleResendOtp}
+                  disabled={isResending}
+                >
+                  {isResending ? (
+                    <ActivityIndicator size="small" color={colors.primary} />
+                  ) : (
+                    <>
+                      <RefreshCw size={16} color={colors.primary} />
+                      <Text style={[styles.resendText, { color: colors.primary }]}>
+                        Resend Code
+                      </Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+              )}
+            </View>
+
+            <Text style={[styles.helpText, { color: colors.textSecondary }]}>
+              Didn't receive the code? Check your spam folder or try resending.
+            </Text>
+          </View>
+        </View>
+      </TouchableWithoutFeedback>
     </KeyboardAvoidingView>
   );
 }
@@ -269,6 +278,9 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 24,
     paddingTop: 60,
+  },
+  innerContainer: {
+    flex: 1,
   },
   header: {
     flexDirection: 'row',
