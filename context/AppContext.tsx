@@ -370,6 +370,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           urgency: requestData.urgency,
           description: requestData.description,
           estimated_cost: requestData.estimatedCost,
+          photos: requestData.photos,
         }, user.id);
         
         if (!result.success || !result.requestId) {
@@ -377,7 +378,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         }
 
         // Create a ServiceRequest object with the data we have
-        console.log('Request created with ID:', user);
+        console.log('Request created with ID:', result.requestId);
+        console.log('Photos included in request:', requestData.photos);
         const newRequest: ServiceRequest = {
           id: result.requestId,
           truckerId: user.id,
@@ -392,6 +394,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           createdAt: new Date().toISOString(),
           leadFeeCharged: true, // Payment was charged
           estimatedCost: requestData.estimatedCost,
+          photos: requestData.photos || [],
         };
         
         // Refresh requests from database to get the latest data

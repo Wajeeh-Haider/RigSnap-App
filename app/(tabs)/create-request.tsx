@@ -48,6 +48,11 @@ import {
   getRandomTruckingLocation,
   formatCoordinates,
 } from '@/utils/location';
+import {
+  uploadImageToCloudinary,
+  CloudinaryUploadResponse,
+  CloudinaryUploadError,
+} from '@/utils/cloudinaryUpload';
 
 const serviceTypes = [
   {
@@ -137,11 +142,13 @@ export default function CreateRequestScreen() {
 
   // Photo-related state
   const [photos, setPhotos] = useState<string[]>([]);
+  const [cloudinaryUrls, setCloudinaryUrls] = useState<string[]>([]);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [cameraFacing, setCameraFacing] = useState<CameraType>('back');
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [cameraRef, setCameraRef] = useState<any>(null);
   const [isTakingPhoto, setIsTakingPhoto] = useState(false);
+  const [isUploadingPhoto, setIsUploadingPhoto] = useState(false);
 
   if (!user) return null;
 
@@ -266,8 +273,37 @@ export default function CreateRequestScreen() {
         base64: false,
       });
 
+      // Add local photo to state immediately for preview
       setPhotos((prev) => [...prev, photo.uri]);
       setShowCameraModal(false);
+      
+      // Upload to Cloudinary in background
+      setIsUploadingPhoto(true);
+      try {
+        const cloudinaryResponse = await uploadImageToCloudinary(photo.uri, {
+          folder: 'service-requests',
+          timeout: 60000, // 60 seconds timeout
+          retries: 2, // Retry up to 2 times
+        });
+        
+        // Add Cloudinary URL to state
+        setCloudinaryUrls((prev) => [...prev, cloudinaryResponse.secure_url]);
+        
+        Alert.alert(
+          'Photo Uploaded! 📸',
+          'Your photo has been successfully uploaded and will be included with your service request.',
+          [{ text: 'OK' }]
+        );
+      } catch (uploadError) {
+        console.error('Cloudinary upload error:', uploadError);
+        Alert.alert(
+          'Upload Warning ⚠️',
+          'Photo was taken but upload to cloud failed. The photo will still be included locally. Please check your internet connection.',
+          [{ text: 'OK' }]
+        );
+      } finally {
+        setIsUploadingPhoto(false);
+      }
     } catch {
       Alert.alert('Error', 'Failed to take picture. Please try again.');
     } finally {
@@ -277,6 +313,7 @@ export default function CreateRequestScreen() {
 
   const removePhoto = (index: number) => {
     setPhotos((prev) => prev.filter((_, i) => i !== index));
+    setCloudinaryUrls((prev) => prev.filter((_, i) => i !== index));
   };
 
   const addSamplePhoto = () => {
@@ -298,9 +335,25 @@ export default function CreateRequestScreen() {
       return;
     }
 
+    // Check if photos are still uploading
+    if (isUploadingPhoto) {
+      Alert.alert(
+        'Photos Uploading',
+        'Please wait for photos to finish uploading before submitting your request.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
     setIsLoading(true);
     try {
-      console.log(user);
+      console.log('User:', user);
+      console.log('Local photos:', photos);
+      console.log('Cloudinary URLs:', cloudinaryUrls);
+      
+      const finalPhotos = cloudinaryUrls.length > 0 ? cloudinaryUrls : (photos.length > 0 ? photos : undefined);
+      console.log('Final photos for request:', finalPhotos);
+      
       const requestData = {
         truckerId: user.id,
         truckerName: `${user.firstName} ${user.lastName}`,
@@ -315,15 +368,17 @@ export default function CreateRequestScreen() {
         status: 'pending' as const,
         urgency,
         estimatedCost: estimatedCost ? parseInt(estimatedCost) : undefined,
-        photos: photos.length > 0 ? photos : undefined,
+        photos: finalPhotos,
       };
+
+      console.log('Request data being submitted:', requestData);
 
       // This will now charge $5 and save to database
       await createRequest(requestData);
 
       Alert.alert(
         'Request Created! 🚛💳',
-        'Your service request has been posted and the $5 request fee has been charged. Service providers in your area will be notified and can accept your request.',
+        'Your service request has been posted and the $5 request fee will be charged when any service provider accepts your request. Service providers in your area will be notified and can accept your request.',
         [
           {
             text: 'View Request',
@@ -499,8 +554,24 @@ export default function CreateRequestScreen() {
                 ]}
               >
                 <Text style={[styles.photoTipText, { color: colors.primary }]}>
-                  📸 {photos.length}/3 photos added. Clear photos help providers
-                  give accurate estimates.
+                  📸 {photos.length}/3 photos added. {cloudinaryUrls.length > 0 ? `${cloudinaryUrls.length} uploaded to cloud.` : ''} Clear photos help providers give accurate estimates.
+                </Text>
+              </View>
+            )}
+            
+            {isUploadingPhoto && (
+              <View
+                style={[
+                  styles.uploadingIndicator,
+                  {
+                    backgroundColor: colors.warning + '20',
+                    borderColor: colors.warning + '40',
+                  },
+                ]}
+              >
+                <ActivityIndicator size="small" color={colors.warning} />
+                <Text style={[styles.uploadingText, { color: colors.warning }]}>
+                  Uploading photo to cloud storage...
                 </Text>
               </View>
             )}
@@ -744,46 +815,45 @@ export default function CreateRequestScreen() {
                   style={styles.camera}
                   facing={cameraFacing}
                   ref={setCameraRef}
-                >
-                  <View style={styles.cameraOverlay}>
-                    <View style={styles.cameraHeader}>
-                      <TouchableOpacity
-                        style={styles.cameraCloseButton}
-                        onPress={() => setShowCameraModal(false)}
-                      >
-                        <X size={24} color="white" />
-                      </TouchableOpacity>
-                      <Text style={styles.cameraTitle}>Take Photo</Text>
-                      <TouchableOpacity
-                        style={styles.cameraFlipButton}
-                        onPress={() =>
-                          setCameraFacing((current) =>
-                            current === 'back' ? 'front' : 'back'
-                          )
-                        }
-                      >
-                        <Camera size={24} color="white" />
-                      </TouchableOpacity>
-                    </View>
-
-                    <View style={styles.cameraFooter}>
-                      <TouchableOpacity
-                        style={[
-                          styles.captureButton,
-                          isTakingPhoto && styles.captureButtonDisabled,
-                        ]}
-                        onPress={takePicture}
-                        disabled={isTakingPhoto}
-                      >
-                        {isTakingPhoto ? (
-                          <ActivityIndicator color="white" />
-                        ) : (
-                          <View style={styles.captureButtonInner} />
-                        )}
-                      </TouchableOpacity>
-                    </View>
+                />
+                <View style={styles.cameraOverlay}>
+                  <View style={styles.cameraHeader}>
+                    <TouchableOpacity
+                      style={styles.cameraCloseButton}
+                      onPress={() => setShowCameraModal(false)}
+                    >
+                      <X size={24} color="white" />
+                    </TouchableOpacity>
+                    <Text style={styles.cameraTitle}>Take Photo</Text>
+                    <TouchableOpacity
+                      style={styles.cameraFlipButton}
+                      onPress={() =>
+                        setCameraFacing((current) =>
+                          current === 'back' ? 'front' : 'back'
+                        )
+                      }
+                    >
+                      <Camera size={24} color="white" />
+                    </TouchableOpacity>
                   </View>
-                </CameraView>
+
+                  <View style={styles.cameraFooter}>
+                    <TouchableOpacity
+                      style={[
+                        styles.captureButton,
+                        isTakingPhoto && styles.captureButtonDisabled,
+                      ]}
+                      onPress={takePicture}
+                      disabled={isTakingPhoto}
+                    >
+                      {isTakingPhoto ? (
+                        <ActivityIndicator color="white" />
+                      ) : (
+                        <View style={styles.captureButtonInner} />
+                      )}
+                    </TouchableOpacity>
+                  </View>
+                </View>
               </>
             ) : (
               <View style={styles.permissionContainer}>
@@ -962,6 +1032,19 @@ const styles = StyleSheet.create({
     fontSize: 12,
     lineHeight: 16,
   },
+  uploadingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: 8,
+  },
+  uploadingText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
   locationContainer: {
     gap: 12,
   },
@@ -1135,8 +1218,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   cameraOverlay: {
-    flex: 1,
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
     justifyContent: 'space-between',
+    zIndex: 1,
   },
   cameraHeader: {
     flexDirection: 'row',

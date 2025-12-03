@@ -10,7 +10,7 @@ import {
   ActivityIndicator,
   Linking,
   TextInput,
-  // Image,
+  Image,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { router, useLocalSearchParams } from 'expo-router';
@@ -577,27 +577,35 @@ export default function JobDetailScreen() {
           </Text>
 
           {/* Photos Section */}
-          {/* {request.photos && request.photos.length > 0 && (
+          {request.photos && request.photos.length > 0 && (
             <View style={styles.photosSection}>
               <Text style={[styles.photosTitle, { color: colors.text }]}>
-                Photos
+                Photos ({request.photos.length})
               </Text>
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 style={styles.photosScroll}
+                contentContainerStyle={{ paddingHorizontal: 4 }}
               >
                 {request.photos.map((photo, index) => (
-                  <Image
-                  <Image
+                  <TouchableOpacity 
                     key={`photo-${index}`}
-                    source={{ uri: photo }}
-                    style={styles.requestPhoto}
-                  />
+                    onPress={() => {
+                      // Could add photo viewer modal here later
+                      console.log('Photo tapped:', photo);
+                    }}
+                  >
+                    <Image
+                      source={{ uri: photo }}
+                      style={styles.requestPhoto}
+                      resizeMode="cover"
+                    />
+                  </TouchableOpacity>
                 ))}
               </ScrollView>
             </View>
-          )} */}
+          )}
 
           <View style={styles.detailsGrid}>
             <View style={styles.detailItem}>
