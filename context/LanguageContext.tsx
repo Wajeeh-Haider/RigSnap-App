@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useAuth } from './AuthContext';
 
 export interface Language {
   code: string;
@@ -1980,23 +1981,18 @@ const LanguageContext = createContext<LanguageContextType | null>(null);
 const LANGUAGE_STORAGE_KEY = '@rigsnap_language';
 
 export function LanguageProvider({ children }: { children: ReactNode }) {
+  const { user, updateProfile } = useAuth();
   const [currentLanguage, setCurrentLanguage] = useState('en');
 
   useEffect(() => {
-    loadLanguagePreference();
-  }, []);
-
-  const loadLanguagePreference = async () => {
-    try {
-      // Get from local storage
-      const savedLanguage = await AsyncStorage.getItem(LANGUAGE_STORAGE_KEY);
-      if (savedLanguage) {
-        setCurrentLanguage(savedLanguage);
-      }
-    } catch (error) {
-      console.error('Failed to load language preference:', error);
+    if (user) {
+      // Load language from user data
+      setCurrentLanguage(user.language || 'en');
+    } else {
+      // No user, default to English
+      setCurrentLanguage('en');
     }
-  };
+  }, [user]);
 
   const setLanguage = async (languageCode: string) => {
     try {
@@ -2004,6 +2000,11 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
       
       // Save to local storage
       await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, languageCode);
+
+      // If user is logged in, update database
+      if (user) {
+        await updateProfile({ language: languageCode });
+      }
     } catch (error) {
       console.error('Failed to save language preference:', error);
     }
