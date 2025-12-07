@@ -52,15 +52,14 @@ export default function ChatDetailScreen() {
 
   const requestId = params.requestId as string;
   const request = requests.find((r) => r.id === requestId);
-  
+
   // Filter messages for this specific chat from global messages
-  const messages = globalMessages.filter(msg => msg.requestId === requestId);
-  
+  const messages = globalMessages.filter((msg) => msg.requestId === requestId);
 
   useEffect(() => {
     const initializeChat = async () => {
       if (!requestId || !user?.id) return;
-      
+
       // If we don't have any messages for this chat, load them specifically
       if (messages.length === 0) {
         // console.log(`🔄 Loading messages specifically for chat ${requestId}`);
@@ -71,7 +70,7 @@ export default function ChatDetailScreen() {
           console.error('Error loading chat messages:', error);
         }
       }
-      
+
       // Mark messages as read when entering the chat
       await markMessagesAsRead(requestId, user.id);
       setIsLoadingMessages(false);
@@ -87,12 +86,12 @@ export default function ChatDetailScreen() {
       requestAnimationFrame(() => {
         scrollViewRef.current?.scrollToEnd({ animated: false });
       });
-      
+
       // Backup scroll after short delay
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
-      
+
       // Final scroll after longer delay to ensure rendering is complete
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: false });
@@ -165,7 +164,7 @@ export default function ChatDetailScreen() {
 
     const messageContent = messageText.trim();
     setMessageText(''); // Clear input immediately for better UX
-    
+
     try {
       // Send message - global realtime subscription will handle adding it to UI
       await sendMessage(
@@ -175,17 +174,16 @@ export default function ChatDetailScreen() {
         user.role,
         messageContent
       );
-      
+
       // Immediate scroll after sending message
       requestAnimationFrame(() => {
         scrollViewRef.current?.scrollToEnd({ animated: false });
       });
-      
+
       // Backup scroll
       setTimeout(() => {
         scrollViewRef.current?.scrollToEnd({ animated: true });
       }, 100);
-      
     } catch (error) {
       console.error('Error sending message:', error);
       setMessageText(messageContent); // Restore input on error
@@ -295,7 +293,9 @@ export default function ChatDetailScreen() {
     if (message.messageType === 'system') {
       return (
         <View style={styles.systemMessage}>
-          <Text style={styles.systemMessageText}>{message.content || message.message}</Text>
+          <Text style={styles.systemMessageText}>
+            {message.content || message.message}
+          </Text>
         </View>
       );
     }
@@ -378,11 +378,31 @@ export default function ChatDetailScreen() {
     return groups;
   }, {});
 
+  const getKeyboardOffset = () => {
+    if (Platform.OS !== 'ios') return 0;
+
+    const osVersion = Platform.Version;
+    const numericVersion =
+      typeof osVersion === 'string' ? parseInt(osVersion) : osVersion;
+
+    // iOS 26+ might need different offset
+    if (numericVersion >= 26) {
+      return 15; // Adjust this for iOS 26
+    }
+
+    // iOS 18-25
+    if (numericVersion >= 18) {
+      return 55;
+    }
+
+    return 55; // iOS 17 and below
+  };
+
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
-      behavior="padding"
-      keyboardVerticalOffset={80}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? getKeyboardOffset() : 0}
     >
       {/* Header */}
       <View
