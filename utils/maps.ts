@@ -94,12 +94,23 @@ class MapsService {
   private async openNativeDirections(options: DirectionsOptions): Promise<void> {
     const { destination, origin, mode } = options;
     
-    // Try to open with different navigation apps in order of preference
-    const apps = [
-      this.getGoogleMapsUrl(options),
-      this.getAppleMapsUrl(options),
-      this.getWazeUrl(options)
-    ];
+    // Different order of preference based on platform
+    let apps: (string | null)[];
+    
+    if (Platform.OS === 'ios') {
+      // On iOS, prioritize Apple Maps, then Google Maps, then Waze
+      apps = [
+        this.getAppleMapsUrl(options),
+        this.getGoogleMapsUrl(options),
+        this.getWazeUrl(options)
+      ];
+    } else {
+      // On Android, prioritize Google Maps, then Waze
+      apps = [
+        this.getGoogleMapsUrl(options),
+        this.getWazeUrl(options)
+      ];
+    }
     
     for (const appUrl of apps) {
       if (appUrl) {
@@ -121,28 +132,32 @@ class MapsService {
   private getGoogleMapsUrl(options: DirectionsOptions): string | null {
     const { destination, origin, mode } = options;
     
-    let url = 'comgooglemaps://?';
+    // Use https scheme which works on both iOS and Android
+    let url = 'https://www.google.com/maps/dir/?api=1';
     const params = new URLSearchParams();
     
+    // Destination is required
     if (destination.address) {
-      params.append('daddr', destination.address);
+      params.append('destination', destination.address);
     } else {
-      params.append('daddr', `${destination.latitude},${destination.longitude}`);
+      params.append('destination', `${destination.latitude},${destination.longitude}`);
     }
     
+    // Origin is optional
     if (origin) {
       if (origin.address) {
-        params.append('saddr', origin.address);
+        params.append('origin', origin.address);
       } else {
-        params.append('saddr', `${origin.latitude},${origin.longitude}`);
+        params.append('origin', `${origin.latitude},${origin.longitude}`);
       }
     }
     
+    // Travel mode
     if (mode) {
-      params.append('directionsmode', mode);
+      params.append('travelmode', mode);
     }
     
-    return url + params.toString();
+    return url + '&' + params.toString();
   }
 
   /**
@@ -269,19 +284,19 @@ class MapsService {
         } else {
           url = `https://www.google.com/maps/@${location.latitude},${location.longitude},15z`;
         }
-      } else {
-        // Try native apps first
-        const googleMapsUrl = `comgooglemaps://?center=${location.latitude},${location.longitude}&zoom=15`;
+      } else if (Platform.OS === 'ios') {
+        // On iOS, prioritize Apple Maps
         const appleMapsUrl = `maps://?ll=${location.latitude},${location.longitude}`;
+        const googleMapsUrl = `https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`;
         
-        if (await Linking.canOpenURL(googleMapsUrl)) {
-          url = googleMapsUrl;
-        } else if (Platform.OS === 'ios' && await Linking.canOpenURL(appleMapsUrl)) {
+        if (await Linking.canOpenURL(appleMapsUrl)) {
           url = appleMapsUrl;
         } else {
-          // Fallback to web
-          url = `https://www.google.com/maps/@${location.latitude},${location.longitude},15z`;
+          url = googleMapsUrl;
         }
+      } else {
+        // On Android, use Google Maps
+        url = `https://www.google.com/maps/search/?api=1&query=${location.latitude},${location.longitude}`;
       }
       
       await Linking.openURL(url);
