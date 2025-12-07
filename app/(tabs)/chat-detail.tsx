@@ -402,7 +402,7 @@ export default function ChatDetailScreen() {
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: colors.background }]}
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      keyboardVerticalOffset={Platform.OS === 'ios' ? getKeyboardOffset() : 0}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? getKeyboardOffset() : 20}
     >
       {/* Header */}
       <View
