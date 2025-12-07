@@ -13,10 +13,11 @@ import {
   Platform,
 } from 'react-native';
 
-import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
+import { router,useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/context/ThemeContext';
+import { useLanguage } from '@/context/LanguageContext';
 import {
   Truck,
   Wrench,
@@ -57,44 +58,44 @@ import {
 const serviceTypes = [
   {
     id: 'towing',
-    title: 'Towing Service',
+    titleKey: 'create.serviceTowing',
+    descriptionKey: 'create.serviceTowingDesc',
     icon: Truck,
-    description: 'Vehicle breakdown or accident towing',
     color: '#2563eb',
   },
   {
     id: 'repair',
-    title: 'Road Service',
+    titleKey: 'create.serviceRepair',
+    descriptionKey: 'create.serviceRepairDesc',
     icon: Wrench,
-    description: 'On-site mechanical repairs',
     color: '#059669',
   },
   {
     id: 'mechanic',
-    title: 'Mechanic Service',
+    titleKey: 'create.serviceMechanic',
+    descriptionKey: 'create.serviceMechanicDesc',
     icon: Settings,
-    description: 'Professional diagnostic and repair',
     color: '#7c3aed',
   },
   {
     id: 'tire_repair',
-    title: 'Mobile Tire Repair',
+    titleKey: 'create.serviceTireRepair',
+    descriptionKey: 'create.serviceTireRepairDesc',
     icon: CircleDot,
-    description: 'Tire replacement and roadside tire services',
     color: '#dc2626',
   },
   {
     id: 'truck_wash',
-    title: 'Mobile Truck Wash',
+    titleKey: 'create.serviceTruckWash',
+    descriptionKey: 'create.serviceTruckWashDesc',
     icon: Droplets,
-    description: 'Professional mobile truck cleaning',
     color: '#0891b2',
   },
   {
     id: 'hose_repair',
-    title: 'Hose Repair',
+    titleKey: 'create.serviceHoseRepair',
+    descriptionKey: 'create.serviceHoseRepairDesc',
     icon: Zap,
-    description: 'Hydraulic and air hose repair',
     color: '#ea580c',
   },
 ];
@@ -102,21 +103,21 @@ const serviceTypes = [
 const urgencyLevels = [
   {
     id: 'low',
-    label: 'Low',
+    labelKey: 'create.urgencyLow',
+    descriptionKey: 'create.urgencyLowDesc',
     color: '#10b981',
-    description: 'Can wait a few hours',
   },
   {
     id: 'medium',
-    label: 'Medium',
+    labelKey: 'create.urgencyMedium',
+    descriptionKey: 'create.urgencyMediumDesc',
     color: '#f59e0b',
-    description: 'Need help within 1-2 hours',
   },
   {
     id: 'high',
-    label: 'High',
+    labelKey: 'create.urgencyHigh',
+    descriptionKey: 'create.urgencyHighDesc',
     color: '#ef4444',
-    description: 'Emergency - need immediate help',
   },
 ];
 
@@ -125,6 +126,7 @@ export default function CreateRequestScreen() {
   const { user } = useAuth();
   const { createRequest } = useApp();
   const { colors } = useTheme();
+  const { t } = useLanguage();
 
   const [selectedService, setSelectedService] = useState(
     (params.type as string) || ''
@@ -152,8 +154,6 @@ export default function CreateRequestScreen() {
 
   if (!user) return null;
 
-  const userLanguage = user.language || 'en';
-
   const getCurrentLocation = async () => {
     setIsGettingLocation(true);
 
@@ -161,8 +161,8 @@ export default function CreateRequestScreen() {
       // First check if location services are available
       if (!locationService.isLocationAvailable()) {
         Alert.alert(
-          'Location Not Available',
-          'Your device or browser does not support location services. You can still enter your location manually.',
+          t('create.locationNotAvailable'),
+          t('create.locationNotAvailableDesc'),
           [{ text: 'OK' }]
         );
         return;
@@ -189,8 +189,8 @@ export default function CreateRequestScreen() {
         setLocation(address);
 
         Alert.alert(
-          'Location Found! 📍',
-          `Your current location has been set to:\n\n${address}`,
+          t('create.locationFound'),
+          `${t('create.locationSet')}\n\n${address}`,
           [{ text: 'OK' }]
         );
       } catch (geocodeError) {
@@ -199,7 +199,7 @@ export default function CreateRequestScreen() {
         setLocation(coordString);
 
         Alert.alert(
-          'Location Found! 📍',
+          t('create.locationFound'),
           `Your GPS coordinates have been set. You can edit the location description if needed.\n\nCoordinates: ${coordString}`,
           [{ text: 'OK' }]
         );
@@ -209,7 +209,7 @@ export default function CreateRequestScreen() {
 
       // Offer fallback options
       Alert.alert(
-        'Location Error',
+        t('create.locationError'),
         error.message || 'Unable to get your current location.',
         [
           { text: 'Enter Manually', style: 'cancel' },
@@ -221,8 +221,8 @@ export default function CreateRequestScreen() {
               setCoordinates(demoLocation.coordinates);
 
               Alert.alert(
-                'Demo Location Set',
-                `Using demo location: ${demoLocation.name}`,
+                t('create.demoLocationSet'),
+                `${t('create.demoLocationDesc')} ${demoLocation.name}`,
                 [{ text: 'OK' }]
               );
             },
@@ -237,8 +237,8 @@ export default function CreateRequestScreen() {
   const openCamera = async () => {
     if (Platform.OS === 'web') {
       Alert.alert(
-        'Camera Not Available',
-        'Camera functionality is not available on web. In a real mobile app, this would open the camera.',
+        t('create.cameraNotAvailable'),
+        t('create.cameraNotAvailableDesc'),
         [{ text: 'OK' }]
       );
       return;
@@ -252,8 +252,8 @@ export default function CreateRequestScreen() {
       const permission = await requestCameraPermission();
       if (!permission.granted) {
         Alert.alert(
-          'Camera Permission Required',
-          'Please grant camera permission to take photos of the issue.',
+          t('create.cameraPermissionRequired'),
+          t('create.cameraPermissionDesc'),
           [{ text: 'OK' }]
         );
         return;
@@ -290,22 +290,22 @@ export default function CreateRequestScreen() {
         setCloudinaryUrls((prev) => [...prev, cloudinaryResponse.secure_url]);
         
         Alert.alert(
-          'Photo Uploaded! 📸',
-          'Your photo has been successfully uploaded and will be included with your service request.',
+          t('create.photoUploaded'),
+          t('create.photoUploadedDesc'),
           [{ text: 'OK' }]
         );
       } catch (uploadError) {
         console.error('Cloudinary upload error:', uploadError);
         Alert.alert(
-          'Upload Warning ⚠️',
-          'Photo was taken but upload to cloud failed. The photo will still be included locally. Please check your internet connection.',
+          t('create.uploadWarning'),
+          t('create.uploadWarningDesc'),
           [{ text: 'OK' }]
         );
       } finally {
         setIsUploadingPhoto(false);
       }
     } catch {
-      Alert.alert('Error', 'Failed to take picture. Please try again.');
+      Alert.alert(t('create.error'), t('create.failedTakePicture'));
     } finally {
       setIsTakingPhoto(false);
     }
@@ -331,15 +331,15 @@ export default function CreateRequestScreen() {
 
   const handleSubmit = async () => {
     if (!selectedService || !description || !location) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      Alert.alert(t('create.error'), t('create.fillRequiredFields'));
       return;
     }
 
     // Check if photos are still uploading
     if (isUploadingPhoto) {
       Alert.alert(
-        'Photos Uploading',
-        'Please wait for photos to finish uploading before submitting your request.',
+        t('create.photosUploading'),
+        t('create.photosUploadingDesc'),
         [{ text: 'OK' }]
       );
       return;
@@ -377,11 +377,11 @@ export default function CreateRequestScreen() {
       await createRequest(requestData);
 
       Alert.alert(
-        'Request Created! 🚛💳',
-        'Your service request has been posted and the $5 request fee will be charged when any service provider accepts your request. Service providers in your area will be notified and can accept your request.',
+        t('create.requestCreated'),
+        t('create.requestCreatedDesc'),
         [
           {
-            text: 'View Request',
+            text: t('create.viewRequest'),
             onPress: () => router.push('/(tabs)'),
           },
         ]
@@ -389,9 +389,9 @@ export default function CreateRequestScreen() {
     } catch (error: any) {
       console.error('Error creating request:', error);
       Alert.alert(
-        'Request Failed',
+        t('create.requestFailed'),
         error.message ||
-          'Failed to create request. Please check your payment method and try again.'
+          t('create.requestFailedDesc')
       );
     } finally {
       setIsLoading(false);
@@ -405,16 +405,16 @@ export default function CreateRequestScreen() {
       <View style={styles.content}>
         <View style={[styles.header, { backgroundColor: colors.background }]}>
           <Text style={[styles.title, { color: colors.text }]}>
-            Request Service
+            {t('create.title')}
           </Text>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-            Get help from trusted service providers
+            {t('create.subtitle')}
           </Text>
         </View>
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Service Type
+            {t('create.serviceType')}
           </Text>
           <View style={styles.serviceGrid}>
             {serviceTypes.map((service) => {
@@ -449,7 +449,7 @@ export default function CreateRequestScreen() {
                       isSelected && { color: service.color },
                     ]}
                   >
-                    {service.title}
+                    {t(service.titleKey)}
                   </Text>
                   <Text
                     style={[
@@ -457,7 +457,7 @@ export default function CreateRequestScreen() {
                       { color: colors.textSecondary },
                     ]}
                   >
-                    {service.description}
+                    {t(service.descriptionKey)}
                   </Text>
                 </TouchableOpacity>
               );
@@ -467,7 +467,7 @@ export default function CreateRequestScreen() {
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Description & Photos
+            {t('create.descriptionPhotos')}
           </Text>
           <TextInput
             style={[
@@ -480,7 +480,7 @@ export default function CreateRequestScreen() {
             ]}
             value={description}
             onChangeText={setDescription}
-            placeholder="Describe the problem in detail. Include truck type, symptoms, and any other relevant information..."
+            placeholder={t('create.descriptionPlaceholder')}
             placeholderTextColor={colors.textSecondary}
             multiline
             numberOfLines={4}
@@ -491,12 +491,12 @@ export default function CreateRequestScreen() {
           <View style={styles.photoSection}>
             <View style={styles.photoHeader}>
               <Text style={[styles.photoTitle, { color: colors.text }]}>
-                Add Photos (Optional)
+                {t('create.addPhotos')}
               </Text>
               <Text
                 style={[styles.photoSubtitle, { color: colors.textSecondary }]}
               >
-                Help providers understand the issue better
+                {t('create.photosHelp')}
               </Text>
             </View>
 
@@ -536,7 +536,7 @@ export default function CreateRequestScreen() {
                         { color: colors.textSecondary },
                       ]}
                     >
-                      {Platform.OS === 'web' ? 'Add Sample' : 'Take Photo'}
+                      {Platform.OS === 'web' ? t('create.addSample') : t('create.takePhoto')}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -554,7 +554,7 @@ export default function CreateRequestScreen() {
                 ]}
               >
                 <Text style={[styles.photoTipText, { color: colors.primary }]}>
-                  📸 {photos.length}/3 photos added. {cloudinaryUrls.length > 0 ? `${cloudinaryUrls.length} uploaded to cloud.` : ''} Clear photos help providers give accurate estimates.
+                  📸 {photos.length}/3{t('create.photoTip')} {cloudinaryUrls.length > 0 ? `${cloudinaryUrls.length} uploaded to cloud.` : ''}
                 </Text>
               </View>
             )}
@@ -571,7 +571,7 @@ export default function CreateRequestScreen() {
               >
                 <ActivityIndicator size="small" color={colors.warning} />
                 <Text style={[styles.uploadingText, { color: colors.warning }]}>
-                  Uploading photo to cloud storage...
+                  {t('create.uploadingPhoto')}
                 </Text>
               </View>
             )}
@@ -580,7 +580,7 @@ export default function CreateRequestScreen() {
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Location
+            {t('create.location')}
           </Text>
           <View style={styles.locationContainer}>
             <View
@@ -598,7 +598,7 @@ export default function CreateRequestScreen() {
                 style={[styles.inputWithIcon, { color: colors.text }]}
                 value={location}
                 onChangeText={setLocation}
-                placeholder="Enter your current location or address"
+                placeholder={t('create.locationPlaceholder')}
                 placeholderTextColor={colors.textSecondary}
                 multiline
               />
@@ -637,8 +637,8 @@ export default function CreateRequestScreen() {
                     ]}
                   >
                     {isGettingLocation
-                      ? 'Getting Location...'
-                      : 'Use Current Location'}
+                      ? t('create.gettingLocation')
+                      : t('create.useCurrentLocation')}
                   </Text>
                 </View>
               </TouchableOpacity>
@@ -673,15 +673,14 @@ export default function CreateRequestScreen() {
             ]}
           >
             <Text style={[styles.locationTipText, { color: colors.warning }]}>
-              💡 Tip: Accurate location helps service providers find you
-              quickly. Include mile markers, exit numbers, or nearby landmarks.
+              {t('create.locationTip')}
             </Text>
           </View>
         </View>
 
         <View style={styles.section}>
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            Urgency Level
+            {t('create.urgencyLevel')}
           </Text>
           <View style={styles.urgencyContainer}>
             {urgencyLevels.map((level) => (
@@ -717,7 +716,7 @@ export default function CreateRequestScreen() {
                       urgency === level.id && { color: level.color },
                     ]}
                   >
-                    {level.label}
+                    {t(level.labelKey)}
                   </Text>
                 </View>
                 <Text
@@ -726,7 +725,7 @@ export default function CreateRequestScreen() {
                     { color: colors.textSecondary },
                   ]}
                 >
-                  {level.description}
+                  {t(level.descriptionKey)}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -748,13 +747,12 @@ export default function CreateRequestScreen() {
             ]}
             value={estimatedCost}
             onChangeText={setEstimatedCost}
-            placeholder="Enter estimated cost in USD"
+            placeholder={t('create.costPlaceholder')}
             placeholderTextColor={colors.textSecondary}
             keyboardType="numeric"
           />
           <Text style={[styles.helperText, { color: colors.textSecondary }]}>
-            This helps providers understand the scope of work and provide
-            accurate quotes
+            {t('create.costHelp')}
           </Text>
         </View>
 
@@ -794,7 +792,7 @@ export default function CreateRequestScreen() {
           ) : (
             <>
               <Plus size={20} color="white" />
-              <Text style={styles.submitButtonText}>Post Request</Text>
+              <Text style={styles.submitButtonText}>{t('create.postRequest')}</Text>
             </>
           )}
         </TouchableOpacity>
