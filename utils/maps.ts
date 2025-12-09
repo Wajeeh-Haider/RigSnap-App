@@ -279,10 +279,13 @@ class MapsService {
       let url: string;
       
       if (Platform.OS === 'web') {
-        if (location.address) {
+        // Prefer coordinates if they are valid (not 0,0)
+        if (location.latitude !== 0 || location.longitude !== 0) {
+          url = `https://www.google.com/maps/@${location.latitude},${location.longitude},15z`;
+        } else if (location.address) {
           url = `https://www.google.com/maps/search/${encodeURIComponent(location.address)}`;
         } else {
-          url = `https://www.google.com/maps/@${location.latitude},${location.longitude},15z`;
+          throw new Error('No valid location data');
         }
       } else if (Platform.OS === 'ios') {
         // On iOS, prioritize Apple Maps
@@ -315,13 +318,14 @@ class MapsService {
    */
   async shareLocation(location: MapLocation): Promise<void> {
     try {
-      const url = location.address 
-        ? `https://www.google.com/maps/search/${encodeURIComponent(location.address)}`
-        : `https://www.google.com/maps/@${location.latitude},${location.longitude},15z`;
+      // Prefer coordinates if they are valid (not 0,0)
+      const url = (location.latitude !== 0 || location.longitude !== 0)
+        ? `https://www.google.com/maps/@${location.latitude},${location.longitude},15z`
+        : `https://www.google.com/maps/search/${encodeURIComponent(location.address || '')}`;
       
-      const message = location.address 
-        ? `My location: ${location.address}\n${url}`
-        : `My location: ${location.latitude}, ${location.longitude}\n${url}`;
+      const message = (location.latitude !== 0 || location.longitude !== 0)
+        ? `My location: ${location.latitude}, ${location.longitude}\n${url}`
+        : `My location: ${location.address}\n${url}`;
       
       // On web, copy to clipboard
       if (Platform.OS === 'web' && navigator.clipboard) {
