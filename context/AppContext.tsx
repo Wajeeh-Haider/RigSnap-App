@@ -51,7 +51,7 @@ interface AppContextType {
   addLead: (lead: Omit<Lead, 'id' | 'createdAt'>) => void;
   getUserRequests: (userId: string) => ServiceRequest[];
   getProviderRequests: (providerId: string) => ServiceRequest[];
-  getAvailableRequests: () => ServiceRequest[];
+  getAvailableRequests: (providerId?: string) => Promise<ServiceRequest[]>;
   getUserChats: (userId: string) => Promise<Chat[]>;
   getChatMessages: (requestId: string) => Promise<ChatMessage[]>;
   sendMessage: (
@@ -837,9 +837,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [requests]
   );
 
-  const getAvailableRequests = useCallback(() => {
+  const getAvailableRequests = useCallback(async (providerId?: string) => {
+    // If we have a provider ID and they are a provider, fetch radius-filtered requests
+    if (providerId && user?.role === 'provider') {
+      try {
+        const radiusFilteredRequests = await fetchAvailableRequests(providerId);
+        return radiusFilteredRequests;
+      } catch (error) {
+        console.error('Error fetching radius-filtered requests:', error);
+        // Fallback to local filtering
+        return requests.filter((request) => request.status === 'pending');
+      }
+    }
+    
+    // Default behavior: return pending requests from local state
     return requests.filter((request) => request.status === 'pending');
-  }, [requests]);
+  }, [requests, user?.role]);
 
   const getUserChats = useCallback(
     async (userId: string) => {

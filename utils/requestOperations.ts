@@ -1,5 +1,6 @@
 import { supabase } from '../lib/supabase';
 import { ServiceRequest } from '../types';
+import { calculateDistance } from './location';
 
 export interface DatabaseRequest {
   id: string;
@@ -166,8 +167,25 @@ export const fetchUserRequests = async (userId: string): Promise<ServiceRequest[
 };
 
 // Fetch available requests for service providers (pending requests)
-export const fetchAvailableRequests = async (): Promise<ServiceRequest[]> => {
+export const fetchAvailableRequests = async (providerId?: string): Promise<ServiceRequest[]> => {
   try {
+    // Get provider details for radius filtering
+    let providerData = null;
+    if (providerId) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('location, service_radius, services')
+        .eq('id', providerId)
+        .single();
+      
+      if (error) {
+        console.error('Error fetching provider data:', error);
+      } else {
+        providerData = data;
+        console.log('Provider data for radius filtering:', JSON.stringify(providerData, null, 2));
+      }
+    }
+
     // First get pending requests
     const { data: requestsData, error: requestsError } = await supabase
       .from('requests')
@@ -210,7 +228,7 @@ export const fetchAvailableRequests = async (): Promise<ServiceRequest[]> => {
     console.log('Truckers found:', usersData?.length || 0);
 
     // Transform requests and add user data
-    const requests = requestsData.map((dbRequest) => {
+    let requests = requestsData.map((dbRequest) => {
       const serviceRequest = transformDatabaseRequestToServiceRequest(dbRequest);
       
       // Update with actual user data
@@ -226,6 +244,104 @@ export const fetchAvailableRequests = async (): Promise<ServiceRequest[]> => {
       
       return serviceRequest;
     });
+
+    // Apply radius-based filtering if provider data is available
+    if (providerData && providerData.service_radius && providerData.location) {
+      try {
+        // Parse provider location coordinates
+        let providerCoords = null;
+        
+        // Try to extract coordinates from location string
+        // Format could be "lat,lng" or a more complex format
+        if (providerData.location.includes(',')) {
+          const parts = providerData.location.split(',');
+          if (parts.length >= 2) {
+            const lat = parseFloat(parts[0].trim());
+            const lng = parseFloat(parts[1].trim());
+            if (!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+              providerCoords = { latitude: lat, longitude: lng };
+            }
+          }
+        }
+
+        if (providerCoords) {
+          const maxDistance = providerData.service_radius; // in miles
+          
+          requests = requests.filter((request) => {
+            try {
+              // Parse request coordinates
+              let requestCoords = null;
+              
+              if (request.coordinates) {
+                // Handle different coordinate formats
+                if (typeof request.coordinates === 'string') {
+                  try {
+                    const parsed = JSON.parse(request.coordinates);
+                    if (parsed.latitude && parsed.longitude) {
+                      requestCoords = { latitude: parsed.latitude, longitude: parsed.longitude };
+                    }
+                  } catch {
+                    // If JSON parse fails, try comma-separated format
+                    if (request.coordinates.includes(',')) {
+                      const parts = request.coordinates.split(',');
+                      if (parts.length >= 2) {
+                        const lat = parseFloat(parts[0].trim());
+                        const lng = parseFloat(parts[1].trim());
+                        if (!isNaN(lat) && !isNaN(lng)) {
+                          requestCoords = { latitude: lat, longitude: lng };
+                        }
+                      }
+                    }
+                  }
+                } else if (typeof request.coordinates === 'object' && request.coordinates.latitude && request.coordinates.longitude) {
+                  requestCoords = { latitude: request.coordinates.latitude, longitude: request.coordinates.longitude };
+                }
+              }
+
+              if (!requestCoords) {
+                console.warn(`Could not parse coordinates for request ${request.id}:`, request.coordinates);
+                return true; // Include requests without coordinates for now (don't break existing functionality)
+              }
+
+              // Calculate distance between provider and request
+              const distance = calculateDistance(
+                providerCoords.latitude,
+                providerCoords.longitude,
+                requestCoords.latitude,
+                requestCoords.longitude
+              );
+
+              // Also filter by services if provider has specific services
+              const serviceMatch = !providerData.services || 
+                                 providerData.services.length === 0 || 
+                                 providerData.services.includes(request.serviceType);
+
+              console.log(`Request ${request.id}: Distance ${distance.toFixed(2)} miles, Max: ${maxDistance}, Service match: ${serviceMatch}`);
+              
+              return distance <= maxDistance && serviceMatch;
+            } catch (error) {
+              console.error(`Error calculating distance for request ${request.id}:`, error);
+              return true; // Include on error to avoid breaking functionality
+            }
+          });
+
+          console.log(`Filtered requests by radius: ${requests.length} requests within ${maxDistance} miles of provider location`);
+        } else {
+          console.warn('Could not parse provider coordinates from location:', providerData.location);
+          console.log('Provider data:', providerData);
+        }
+        
+        // Also filter by services even if we don't have coordinates
+        if (providerData.services && providerData.services.length > 0) {
+          requests = requests.filter((request) => 
+            providerData.services.includes(request.serviceType)
+          );
+          console.log(`Filtered by services: ${requests.length} requests matching provider services`);
+        }
+      } catch (error) {
+        console.error('Error applying radius filter:', error);
+      }
+    }
 
     return requests;
   } catch (error) {

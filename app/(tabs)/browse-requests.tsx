@@ -129,6 +129,8 @@ export default function BrowseRequestsScreen() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [availableRequests, setAvailableRequests] = useState<any[]>([]);
+  const [isLoadingRequests, setIsLoadingRequests] = useState(false);
 
   const getUserLocation = async () => {
     try {
@@ -144,16 +146,32 @@ export default function BrowseRequestsScreen() {
     }
   };
 
-  // Get user location on component mount
+  const loadAvailableRequests = async () => {
+    if (!user || user.role === 'trucker') return;
+
+    setIsLoadingRequests(true);
+    try {
+      const requests = await getAvailableRequests(user.id);
+      setAvailableRequests(requests);
+    } catch (error) {
+      console.error('Error loading available requests:', error);
+    } finally {
+      setIsLoadingRequests(false);
+    }
+  };
+
+  // Get user location and load requests on component mount
   useEffect(() => {
     getUserLocation();
-  }, []);
+    loadAvailableRequests();
+  }, [user?.id]);
 
   // Refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       refreshRequests();
-    }, [refreshRequests])
+      loadAvailableRequests();
+    }, [refreshRequests, user?.id])
   );
 
   if (!user) return null;
@@ -161,9 +179,7 @@ export default function BrowseRequestsScreen() {
   const isTrucker = user.role === 'trucker';
 
   // Get appropriate requests based on user role
-  const requests = isTrucker
-    ? getUserRequests(user.id)
-    : getAvailableRequests();
+  const requests = isTrucker ? getUserRequests(user.id) : availableRequests;
 
   const filteredRequests =
     filter === 'all'
@@ -280,7 +296,11 @@ export default function BrowseRequestsScreen() {
 
                     setIsCancelling(true);
                     try {
-                      const success = await cancelRequest(request.id, user.id, reason.trim());
+                      const success = await cancelRequest(
+                        request.id,
+                        user.id,
+                        reason.trim()
+                      );
                       if (success) {
                         setSelectedRequest(null);
                         Alert.alert(
@@ -411,7 +431,9 @@ export default function BrowseRequestsScreen() {
                       ]}
                     >
                       <StatusIcon size={12} color="white" />
-                      <Text style={styles.statusText}>{request.status.replace('_', ' ').toUpperCase()}</Text>
+                      <Text style={styles.statusText}>
+                        {request.status.replace('_', ' ').toUpperCase()}
+                      </Text>
                     </View>
                     <View
                       style={[
@@ -590,7 +612,6 @@ export default function BrowseRequestsScreen() {
     );
   };
 
-
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View
@@ -650,7 +671,14 @@ export default function BrowseRequestsScreen() {
       <ScrollView
         style={[styles.content, { backgroundColor: colors.background }]}
       >
-        {filteredRequests.length === 0 ? (
+        {isLoadingRequests && !isTrucker ? (
+          <View style={styles.emptyState}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={[styles.emptyStateText, { color: colors.text }]}>
+              Loading requests
+            </Text>
+          </View>
+        ) : filteredRequests.length === 0 ? (
           <View style={styles.emptyState}>
             <Filter size={48} color="#9ca3af" />
             <Text style={[styles.emptyStateText, { color: colors.text }]}>
@@ -665,7 +693,7 @@ export default function BrowseRequestsScreen() {
               {filter === 'all'
                 ? isTrucker
                   ? 'Create a new request to get started'
-                  : 'There are no pending requests at the moment'
+                  : 'There are no pending requests within your service radius'
                 : `No ${getFilterDisplayName(
                     filter
                   ).toLowerCase()} requests available right now`}
@@ -703,7 +731,9 @@ export default function BrowseRequestsScreen() {
                       ]}
                     >
                       <StatusIcon size={12} color="white" />
-                      <Text style={styles.statusText}>{request.status.replace('_', ' ').toUpperCase()}</Text>
+                      <Text style={styles.statusText}>
+                        {request.status.replace('_', ' ').toUpperCase()}
+                      </Text>
                     </View>
                     <View
                       style={[
@@ -791,6 +821,7 @@ const styles = StyleSheet.create({
   header: {
     padding: 24,
     paddingTop: 10,
+    paddingBottom: 10,
     borderBottomWidth: 1,
   },
   title: {
@@ -922,8 +953,8 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 12,
-    paddingRight:5,
-    paddingLeft:5,
+    paddingRight: 5,
+    paddingLeft: 5,
   },
   availableRequestFooter: {
     flexDirection: 'row',

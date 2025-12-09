@@ -112,25 +112,49 @@ export default function HomeScreen() {
   const { colors } = useTheme();
   const { t } = useLanguage();
   const [refreshing, setRefreshing] = React.useState(false);
+  const [availableRequests, setAvailableRequests] = React.useState<any[]>([]);
   
   // Refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
       refreshRequests();
-    }, [refreshRequests])
+      loadAvailableRequests();
+    }, [refreshRequests, loadAvailableRequests])
   );
+
+  // Load available requests for providers
+  const loadAvailableRequests = React.useCallback(async () => {
+    if (!user || user.role === 'trucker') {
+      setAvailableRequests([]);
+      return;
+    }
+    
+    try {
+      const requests = await getAvailableRequests(user.id);
+      setAvailableRequests(requests.slice(0, 2));
+    } catch (error) {
+      console.error('Error loading available requests:', error);
+      setAvailableRequests([]);
+    }
+  }, [user?.id, user?.role, getAvailableRequests]);
+
+  // Load available requests on mount and when user changes
+  React.useEffect(() => {
+    loadAvailableRequests();
+  }, [loadAvailableRequests]);
 
   // Handle pull-to-refresh
   const onRefresh = React.useCallback(async () => {
     setRefreshing(true);
     try {
       await refreshRequests();
+      await loadAvailableRequests();
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {
       setRefreshing(false);
     }
-  }, [refreshRequests]);
+  }, [refreshRequests, loadAvailableRequests]);
   
   if (!user) return null;
 
@@ -139,9 +163,7 @@ export default function HomeScreen() {
     ? getUserRequests(user.id)
     : getProviderRequests(user.id);
   const recentRequests = userRequests.slice(0, 3);
-  const availableRequests = !isTrucker
-    ? getAvailableRequests().slice(0, 2)
-    : [];
+  // availableRequests is now managed by state
   // We'll assume 0 unread chats since we don't fetch them here anymore
   const unreadChats: any[] = [];
 
@@ -158,11 +180,10 @@ export default function HomeScreen() {
       return pendingRequests.length;
     } else {
       // For providers: count available requests + accepted/in_progress jobs
-      const availableCount = getAvailableRequests().length;
       const activeJobs = getProviderRequests(user.id).filter(
         (r) => r.status === 'accepted' || r.status === 'in_progress'
       );
-      return availableCount + activeJobs.length;
+      return availableRequests.length + activeJobs.length;
     }
   };
 
