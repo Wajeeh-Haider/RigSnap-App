@@ -20,9 +20,9 @@ export interface CloudinaryUploadError {
 }
 
 const CLOUDINARY_CONFIG = {
-  cloudName: 'djcgbz8ud', // Your cloud name
-  apiKey: '313475539929624',
-  uploadPreset: 'parizah', // You'll need to create this preset in Cloudinary dashboard
+  cloudName: 'djf0tqf0z', // Your cloud name
+  apiKey: '821985821337777',
+  uploadPreset: 'RigSnap', // You'll need to create this preset in Cloudinary dashboard
 };
 
 /**
