@@ -12,6 +12,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Modal,
+  Linking,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
@@ -121,6 +122,7 @@ export default function SignupScreen() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [showLanguageModal, setShowLanguageModal] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
   const { signup } = useAuth();
   const { languages, currentLanguage, setLanguage } = useLanguage();
   const { colors } = useTheme();
@@ -162,6 +164,11 @@ export default function SignupScreen() {
       !language
     ) {
       Alert.alert('Error', 'Please fill in all fields');
+      return false;
+    }
+
+    if (!agreedToTerms) {
+      Alert.alert('Error', 'You must agree to the Privacy Policy and Terms of Service to continue');
       return false;
     }
 
@@ -567,6 +574,45 @@ export default function SignupScreen() {
             />
           </View>
 
+          {/* Terms and Privacy Policy Agreement */}
+          <TouchableOpacity
+            style={styles.checkboxContainer}
+            onPress={() => setAgreedToTerms(!agreedToTerms)}
+            activeOpacity={0.7}
+          >
+            <View style={[
+              styles.checkbox,
+              { borderColor: colors.border, backgroundColor: colors.card },
+              agreedToTerms && { backgroundColor: colors.primary, borderColor: colors.primary }
+            ]}>
+              {agreedToTerms && <Check size={16} color="white" />}
+            </View>
+            <View style={styles.checkboxTextContainer}>
+              <Text style={[styles.checkboxText, { color: colors.text }]}>
+                I agree to the{' '}
+                <Text
+                  style={[styles.linkInline, { color: colors.primary }]}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    Linking.openURL('https://rigsnap.com/privacy');
+                  }}
+                >
+                  Privacy Policy
+                </Text>
+                {' '}and{' '}
+                <Text
+                  style={[styles.linkInline, { color: colors.primary }]}
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    Linking.openURL('https://rigsnap.com/terms');
+                  }}
+                >
+                  Terms of Service
+                </Text>
+              </Text>
+            </View>
+          </TouchableOpacity>
+
           <TouchableOpacity
             style={[styles.signupButton, { backgroundColor: colors.primary }, isLoading && styles.buttonDisabled]}
             onPress={handleSignup}
@@ -805,6 +851,33 @@ const styles = StyleSheet.create({
   serviceDescription: {
     fontSize: 12,
     lineHeight: 16,
+  },
+  checkboxContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 8,
+    marginBottom: 16,
+  },
+  checkbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+    marginTop: 2,
+  },
+  checkboxTextContainer: {
+    flex: 1,
+  },
+  checkboxText: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  linkInline: {
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   signupButton: {
     borderRadius: 12,
