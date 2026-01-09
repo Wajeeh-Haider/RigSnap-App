@@ -2,7 +2,7 @@
 import { StripeProvider, useStripe } from '@stripe/stripe-react-native';
 import { supabase } from '../lib/supabase';
 
-export const STRIPE_PUBLISHABLE_KEY = process.env.STRIPE_PUBLISHED_KEY;
+export const STRIPE_PUBLISHABLE_KEY = (process.env.EXPO_PUBLIC_STRIPE_PUBLISHED_KEY as string) || '';
 const BACKEND_URL =
   process.env.EXPO_PUBLIC_BACKEND_URL ||
   'https://rigsnap-backend-vqqg.vercel.app';

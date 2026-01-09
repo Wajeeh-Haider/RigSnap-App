@@ -8,6 +8,8 @@ import { LanguageProvider } from '@/context/LanguageContext';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
 import { useEffect } from 'react';
 import * as NavigationBar from 'expo-navigation-bar';
+import { StripeProvider } from '@stripe/stripe-react-native';
+import { STRIPE_PUBLISHABLE_KEY } from '@/utils/stripe';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 // Create a separate component for the Stack with SafeAreaView
@@ -47,7 +49,9 @@ export default function RootLayout() {
       <AuthProvider>
         <LanguageProvider>
           <AppProvider>
-            <StackWithSafeArea />
+            <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
+              <StackWithSafeArea />
+            </StripeProvider>
           </AppProvider>
         </LanguageProvider>
       </AuthProvider>

@@ -17,7 +17,6 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
 import {
-  StripeProvider,
   useStripe,
   useConfirmSetupIntent,
   CardForm,
@@ -186,11 +185,6 @@ export default function ProfileScreen() {
         setupIntentResponse.client_secret,
         {
           paymentMethodType: 'Card',
-          paymentMethodData: {
-            billingDetails: {
-              name: newCard.name,
-            },
-          },
         }
       );
 
@@ -500,10 +494,9 @@ export default function ProfileScreen() {
   const isTrucker = user.role === 'trucker';
 
   return (
-    <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
-      <ScrollView
-        style={[styles.container, { backgroundColor: colors.background }]}
-      >
+    <ScrollView
+      style={[styles.container, { backgroundColor: colors.background }]}
+    >
         <View
           style={[
             styles.header,
@@ -1130,7 +1123,7 @@ export default function ProfileScreen() {
           <KeyboardAvoidingView
             style={{ flex: 1 }}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+            // keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
           >
             <View
               style={[
@@ -1149,7 +1142,7 @@ export default function ProfileScreen() {
                 ]}
               >
                 <Text style={[styles.modalTitle, { color: colors.text }]}>
-                  Add Payment Method
+                  Add Payment Methods
                 </Text>
 
                 <TouchableOpacity
@@ -1310,7 +1303,6 @@ export default function ProfileScreen() {
 
         {/* <StripeCardComponent /> */}
       </ScrollView>
-    </StripeProvider>
   );
 }
 
@@ -1628,6 +1620,7 @@ const styles = StyleSheet.create({
   formLabel: {
     fontSize: 16,
     fontWeight: '600',
+    marginTop: 8,
     marginBottom: 8,
   },
   formInput: {
