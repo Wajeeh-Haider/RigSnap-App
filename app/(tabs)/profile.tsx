@@ -8,15 +8,26 @@ import {
   Alert,
   TextInput,
   Modal,
+  KeyboardAvoidingView,
+  Platform,
   ActivityIndicator,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { StripeProvider, useStripe, useConfirmSetupIntent, CardForm } from '@stripe/stripe-react-native';
+import {
+  StripeProvider,
+  useStripe,
+  useConfirmSetupIntent,
+  CardForm,
+} from '@stripe/stripe-react-native';
 import { paymentMethodService } from '@/utils/paymentOperations';
-import { PaymentMethod, STRIPE_PUBLISHABLE_KEY, createSetupIntent } from '@/utils/stripe';
+import {
+  PaymentMethod,
+  STRIPE_PUBLISHABLE_KEY,
+  createSetupIntent,
+} from '@/utils/stripe';
 import {
   User,
   Settings,
@@ -69,10 +80,12 @@ export default function ProfileScreen() {
 
   const fetchPaymentMethods = async () => {
     if (!user?.id) return;
-    
+
     setIsLoadingPaymentMethods(true);
     try {
-      const methods = await paymentMethodService.fetchUserPaymentMethods(user.id);
+      const methods = await paymentMethodService.fetchUserPaymentMethods(
+        user.id
+      );
       setPaymentMethods(methods);
     } catch (error) {
       console.error('Error fetching payment methods:', error);
@@ -144,7 +157,10 @@ export default function ProfileScreen() {
 
   const handleAddCard = async () => {
     if (!cardFormComplete || !newCard.name) {
-      Alert.alert('Error', 'Please fill in all card details and cardholder name');
+      Alert.alert(
+        'Error',
+        'Please fill in all card details and cardholder name'
+      );
       return;
     }
 
@@ -154,11 +170,11 @@ export default function ProfileScreen() {
     }
 
     setIsLoading(true);
-    
+
     try {
       // Step 1: Create a SetupIntent on the backend
       const setupIntentResponse = await createSetupIntent(user.id);
-      
+
       if (!setupIntentResponse.success || !setupIntentResponse.client_secret) {
         Alert.alert('Error', 'Failed to initialize payment setup');
         setIsLoading(false);
@@ -204,7 +220,7 @@ export default function ProfileScreen() {
       const expMonth = paymentMethod.Card?.expMonth || 0;
       const expYear = paymentMethod.Card?.expYear || 0;
       const isFirstCard = paymentMethods.length === 0;
-      
+
       const result = await paymentMethodService.addPaymentMethod(
         user.id,
         paymentMethod.id, // Use real Stripe payment method ID
@@ -242,7 +258,7 @@ export default function ProfileScreen() {
   // Component for Stripe card form
   const StripeCardComponent = () => {
     const { confirmSetupIntent } = useConfirmSetupIntent();
-    
+
     const handleSaveCard = async () => {
       if (!cardFormComplete || !user?.id) {
         Alert.alert('Error', 'Please complete the card form');
@@ -250,13 +266,16 @@ export default function ProfileScreen() {
       }
 
       setIsLoading(true);
-      
+
       try {
         // Step 1: Create setup intent
         const setupIntentResult = await createSetupIntent(user.id);
-        
+
         if (!setupIntentResult.success || !setupIntentResult.client_secret) {
-          Alert.alert('Error', setupIntentResult.error || 'Failed to create setup intent');
+          Alert.alert(
+            'Error',
+            setupIntentResult.error || 'Failed to create setup intent'
+          );
           return;
         }
 
@@ -277,7 +296,7 @@ export default function ProfileScreen() {
           // Step 3: Save payment method to database
           const paymentMethod = setupIntent.paymentMethod;
           const isFirstCard = paymentMethods.length === 0;
-          
+
           const result = await paymentMethodService.addPaymentMethod(
             user.id,
             setupIntent.paymentMethodId,
@@ -295,7 +314,10 @@ export default function ProfileScreen() {
             setCardFormComplete(false);
             Alert.alert('Success', 'Payment method added successfully!');
           } else {
-            Alert.alert('Error', result.error || 'Failed to save payment method');
+            Alert.alert(
+              'Error',
+              result.error || 'Failed to save payment method'
+            );
           }
         }
       } catch (error) {
@@ -313,13 +335,25 @@ export default function ProfileScreen() {
         presentationStyle="pageSheet"
         onRequestClose={() => setShowStripeCardModal(false)}
       >
-        <View style={[styles.modalContainer, { backgroundColor: colors.background }]}>
-          <View style={[styles.modalHeader, { borderBottomColor: colors.border }]}>
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: colors.background },
+          ]}
+        >
+          <View
+            style={[styles.modalHeader, { borderBottomColor: colors.border }]}
+          >
             <TouchableOpacity
               onPress={() => setShowStripeCardModal(false)}
               style={styles.cancelButton}
             >
-              <Text style={[styles.cancelButtonText, { color: colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.cancelButtonText,
+                  { color: colors.textSecondary },
+                ]}
+              >
                 Cancel
               </Text>
             </TouchableOpacity>
@@ -332,32 +366,37 @@ export default function ProfileScreen() {
               style={[
                 styles.saveButton,
                 {
-                  backgroundColor: cardFormComplete && !isLoading ? '#2563eb' : colors.border,
+                  backgroundColor:
+                    cardFormComplete && !isLoading ? '#2563eb' : colors.border,
                 },
               ]}
             >
               {isLoading ? (
                 <ActivityIndicator color="white" size="small" />
               ) : (
-                <Text style={[styles.saveButtonText, { color: 'white' }]}>Save</Text>
+                <Text style={[styles.saveButtonText, { color: 'white' }]}>
+                  Save
+                </Text>
               )}
             </TouchableOpacity>
           </View>
-          
+
           <View style={styles.cardFormContainer}>
             <Text style={[styles.cardFormTitle, { color: colors.text }]}>
               Card Details
             </Text>
-            <Text style={[styles.cardFormSubtitle, { color: colors.textSecondary }]}>
+            <Text
+              style={[styles.cardFormSubtitle, { color: colors.textSecondary }]}
+            >
               Your card information is encrypted and secure
             </Text>
-            
+
             <CardForm
               placeholders={{
                 number: '4242 4242 4242 4242',
               }}
               cardStyle={{
-                backgroundColor: "white",
+                backgroundColor: 'white',
                 textColor: colors.text,
                 placeholderColor: colors.textSecondary,
                 borderColor: colors.border,
@@ -396,12 +435,15 @@ export default function ProfileScreen() {
                 card.id,
                 card.stripe_payment_method_id
               );
-              
+
               if (result.success) {
                 await fetchPaymentMethods(); // Refresh the list
                 Alert.alert('Success', 'Payment method deleted successfully!');
               } else {
-                Alert.alert('Error', result.error || 'Failed to delete payment method');
+                Alert.alert(
+                  'Error',
+                  result.error || 'Failed to delete payment method'
+                );
               }
             } catch (error) {
               console.error('Error deleting payment method:', error);
@@ -419,12 +461,15 @@ export default function ProfileScreen() {
     setIsLoading(true);
     try {
       const result = await paymentMethodService.setDefaultPaymentMethod(cardId);
-      
+
       if (result.success) {
         await fetchPaymentMethods(); // Refresh the list
         Alert.alert('Success', 'Default payment method updated!');
       } else {
-        Alert.alert('Error', result.error || 'Failed to update default payment method');
+        Alert.alert(
+          'Error',
+          result.error || 'Failed to update default payment method'
+        );
       }
     } catch (error) {
       console.error('Error setting default payment method:', error);
@@ -459,279 +504,188 @@ export default function ProfileScreen() {
       <ScrollView
         style={[styles.container, { backgroundColor: colors.background }]}
       >
-      <View
-        style={[
-          styles.header,
-          { backgroundColor: colors.surface, borderBottomColor: colors.border },
-        ]}
-      >
-        <View style={styles.headerContent}>
-          <View style={styles.avatarContainer}>
-            <View
-              style={[
-                styles.logoContainer,
-                { backgroundColor: isTrucker ? '#2563eb' : '#ea580c' },
-              ]}
-            >
-              {isTrucker ? (
-                <Truck size={40} color="white" />
-              ) : (
-                <Shield size={40} color="white" />
-              )}
-            </View>
-          </View>
-
-          <View style={styles.userInfo}>
-            <Text style={[styles.userName, { color: colors.text }]}>
-              {user.firstName} {user.lastName}
-            </Text>
-            <View style={styles.roleContainer}>
-              <Text
+        <View
+          style={[
+            styles.header,
+            {
+              backgroundColor: colors.surface,
+              borderBottomColor: colors.border,
+            },
+          ]}
+        >
+          <View style={styles.headerContent}>
+            <View style={styles.avatarContainer}>
+              <View
                 style={[
-                  styles.userRole,
-                  { color: isTrucker ? '#2563eb' : '#ea580c' },
+                  styles.logoContainer,
+                  { backgroundColor: isTrucker ? '#2563eb' : '#ea580c' },
                 ]}
               >
-                {isTrucker ? 'Trucker' : 'Service Provider'}
-              </Text>
+                {isTrucker ? (
+                  <Truck size={40} color="white" />
+                ) : (
+                  <Shield size={40} color="white" />
+                )}
+              </View>
             </View>
 
-            <View style={styles.ratingContainer}>
-              <Star size={16} color="#f59e0b" fill="#f59e0b" />
-              <Text style={[styles.rating, { color: colors.text }]}>
-                {user.rating.toFixed(1)}
+            <View style={styles.userInfo}>
+              <Text style={[styles.userName, { color: colors.text }]}>
+                {user.firstName} {user.lastName}
               </Text>
-              <Text
-                style={[styles.ratingText, { color: colors.textSecondary }]}
-              >
-                {t('profile.rating')}
-              </Text>
+              <View style={styles.roleContainer}>
+                <Text
+                  style={[
+                    styles.userRole,
+                    { color: isTrucker ? '#2563eb' : '#ea580c' },
+                  ]}
+                >
+                  {isTrucker ? 'Trucker' : 'Service Provider'}
+                </Text>
+              </View>
+
+              <View style={styles.ratingContainer}>
+                <Star size={16} color="#f59e0b" fill="#f59e0b" />
+                <Text style={[styles.rating, { color: colors.text }]}>
+                  {user.rating.toFixed(1)}
+                </Text>
+                <Text
+                  style={[styles.ratingText, { color: colors.textSecondary }]}
+                >
+                  {t('profile.rating')}
+                </Text>
+              </View>
             </View>
           </View>
-        </View>
 
-        <View style={styles.headerActions}>
-          {!isEditing ? (
-            <TouchableOpacity
-              style={[
-                styles.editButton,
-                { backgroundColor: colors.primary + '20' },
-              ]}
-              onPress={handleEdit}
-            >
-              <Edit3 size={20} color="#2563eb" />
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.editActions}>
-              <TouchableOpacity
-                style={[styles.cancelButton, { backgroundColor: colors.card }]}
-                onPress={handleCancel}
-                disabled={isLoading}
-              >
-                <X size={20} color={colors.textSecondary} />
-              </TouchableOpacity>
+          <View style={styles.headerActions}>
+            {!isEditing ? (
               <TouchableOpacity
                 style={[
-                  styles.saveButton,
-                  { backgroundColor: colors.primary },
-                  isLoading && styles.saveButtonDisabled,
+                  styles.editButton,
+                  { backgroundColor: colors.primary + '20' },
                 ]}
-                onPress={handleSave}
-                disabled={isLoading}
+                onPress={handleEdit}
               >
-                {isLoading ? (
-                  <ActivityIndicator size="small" color="white" />
-                ) : (
-                  <Save size={20} color="white" />
-                )}
+                <Edit3 size={20} color="#2563eb" />
               </TouchableOpacity>
-            </View>
-          )}
-        </View>
-      </View>
-
-      <View style={[styles.content, { backgroundColor: colors.background }]}>
-        {/* Personal Information */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            {t('profile.personalInformation')}
-          </Text>
-          <View style={[styles.card, { backgroundColor: colors.surface }]}>
-            <View style={styles.infoRow}>
-              <User size={20} color={colors.textSecondary} />
-              <View style={styles.infoContent}>
-                <Text
-                  style={[styles.infoLabel, { color: colors.textSecondary }]}
+            ) : (
+              <View style={styles.editActions}>
+                <TouchableOpacity
+                  style={[
+                    styles.cancelButton,
+                    { backgroundColor: colors.card },
+                  ]}
+                  onPress={handleCancel}
+                  disabled={isLoading}
                 >
-                  {t('profile.name')}
-                </Text>
-                {isEditing ? (
-                  <View style={styles.nameInputs}>
-                    <TextInput
-                      style={[
-                        styles.input,
-                        styles.nameInput,
-                        {
-                          backgroundColor: colors.background,
-                          borderColor: colors.border,
-                          color: colors.text,
-                        },
-                      ]}
-                      value={editedUser?.firstName || ''}
-                      onChangeText={(text) =>
-                        setEditedUser((prev) =>
-                          prev ? { ...prev, firstName: text } : null
-                        )
-                      }
-                      placeholder="First name"
-                      placeholderTextColor={colors.textSecondary}
-                    />
-                    <TextInput
-                      style={[
-                        styles.input,
-                        styles.nameInput,
-                        {
-                          backgroundColor: colors.background,
-                          borderColor: colors.border,
-                          color: colors.text,
-                        },
-                      ]}
-                      value={editedUser?.lastName || ''}
-                      onChangeText={(text) =>
-                        setEditedUser((prev) =>
-                          prev ? { ...prev, lastName: text } : null
-                        )
-                      }
-                      placeholder="Last name"
-                      placeholderTextColor={colors.textSecondary}
-                    />
-                  </View>
-                ) : (
-                  <Text style={[styles.infoValue, { color: colors.text }]}>
-                    {user.firstName} {user.lastName}
-                  </Text>
-                )}
-              </View>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Mail size={20} color={colors.textSecondary} />
-              <View style={styles.infoContent}>
-                <Text
-                  style={[styles.infoLabel, { color: colors.textSecondary }]}
+                  <X size={20} color={colors.textSecondary} />
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={[
+                    styles.saveButton,
+                    { backgroundColor: colors.primary },
+                    isLoading && styles.saveButtonDisabled,
+                  ]}
+                  onPress={handleSave}
+                  disabled={isLoading}
                 >
-                  {t('profile.email')}
-                </Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>
-                  {user.email}
-                </Text>
+                  {isLoading ? (
+                    <ActivityIndicator size="small" color="white" />
+                  ) : (
+                    <Save size={20} color="white" />
+                  )}
+                </TouchableOpacity>
               </View>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Phone size={20} color={colors.textSecondary} />
-              <View style={styles.infoContent}>
-                <Text
-                  style={[styles.infoLabel, { color: colors.textSecondary }]}
-                >
-                  {t('profile.phone')}
-                </Text>
-                {isEditing ? (
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: colors.background,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      },
-                    ]}
-                    value={editedUser?.phone || ''}
-                    onChangeText={(text) =>
-                      setEditedUser((prev) =>
-                        prev ? { ...prev, phone: text } : null
-                      )
-                    }
-                    placeholder="Phone number"
-                    placeholderTextColor={colors.textSecondary}
-                    keyboardType="phone-pad"
-                  />
-                ) : (
-                  <Text style={[styles.infoValue, { color: colors.text }]}>
-                    {user.phone || t('profile.notProvided')}
-                  </Text>
-                )}
-              </View>
-            </View>
-
-            <View style={styles.infoRow}>
-              <MapPin size={20} color={colors.textSecondary} />
-              <View style={styles.infoContent}>
-                <Text
-                  style={[styles.infoLabel, { color: colors.textSecondary }]}
-                >
-                  {t('profile.location')}
-                </Text>
-                {isEditing ? (
-                  <TextInput
-                    style={[
-                      styles.input,
-                      {
-                        backgroundColor: colors.background,
-                        borderColor: colors.border,
-                        color: colors.text,
-                      },
-                    ]}
-                    value={editedUser?.location || ''}
-                    onChangeText={(text) =>
-                      setEditedUser((prev) =>
-                        prev ? { ...prev, location: text } : null
-                      )
-                    }
-                    placeholder="Location"
-                    placeholderTextColor={colors.textSecondary}
-                  />
-                ) : (
-                  <Text style={[styles.infoValue, { color: colors.text }]}>
-                    {user.location}
-                  </Text>
-                )}
-              </View>
-            </View>
-
-            <View style={styles.infoRow}>
-              <Calendar size={20} color={colors.textSecondary} />
-              <View style={styles.infoContent}>
-                <Text
-                  style={[styles.infoLabel, { color: colors.textSecondary }]}
-                >
-                  {t('profile.memberSince')}
-                </Text>
-                <Text style={[styles.infoValue, { color: colors.text }]}>
-                  {new Date(user.joinDate).toLocaleDateString('en-US', {
-                    month: 'long',
-                    year: 'numeric',
-                  })}
-                </Text>
-              </View>
-            </View>
+            )}
           </View>
         </View>
 
-        {/* Role-specific Information */}
-        {isTrucker ? (
+        <View style={[styles.content, { backgroundColor: colors.background }]}>
+          {/* Personal Information */}
           <View style={styles.section}>
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('profile.truckerInformation')}
+              {t('profile.personalInformation')}
             </Text>
             <View style={[styles.card, { backgroundColor: colors.surface }]}>
               <View style={styles.infoRow}>
-                <Truck size={20} color="#2563eb" />
+                <User size={20} color={colors.textSecondary} />
                 <View style={styles.infoContent}>
                   <Text
                     style={[styles.infoLabel, { color: colors.textSecondary }]}
                   >
-                    {t('profile.truckType')}
+                    {t('profile.name')}
+                  </Text>
+                  {isEditing ? (
+                    <View style={styles.nameInputs}>
+                      <TextInput
+                        style={[
+                          styles.input,
+                          styles.nameInput,
+                          {
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
+                            color: colors.text,
+                          },
+                        ]}
+                        value={editedUser?.firstName || ''}
+                        onChangeText={(text) =>
+                          setEditedUser((prev) =>
+                            prev ? { ...prev, firstName: text } : null
+                          )
+                        }
+                        placeholder="First name"
+                        placeholderTextColor={colors.textSecondary}
+                      />
+                      <TextInput
+                        style={[
+                          styles.input,
+                          styles.nameInput,
+                          {
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
+                            color: colors.text,
+                          },
+                        ]}
+                        value={editedUser?.lastName || ''}
+                        onChangeText={(text) =>
+                          setEditedUser((prev) =>
+                            prev ? { ...prev, lastName: text } : null
+                          )
+                        }
+                        placeholder="Last name"
+                        placeholderTextColor={colors.textSecondary}
+                      />
+                    </View>
+                  ) : (
+                    <Text style={[styles.infoValue, { color: colors.text }]}>
+                      {user.firstName} {user.lastName}
+                    </Text>
+                  )}
+                </View>
+              </View>
+
+              <View style={styles.infoRow}>
+                <Mail size={20} color={colors.textSecondary} />
+                <View style={styles.infoContent}>
+                  <Text
+                    style={[styles.infoLabel, { color: colors.textSecondary }]}
+                  >
+                    {t('profile.email')}
+                  </Text>
+                  <Text style={[styles.infoValue, { color: colors.text }]}>
+                    {user.email}
+                  </Text>
+                </View>
+              </View>
+
+              <View style={styles.infoRow}>
+                <Phone size={20} color={colors.textSecondary} />
+                <View style={styles.infoContent}>
+                  <Text
+                    style={[styles.infoLabel, { color: colors.textSecondary }]}
+                  >
+                    {t('profile.phone')}
                   </Text>
                   {isEditing ? (
                     <TextInput
@@ -743,30 +697,31 @@ export default function ProfileScreen() {
                           color: colors.text,
                         },
                       ]}
-                      value={editedUser?.truckType || ''}
+                      value={editedUser?.phone || ''}
                       onChangeText={(text) =>
                         setEditedUser((prev) =>
-                          prev ? { ...prev, truckType: text } : null
+                          prev ? { ...prev, phone: text } : null
                         )
                       }
-                      placeholder="Truck type"
+                      placeholder="Phone number"
                       placeholderTextColor={colors.textSecondary}
+                      keyboardType="phone-pad"
                     />
                   ) : (
                     <Text style={[styles.infoValue, { color: colors.text }]}>
-                      {user.truckType || t('profile.notSpecified')}
+                      {user.phone || t('profile.notProvided')}
                     </Text>
                   )}
                 </View>
               </View>
 
               <View style={styles.infoRow}>
-                <User size={20} color="#2563eb" />
+                <MapPin size={20} color={colors.textSecondary} />
                 <View style={styles.infoContent}>
                   <Text
                     style={[styles.infoLabel, { color: colors.textSecondary }]}
                   >
-                    {t('profile.licenseNumber')}
+                    {t('profile.location')}
                   </Text>
                   {isEditing ? (
                     <TextInput
@@ -778,68 +733,51 @@ export default function ProfileScreen() {
                           color: colors.text,
                         },
                       ]}
-                      value={editedUser?.licenseNumber || ''}
+                      value={editedUser?.location || ''}
                       onChangeText={(text) =>
                         setEditedUser((prev) =>
-                          prev ? { ...prev, licenseNumber: text } : null
+                          prev ? { ...prev, location: text } : null
                         )
                       }
-                      placeholder="License number"
+                      placeholder="Location"
                       placeholderTextColor={colors.textSecondary}
-                      autoCapitalize="characters"
                     />
                   ) : (
                     <Text style={[styles.infoValue, { color: colors.text }]}>
-                      {user.licenseNumber || t('profile.notProvided')}
+                      {user.location}
                     </Text>
                   )}
                 </View>
               </View>
+
+              <View style={styles.infoRow}>
+                <Calendar size={20} color={colors.textSecondary} />
+                <View style={styles.infoContent}>
+                  <Text
+                    style={[styles.infoLabel, { color: colors.textSecondary }]}
+                  >
+                    {t('profile.memberSince')}
+                  </Text>
+                  <Text style={[styles.infoValue, { color: colors.text }]}>
+                    {new Date(user.joinDate).toLocaleDateString('en-US', {
+                      month: 'long',
+                      year: 'numeric',
+                    })}
+                  </Text>
+                </View>
+              </View>
             </View>
           </View>
-        ) : (
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('profile.serviceProviderInformation')}
-            </Text>
-            <View style={[styles.card, { backgroundColor: colors.surface }]}>
-              <View style={styles.infoRow}>
-                <Shield size={20} color="#ea580c" />
-                <View style={styles.infoContent}>
-                  <Text
-                    style={[styles.infoLabel, { color: colors.textSecondary }]}
-                  >
-                    {t('profile.servicesOffered')}
-                  </Text>
-                  <Text style={[styles.infoValue, { color: colors.text }]}>
-                    {user.services && user.services.length > 0
-                      ? user.services
-                          .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-                          .join(', ')
-                      : t('profile.notSpecified')}
-                  </Text>
-                </View>
-              </View>
 
-              <View style={styles.infoRow}>
-                <MapPin size={20} color="#ea580c" />
-                <View style={styles.infoContent}>
-                  <Text
-                    style={[styles.infoLabel, { color: colors.textSecondary }]}
-                  >
-                    {t('profile.serviceRadius')}
-                  </Text>
-                  <Text style={[styles.infoValue, { color: colors.text }]}>
-                    {user.serviceRadius
-                      ? `${user.serviceRadius} ${t('profile.miles')}`
-                      : t('profile.notSpecified')}
-                  </Text>
-                </View>
-              </View>
-
-              {user.certifications && user.certifications.length > 0 && (
+          {/* Role-specific Information */}
+          {isTrucker ? (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {t('profile.truckerInformation')}
+              </Text>
+              <View style={[styles.card, { backgroundColor: colors.surface }]}>
                 <View style={styles.infoRow}>
-                  <Star size={20} color="#ea580c" />
+                  <Truck size={20} color="#2563eb" />
                   <View style={styles.infoContent}>
                     <Text
                       style={[
@@ -847,58 +785,189 @@ export default function ProfileScreen() {
                         { color: colors.textSecondary },
                       ]}
                     >
-                      {t('profile.certifications')}
+                      {t('profile.truckType')}
+                    </Text>
+                    {isEditing ? (
+                      <TextInput
+                        style={[
+                          styles.input,
+                          {
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
+                            color: colors.text,
+                          },
+                        ]}
+                        value={editedUser?.truckType || ''}
+                        onChangeText={(text) =>
+                          setEditedUser((prev) =>
+                            prev ? { ...prev, truckType: text } : null
+                          )
+                        }
+                        placeholder="Truck type"
+                        placeholderTextColor={colors.textSecondary}
+                      />
+                    ) : (
+                      <Text style={[styles.infoValue, { color: colors.text }]}>
+                        {user.truckType || t('profile.notSpecified')}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+
+                <View style={styles.infoRow}>
+                  <User size={20} color="#2563eb" />
+                  <View style={styles.infoContent}>
+                    <Text
+                      style={[
+                        styles.infoLabel,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      {t('profile.licenseNumber')}
+                    </Text>
+                    {isEditing ? (
+                      <TextInput
+                        style={[
+                          styles.input,
+                          {
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
+                            color: colors.text,
+                          },
+                        ]}
+                        value={editedUser?.licenseNumber || ''}
+                        onChangeText={(text) =>
+                          setEditedUser((prev) =>
+                            prev ? { ...prev, licenseNumber: text } : null
+                          )
+                        }
+                        placeholder="License number"
+                        placeholderTextColor={colors.textSecondary}
+                        autoCapitalize="characters"
+                      />
+                    ) : (
+                      <Text style={[styles.infoValue, { color: colors.text }]}>
+                        {user.licenseNumber || t('profile.notProvided')}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+              </View>
+            </View>
+          ) : (
+            <View style={styles.section}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {t('profile.serviceProviderInformation')}
+              </Text>
+              <View style={[styles.card, { backgroundColor: colors.surface }]}>
+                <View style={styles.infoRow}>
+                  <Shield size={20} color="#ea580c" />
+                  <View style={styles.infoContent}>
+                    <Text
+                      style={[
+                        styles.infoLabel,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      {t('profile.servicesOffered')}
                     </Text>
                     <Text style={[styles.infoValue, { color: colors.text }]}>
-                      {user.certifications.join(', ')}
+                      {user.services && user.services.length > 0
+                        ? user.services
+                            .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
+                            .join(', ')
+                        : t('profile.notSpecified')}
                     </Text>
                   </View>
                 </View>
-              )}
-            </View>
-          </View>
-        )}
 
-        {/* Payment Methods */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionTitle, { color: colors.text }]}>
-              {t('profile.paymentMethods')}
-            </Text>
-            <TouchableOpacity
-              style={[
-                styles.addButton,
-                { backgroundColor: colors.primary + '20' },
-              ]}
-              onPress={() => setShowPaymentModal(true)}
-            >
-              <Plus size={16} color={colors.primary} />
-              <Text style={[styles.addButtonText, { color: colors.primary }]}>
-                Add Card
-              </Text>
-            </TouchableOpacity>
-          </View>
-          <View style={[styles.card, { backgroundColor: colors.surface }]}>
-            {paymentMethods.length === 0 ? (
-              <View style={styles.emptyPayment}>
-                <CreditCard size={48} color={colors.textSecondary} />
-                <Text style={[styles.emptyPaymentText, { color: colors.text }]}>
-                  No payment methods added
-                </Text>
-                <Text
-                  style={[
-                    styles.emptyPaymentSubtext,
-                    { color: colors.textSecondary },
-                  ]}
-                >
-                  Add a credit or debit card to get started
-                </Text>
+                <View style={styles.infoRow}>
+                  <MapPin size={20} color="#ea580c" />
+                  <View style={styles.infoContent}>
+                    <Text
+                      style={[
+                        styles.infoLabel,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      {t('profile.serviceRadius')}
+                    </Text>
+                    <Text style={[styles.infoValue, { color: colors.text }]}>
+                      {user.serviceRadius
+                        ? `${user.serviceRadius} ${t('profile.miles')}`
+                        : t('profile.notSpecified')}
+                    </Text>
+                  </View>
+                </View>
+
+                {user.certifications && user.certifications.length > 0 && (
+                  <View style={styles.infoRow}>
+                    <Star size={20} color="#ea580c" />
+                    <View style={styles.infoContent}>
+                      <Text
+                        style={[
+                          styles.infoLabel,
+                          { color: colors.textSecondary },
+                        ]}
+                      >
+                        {t('profile.certifications')}
+                      </Text>
+                      <Text style={[styles.infoValue, { color: colors.text }]}>
+                        {user.certifications.join(', ')}
+                      </Text>
+                    </View>
+                  </View>
+                )}
               </View>
-            ) : (
-              isLoadingPaymentMethods ? (
+            </View>
+          )}
+
+          {/* Payment Methods */}
+          <View style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { color: colors.text }]}>
+                {t('profile.paymentMethods')}
+              </Text>
+              <TouchableOpacity
+                style={[
+                  styles.addButton,
+                  { backgroundColor: colors.primary + '20' },
+                ]}
+                onPress={() => setShowPaymentModal(true)}
+              >
+                <Plus size={16} color={colors.primary} />
+                <Text style={[styles.addButtonText, { color: colors.primary }]}>
+                  Add Card
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={[styles.card, { backgroundColor: colors.surface }]}>
+              {paymentMethods.length === 0 ? (
+                <View style={styles.emptyPayment}>
+                  <CreditCard size={48} color={colors.textSecondary} />
+                  <Text
+                    style={[styles.emptyPaymentText, { color: colors.text }]}
+                  >
+                    No payment methods added
+                  </Text>
+                  <Text
+                    style={[
+                      styles.emptyPaymentSubtext,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Add a credit or debit card to get started
+                  </Text>
+                </View>
+              ) : isLoadingPaymentMethods ? (
                 <View style={styles.loadingContainer}>
                   <ActivityIndicator size="small" color={colors.primary} />
-                  <Text style={[styles.loadingText, { color: colors.textSecondary }]}>
+                  <Text
+                    style={[
+                      styles.loadingText,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
                     Loading payment methods...
                   </Text>
                 </View>
@@ -941,7 +1010,8 @@ export default function ProfileScreen() {
                               { color: colors.text },
                             ]}
                           >
-                            {method.card_brand.toUpperCase()} •••• {method.last4}
+                            {method.card_brand.toUpperCase()} ••••{' '}
+                            {method.last4}
                           </Text>
                           <Text
                             style={[
@@ -949,7 +1019,9 @@ export default function ProfileScreen() {
                               { color: colors.textSecondary },
                             ]}
                           >
-                            Expires {method.exp_month.toString().padStart(2, '0')}/{method.exp_year}
+                            Expires{' '}
+                            {method.exp_month.toString().padStart(2, '0')}/
+                            {method.exp_year}
                           </Text>
                           {method.is_default && (
                             <Text
@@ -997,236 +1069,246 @@ export default function ProfileScreen() {
                     </View>
                   );
                 })
-              )
-            )}
+              )}
+            </View>
           </View>
-        </View>
-        {/* Settings */}
-        <View style={styles.section}>
-          <Text style={[styles.sectionTitle, { color: colors.text }]}>
-            {t('profile.settings')}
-          </Text>
-          <View style={[styles.card, { backgroundColor: colors.surface }]}>
-            <TouchableOpacity
-              style={[styles.settingRow, { borderBottomColor: colors.border }]}
-              onPress={() => router.push('/account-settings')}
-            >
-              <View style={styles.settingContent}>
-                <Settings size={20} color={colors.textSecondary} />
-                <Text style={[styles.settingText, { color: colors.text }]}>
-                  {t('profile.accountSettings')}
-                </Text>
-              </View>
-              <ChevronRight size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.settingRow, { borderBottomColor: colors.border }]}
-              onPress={() => router.push('/account-settings')}
-            >
-              <View style={styles.settingContent}>
-                <Globe size={20} color={colors.textSecondary} />
-                <Text style={[styles.settingText, { color: colors.text }]}>
-                  {t('profile.languageRegion')}
-                </Text>
-              </View>
-              <ChevronRight size={20} color={colors.textSecondary} />
-            </TouchableOpacity>
-          </View>
-        </View>
-
-        {/* Logout */}
-        <TouchableOpacity
-          style={[styles.logoutButton, { backgroundColor: colors.error }]}
-          onPress={handleLogout}
-        >
-          <Text style={styles.logoutText}>{t('profile.signOut')}</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Add Payment Method Modal */}
-      <Modal
-        visible={showPaymentModal}
-        animationType="slide"
-        presentationStyle="pageSheet"
-        onRequestClose={() => setShowPaymentModal(false)}
-      >
-        <View
-          style={[
-            styles.modalContainer,
-            { backgroundColor: colors.background },
-          ]}
-        >
-          <View
-            style={[
-              styles.modalHeader,
-              {
-                backgroundColor: colors.surface,
-                borderBottomColor: colors.border,
-              },
-            ]}
-          >
-            <Text style={[styles.modalTitle, { color: colors.text }]}>
-              Add Payment Method
+          {/* Settings */}
+          <View style={styles.section}>
+            <Text style={[styles.sectionTitle, { color: colors.text }]}>
+              {t('profile.settings')}
             </Text>
-            <TouchableOpacity
-              onPress={() => {
-                setShowPaymentModal(false);
-                setNewCard({
-                  number: '',
-                  expiryMonth: '',
-                  expiryYear: '',
-                  cvc: '',
-                  name: '',
-                });
-              }}
-              style={styles.closeButton}
-            >
-              <X size={24} color={colors.textSecondary} />
-            </TouchableOpacity>
+            <View style={[styles.card, { backgroundColor: colors.surface }]}>
+              <TouchableOpacity
+                style={[
+                  styles.settingRow,
+                  { borderBottomColor: colors.border },
+                ]}
+                onPress={() => router.push('/account-settings')}
+              >
+                <View style={styles.settingContent}>
+                  <Settings size={20} color={colors.textSecondary} />
+                  <Text style={[styles.settingText, { color: colors.text }]}>
+                    {t('profile.accountSettings')}
+                  </Text>
+                </View>
+                <ChevronRight size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[
+                  styles.settingRow,
+                  { borderBottomColor: colors.border },
+                ]}
+                onPress={() => router.push('/account-settings')}
+              >
+                <View style={styles.settingContent}>
+                  <Globe size={20} color={colors.textSecondary} />
+                  <Text style={[styles.settingText, { color: colors.text }]}>
+                    {t('profile.languageRegion')}
+                  </Text>
+                </View>
+                <ChevronRight size={20} color={colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
           </View>
 
-          <ScrollView
-            style={[
-              styles.modalContent,
-              { backgroundColor: colors.background },
-            ]}
+          {/* Logout */}
+          <TouchableOpacity
+            style={[styles.logoutButton, { backgroundColor: colors.error }]}
+            onPress={handleLogout}
           >
-            <View style={styles.cardForm}>
-              <View style={styles.formGroup}>
-                <Text style={[styles.formLabel, { color: colors.text }]}>
-                  Cardholder Name
-                </Text>
-                <TextInput
-                  style={[
-                    styles.formInput,
-                    {
-                      backgroundColor: colors.surface,
-                      borderColor: colors.border,
-                      color: colors.text,
-                    },
-                  ]}
-                  value={newCard.name}
-                  onChangeText={(text) =>
-                    setNewCard((prev) => ({ ...prev, name: text }))
-                  }
-                  placeholder="John Doe"
-                  placeholderTextColor={colors.textSecondary}
-                  autoCapitalize="words"
-                />
-              </View>
+            <Text style={styles.logoutText}>{t('profile.signOut')}</Text>
+          </TouchableOpacity>
+        </View>
 
-              <View style={styles.formGroup}>
-                <Text style={[styles.formLabel, { color: colors.text }]}>
-                  Card Details
-                </Text>
-                <View style={[
-                  styles.cardInputContainer,
-                  {
-                    backgroundColor: 'transparent',
-                    borderColor: 'transparent',
-                  }
-                ]}>
-                  <CardForm
-                    placeholders={{
-                      number: '1234 5678 9012 3456',
-                      cvc: 'CVC',
-                    }}
-                    cardStyle={{
-                      backgroundColor: colors.surface,
-                      textColor: colors.text,
-                      placeholderColor: colors.textSecondary,
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: colors.border,
-                      fontSize: 16,
-                    }}
-                    style={{
-                      width: '100%',
-                      height: 250,
-                    }}
-                    onFormComplete={(cardDetails) => {
-                      setCardFormComplete(cardDetails.complete);
-                    }}
-                  />
-                </View>
-              </View>
-
+        <Modal
+          visible={showPaymentModal}
+          animationType="slide"
+          presentationStyle="pageSheet"
+          onRequestClose={() => setShowPaymentModal(false)}
+        >
+          <KeyboardAvoidingView
+            style={{ flex: 1 }}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
+          >
+            <View
+              style={[
+                styles.modalContainer,
+                { backgroundColor: colors.background, flex: 1 },
+              ]}
+            >
+              {/* ---------- HEADER ---------- */}
               <View
                 style={[
-                  styles.securityNotice,
+                  styles.modalHeader,
                   {
-                    backgroundColor: colors.success + '15',
-                    borderColor: colors.success + '30',
+                    backgroundColor: colors.surface,
+                    borderBottomColor: colors.border,
                   },
                 ]}
               >
-                <View style={styles.securityContent}>
-                  <Text style={styles.securityIcon}>🔒</Text>
-                  <Text style={[styles.securityText, { color: colors.success }]}>
-                    Your payment information is encrypted and secure. We use industry-standard security measures to protect your data.
-                  </Text>
-                </View>
+                <Text style={[styles.modalTitle, { color: colors.text }]}>
+                  Add Payment Method
+                </Text>
+
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowPaymentModal(false);
+                    setNewCard({
+                      number: '',
+                      expiryMonth: '',
+                      expiryYear: '',
+                      cvc: '',
+                      name: '',
+                    });
+                  }}
+                  style={styles.closeButton}
+                >
+                  <X size={24} color={colors.textSecondary} />
+                </TouchableOpacity>
               </View>
-            </View>
-          </ScrollView>
 
-          <View
-            style={[
-              styles.modalActions,
-              {
-                backgroundColor: colors.surface,
-                borderTopColor: colors.border,
-              },
-            ]}
-          >
-            <TouchableOpacity
-              style={[styles.cancelButton, { backgroundColor: colors.card }]}
-              onPress={() => {
-                setShowPaymentModal(false);
-                setNewCard({
-                  number: '',
-                  expiryMonth: '',
-                  expiryYear: '',
-                  cvc: '',
-                  name: '',
-                });
-              }}
-            >
-              <Text
-                style={[
-                  styles.cancelButtonText,
-                  { color: colors.textSecondary },
-                ]}
+              {/* ---------- CONTENT + ACTIONS (SCROLLABLE) ---------- */}
+              <ScrollView
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{
+                  padding: 16,
+                  flexGrow: 1,
+                  justifyContent: 'space-between',
+                }}
               >
-                Cancel
-              </Text>
-            </TouchableOpacity>
+                {/* ---------- FORM CONTENT ---------- */}
+                <View>
+                  {/* Cardholder Name */}
+                  <View style={styles.formGroup}>
+                    <Text style={[styles.formLabel, { color: colors.text }]}>
+                      Cardholder Name
+                    </Text>
 
-            <TouchableOpacity
-              style={[
-                styles.addCardButton,
-                { backgroundColor: colors.primary },
-                ((!cardFormComplete || !newCard.name) || isLoading) &&
-                  styles.addCardButtonDisabled,
-              ]}
-              onPress={handleAddCard}
-              disabled={(!cardFormComplete || !newCard.name) || isLoading}
-            >
-              {isLoading ? (
-                <ActivityIndicator size="small" color="white" />
-              ) : (
-                <CreditCard size={16} color="white" />
-              )}
-              <Text style={styles.addCardButtonText}>
-                {isLoading ? 'Adding Card...' : 'Add Card'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
-      </Modal>
-      
-      {/* <StripeCardComponent /> */}
+                    <TextInput
+                      style={[
+                        styles.formInput,
+                        {
+                          backgroundColor: colors.surface,
+                          borderColor: colors.border,
+                          color: colors.text,
+                        },
+                      ]}
+                      value={newCard.name}
+                      onChangeText={(text) =>
+                        setNewCard((prev) => ({ ...prev, name: text }))
+                      }
+                      placeholder="John Doe"
+                      placeholderTextColor={colors.textSecondary}
+                      autoCapitalize="words"
+                    />
+                  </View>
+
+                  {/* Card Form */}
+                  <View style={styles.formGroup}>
+                    <Text style={[styles.formLabel, { color: colors.text }]}>
+                      Card Details
+                    </Text>
+
+                    <CardForm
+                      placeholders={{
+                        number: '1234 5678 9012 3456',
+                        cvc: 'CVC',
+                      }}
+                      cardStyle={{
+                        backgroundColor: colors.surface,
+                        textColor: colors.text,
+                        placeholderColor: colors.textSecondary,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: colors.border,
+                        fontSize: 16,
+                      }}
+                      style={{
+                        width: '100%',
+                        height: 250,
+                      }}
+                      onFormComplete={(cardDetails) => {
+                        setCardFormComplete(cardDetails.complete);
+                      }}
+                    />
+                  </View>
+
+                  {/* Security Notice */}
+                  <View
+                    style={[
+                      styles.securityNotice,
+                      {
+                        backgroundColor: colors.success + '15',
+                        borderColor: colors.success + '30',
+                      },
+                    ]}
+                  >
+                    <Text
+                      style={[styles.securityText, { color: colors.success }]}
+                    >
+                      Your payment information is encrypted and secure.
+                    </Text>
+                  </View>
+                </View>
+
+                {/* ---------- ACTION BUTTONS (NOW SCROLLABLE) ---------- */}
+                <View style={{ gap: 12, marginTop: 24 ,flexDirection: 'row'}}>
+                  <TouchableOpacity
+                    style={[
+                      styles.cancelButton,
+                      { backgroundColor: colors.card },
+                    ]}
+                    onPress={() => {
+                      setShowPaymentModal(false);
+                      setNewCard({
+                        number: '',
+                        expiryMonth: '',
+                        expiryYear: '',
+                        cvc: '',
+                        name: '',
+                      });
+                    }}
+                  >
+                    <Text
+                      style={[
+                        styles.cancelButtonText,
+                        { color: colors.textSecondary },
+                      ]}
+                    >
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.addCardButton,
+                      { backgroundColor: colors.primary },
+                      (!cardFormComplete || !newCard.name || isLoading) &&
+                        styles.addCardButtonDisabled,
+                    ]}
+                    onPress={handleAddCard}
+                    disabled={!cardFormComplete || !newCard.name || isLoading}
+                  >
+                    {isLoading ? (
+                      <ActivityIndicator size="small" color="white" />
+                    ) : (
+                      <CreditCard size={16} color="white" />
+                    )}
+
+                    <Text style={styles.addCardButtonText}>
+                      {isLoading ? 'Adding Card...' : 'Add Card'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </View>
+          </KeyboardAvoidingView>
+        </Modal>
+
+        {/* <StripeCardComponent /> */}
       </ScrollView>
     </StripeProvider>
   );
@@ -1505,6 +1587,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: 24,
     paddingTop: 10,
+    paddingBottom: 10,
     borderBottomWidth: 1,
   },
   modalTitle: {
