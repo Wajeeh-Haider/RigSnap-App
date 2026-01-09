@@ -45,7 +45,57 @@ import {
   CreditCard,
   Plus,
   Trash2,
+  Check,
+  Wrench,
+  CircleDot,
+  Droplets,
+  Zap,
 } from 'lucide-react-native';
+
+const serviceTypes = [
+  {
+    id: 'towing',
+    name: 'Towing Service',
+    description: 'Vehicle breakdown and accident towing',
+    icon: Truck,
+    color: '#2563eb',
+  },
+  {
+    id: 'repair',
+    name: 'Road Service',
+    description: 'On-site mechanical repairs and diagnostics',
+    icon: Wrench,
+    color: '#059669',
+  },
+  {
+    id: 'mechanic',
+    name: 'Mechanic Service',
+    description: 'Professional diagnostic and repair services',
+    icon: Settings,
+    color: '#7c3aed',
+  },
+  {
+    id: 'tire_repair',
+    name: 'Mobile Tire Repair',
+    description: 'Tire replacement, patching, and roadside tire services',
+    icon: CircleDot,
+    color: '#dc2626',
+  },
+  {
+    id: 'truck_wash',
+    name: 'Mobile Truck Wash',
+    description: 'Professional mobile truck cleaning and detailing',
+    icon: Droplets,
+    color: '#0891b2',
+  },
+  {
+    id: 'hose_repair',
+    name: 'Hose Repair',
+    description: 'Hydraulic and air hose repair and replacement',
+    icon: Zap,
+    color: '#ea580c',
+  },
+];
 
 export default function ProfileScreen() {
   const { user, logout, updateProfile } = useAuth();
@@ -491,6 +541,18 @@ export default function ProfileScreen() {
       return v;
     }
   };
+
+  const toggleService = (serviceId: string) => {
+    setEditedUser((prev) =>
+      prev ? {
+        ...prev,
+        services: prev.services?.includes(serviceId)
+          ? prev.services.filter((s) => s !== serviceId)
+          : [...(prev.services || []), serviceId],
+      } : null
+    );
+  };
+
   const isTrucker = user.role === 'trucker';
 
   return (
@@ -864,13 +926,74 @@ export default function ProfileScreen() {
                     >
                       {t('profile.servicesOffered')}
                     </Text>
-                    <Text style={[styles.infoValue, { color: colors.text }]}>
-                      {user.services && user.services.length > 0
-                        ? user.services
-                            .map((s) => s.charAt(0).toUpperCase() + s.slice(1))
-                            .join(', ')
-                        : t('profile.notSpecified')}
-                    </Text>
+                    {isEditing ? (
+                      <View style={styles.servicesContainer}>
+                        {serviceTypes.map((service) => {
+                          const ServiceIcon = service.icon;
+                          const isSelected = editedUser?.services?.includes(service.id) || false;
+                          return (
+                            <TouchableOpacity
+                              key={service.id}
+                              style={[
+                                styles.serviceOption,
+                                {
+                                  backgroundColor: isSelected
+                                    ? service.color + '20'
+                                    : colors.surface,
+                                  borderColor: isSelected
+                                    ? service.color
+                                    : colors.border,
+                                },
+                              ]}
+                              onPress={() => toggleService(service.id)}
+                            >
+                              <View style={styles.serviceOptionContent}>
+                                <ServiceIcon
+                                  size={20}
+                                  color={isSelected ? service.color : colors.textSecondary}
+                                />
+                                <View style={styles.serviceOptionText}>
+                                  <Text
+                                    style={[
+                                      styles.serviceOptionTitle,
+                                      {
+                                        color: isSelected
+                                          ? service.color
+                                          : colors.text,
+                                      },
+                                    ]}
+                                  >
+                                    {service.name}
+                                  </Text>
+                                  <Text
+                                    style={[
+                                      styles.serviceOptionDescription,
+                                      { color: colors.textSecondary },
+                                    ]}
+                                  >
+                                    {service.description}
+                                  </Text>
+                                </View>
+                              </View>
+                              {isSelected && (
+                                <Check size={20} color={service.color} />
+                              )}
+                            </TouchableOpacity>
+                          );
+                        })}
+                      </View>
+                    ) : (
+                      <Text style={[styles.infoValue, { color: colors.text }]}>
+                        {user.services && user.services.length > 0
+                          ? user.services
+                              .map((s) => {
+                                const service = serviceTypes.find(st => st.id === s);
+                                return service ? service.name : s.charAt(0).toUpperCase() + s.slice(1);
+                              })
+                              .join(', ')
+                          : t('profile.notSpecified')}
+                      </Text>
+                    )}
                   </View>
                 </View>
 
@@ -885,11 +1008,33 @@ export default function ProfileScreen() {
                     >
                       {t('profile.serviceRadius')}
                     </Text>
-                    <Text style={[styles.infoValue, { color: colors.text }]}>
-                      {user.serviceRadius
-                        ? `${user.serviceRadius} ${t('profile.miles')}`
-                        : t('profile.notSpecified')}
-                    </Text>
+                    {isEditing ? (
+                      <TextInput
+                        style={[
+                          styles.input,
+                          {
+                            backgroundColor: colors.background,
+                            borderColor: colors.border,
+                            color: colors.text,
+                          },
+                        ]}
+                        value={editedUser?.serviceRadius ? editedUser.serviceRadius.toString() : ''}
+                        onChangeText={(text) =>
+                          setEditedUser((prev) =>
+                            prev ? { ...prev, serviceRadius: text ? parseInt(text) || undefined : undefined } : null
+                          )
+                        }
+                        placeholder="e.g. 50"
+                        placeholderTextColor={colors.textSecondary}
+                        keyboardType="numeric"
+                      />
+                    ) : (
+                      <Text style={[styles.infoValue, { color: colors.text }]}>
+                        {user.serviceRadius
+                          ? `${user.serviceRadius} ${t('profile.miles')}`
+                          : t('profile.notSpecified')}
+                      </Text>
+                    )}
                   </View>
                 </View>
 
@@ -1711,5 +1856,34 @@ const styles = StyleSheet.create({
   cardFormSubtitle: {
     fontSize: 16,
     marginBottom: 24,
+  },
+  servicesContainer: {
+    marginTop: 8,
+  },
+  serviceOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    marginBottom: 8,
+  },
+  serviceOptionContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  serviceOptionText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  serviceOptionTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  serviceOptionDescription: {
+    fontSize: 14,
   },
 });
