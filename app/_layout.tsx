@@ -15,7 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 // Create a separate component for the Stack with SafeAreaView
 function StackWithSafeArea() {
   const { colors } = useTheme();
-  
+
   return (
     <SafeAreaView
       edges={['top']}
@@ -30,6 +30,10 @@ function StackWithSafeArea() {
         <Stack.Screen name="(auth)" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="+not-found" />
+        <Stack.Screen
+          name="add-payment-method"
+          options={{ presentation: 'modal', headerShown: false }}
+        />
       </Stack>
       <StatusBar style="auto" />
     </SafeAreaView>
