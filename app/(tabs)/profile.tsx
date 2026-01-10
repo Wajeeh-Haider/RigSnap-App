@@ -39,7 +39,7 @@ import {
   Droplets,
   Zap,
 } from 'lucide-react-native';
-import { useConfirmSetupIntent } from '@stripe/stripe-react-native';
+import { useIsFocused } from '@react-navigation/native';
 
 const serviceTypes = [
   {
@@ -90,9 +90,9 @@ export default function ProfileScreen() {
   const { user, logout, updateProfile } = useAuth();
   const { colors } = useTheme();
   const { t } = useLanguage();
-  const { confirmSetupIntent } = useConfirmSetupIntent();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const isFocused = useIsFocused();
   const [editedUser, setEditedUser] = useState(user);
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
@@ -100,10 +100,10 @@ export default function ProfileScreen() {
 
   // Fetch payment methods on component mount
   useEffect(() => {
-    if (user?.id) {
+    if (user?.id && isFocused) {
       fetchPaymentMethods();
     }
-  }, [user?.id]);
+  }, [user?.id, isFocused]);
 
   if (!user) return null;
 
