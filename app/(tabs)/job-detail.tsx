@@ -506,7 +506,7 @@ export default function JobDetailScreen() {
       </View>
     );
   };
-  // console.log(request);
+  console.log(request);
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View

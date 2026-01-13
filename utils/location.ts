@@ -29,6 +29,7 @@ export interface LocationService {
   ) => number;
   clearWatch: (watchId: number) => void;
   reverseGeocode: (latitude: number, longitude: number) => Promise<string>;
+  geocode: (address: string) => Promise<LocationResult[]>;
   isLocationAvailable: () => boolean;
 }
 
@@ -193,6 +194,41 @@ class WebLocationService implements LocationService {
       console.error('Reverse geocoding failed:', error);
       // Return coordinates as fallback
       return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+    }
+  }
+
+  async geocode(address: string): Promise<LocationResult[]> {
+    try {
+      // Using Nominatim OpenStreetMap for geocoding
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}&limit=5&countrycodes=us`,
+        {
+          headers: {
+            'User-Agent': 'RigSnap-Mobile-App/1.0',
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('Geocoding service unavailable');
+      }
+
+      const data = await response.json();
+
+      return data.map((item: any) => ({
+        coords: {
+          latitude: parseFloat(item.lat),
+          longitude: parseFloat(item.lon),
+          accuracy: undefined,
+          altitude: undefined,
+          heading: undefined,
+          speed: undefined,
+        },
+        timestamp: Date.now(),
+      }));
+    } catch (error) {
+      console.error('Geocoding failed:', error);
+      return [];
     }
   }
 
@@ -361,6 +397,27 @@ class MobileLocationService implements LocationService {
       console.error('Reverse geocoding failed:', error);
       // Return coordinates as fallback
       return `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`;
+    }
+  }
+
+  async geocode(address: string): Promise<LocationResult[]> {
+    try {
+      const result = await Location.geocodeAsync(address);
+
+      return result.map((location) => ({
+        coords: {
+          latitude: location.latitude,
+          longitude: location.longitude,
+          accuracy: location.accuracy || undefined,
+          altitude: undefined,
+          heading: undefined,
+          speed: undefined,
+        },
+        timestamp: Date.now(),
+      }));
+    } catch (error) {
+      console.error('Geocoding failed:', error);
+      return [];
     }
   }
 }

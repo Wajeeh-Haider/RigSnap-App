@@ -15,6 +15,7 @@ import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { router } from 'expo-router';
+import { locationService } from '@/utils/location';
 import {
   Plus,
   Search,
@@ -101,7 +102,7 @@ const getServiceDisplayName = (serviceType: string) => {
 };
 
 export default function HomeScreen() {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const {
     getUserRequests,
     getProviderRequests,
@@ -113,10 +114,13 @@ export default function HomeScreen() {
   const { t } = useLanguage();
   const [refreshing, setRefreshing] = React.useState(false);
   const [availableRequests, setAvailableRequests] = React.useState<any[]>([]);
+  const locationUpdatedRef = React.useRef(false);
   
   // Refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
+      // Reset location updated flag when screen comes into focus
+      locationUpdatedRef.current = false;
       refreshRequests();
       loadAvailableRequests();
     }, [refreshRequests, loadAvailableRequests])
@@ -130,13 +134,30 @@ export default function HomeScreen() {
     }
     
     try {
+      // Update provider's location with current live location for radius filtering (only once per screen visit)
+      if (!locationUpdatedRef.current) {
+        try {
+          const currentLocation = await locationService.getCurrentPosition();
+          const coords = `${currentLocation.coords.latitude},${currentLocation.coords.longitude}`;
+          
+          // Update the provider's location in database
+          await updateProfile({ location: coords });
+          
+          locationUpdatedRef.current = true;
+          console.log('Updated provider live location for radius filtering:', coords);
+        } catch (locationError) {
+          console.error('Failed to get/update live location:', locationError);
+          // Continue with request fetching even if location update fails
+        }
+      }
+
       const requests = await getAvailableRequests(user.id);
       setAvailableRequests(requests.slice(0, 2));
     } catch (error) {
       console.error('Error loading available requests:', error);
       setAvailableRequests([]);
     }
-  }, [user?.id, user?.role, getAvailableRequests]);
+  }, [user?.id, user?.role, getAvailableRequests, updateProfile]);
 
   // Load available requests on mount and when user changes
   React.useEffect(() => {

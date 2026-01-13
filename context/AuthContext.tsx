@@ -8,6 +8,7 @@ import React, {
 import { supabase } from '@/lib/supabase';
 import { User } from '@/types';
 import { otpService } from '@/utils/otpService';
+import { locationService } from '@/utils/location';
 
 interface AuthContextType {
   user: User | null;
@@ -393,6 +394,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const userData = await fetchUserData(data.user.id);
         if (userData) {
           console.log('User data found:', userData.role);
+          
+          // For providers, ensure they have coordinates for radius filtering
+          if (userData.role === 'provider') {
+            try {
+              // Check if location is already in coordinates format
+              const coordMatch = userData.location?.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+              if (!coordMatch) {
+                console.log('Provider location not in coordinates format, getting current location');
+                // Get current location
+                const currentLocation = await locationService.getCurrentPosition();
+                const coords = `${currentLocation.coords.latitude},${currentLocation.coords.longitude}`;
+                
+                // Update user profile with coordinates
+                await updateProfile({
+                  location: coords,
+                });
+                
+                // Update local user data
+                userData.location = coords;
+                console.log('Updated provider location to coordinates:', coords);
+              }
+            } catch (locationError) {
+              console.error('Failed to get/update provider location:', locationError);
+              // Continue with login even if location update fails
+            }
+          }
+          
           setUser(userData);
           console.log('User state updated successfully');
           return { success: true };

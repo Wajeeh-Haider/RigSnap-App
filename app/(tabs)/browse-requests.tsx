@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -111,7 +111,7 @@ const filterOptions = [
 ];
 
 export default function BrowseRequestsScreen() {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const {
     getAvailableRequests,
     getUserRequests,
@@ -131,6 +131,7 @@ export default function BrowseRequestsScreen() {
   } | null>(null);
   const [availableRequests, setAvailableRequests] = useState<any[]>([]);
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
+  const locationUpdatedRef = useRef(false);
 
   const getUserLocation = async () => {
     try {
@@ -151,6 +152,23 @@ export default function BrowseRequestsScreen() {
 
     setIsLoadingRequests(true);
     try {
+      // Update provider's location with current live location for radius filtering (only once per screen visit)
+      if (!locationUpdatedRef.current) {
+        try {
+          const currentLocation = await locationService.getCurrentPosition();
+          const coords = `${currentLocation.coords.latitude},${currentLocation.coords.longitude}`;
+          
+          // Update the provider's location in database
+          await updateProfile({ location: coords });
+          
+          locationUpdatedRef.current = true;
+          console.log('Updated provider live location for radius filtering:', coords);
+        } catch (locationError) {
+          console.error('Failed to get/update live location:', locationError);
+          // Continue with request fetching even if location update fails
+        }
+      }
+
       const requests = await getAvailableRequests(user.id);
       setAvailableRequests(requests);
     } catch (error) {
@@ -169,6 +187,8 @@ export default function BrowseRequestsScreen() {
   // Refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
+      // Reset location updated flag when screen comes into focus
+      locationUpdatedRef.current = false;
       refreshRequests();
       loadAvailableRequests();
     }, [refreshRequests, user?.id])

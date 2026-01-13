@@ -40,6 +40,7 @@ import {
   Zap,
 } from 'lucide-react-native';
 import { useIsFocused } from '@react-navigation/native';
+import { locationService } from '@/utils/location';
 
 const serviceTypes = [
   {
@@ -97,6 +98,7 @@ export default function ProfileScreen() {
 
   const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const [isLoadingPaymentMethods, setIsLoadingPaymentMethods] = useState(false);
+  const [readableLocation, setReadableLocation] = useState<string>('');
 
   // Fetch payment methods on component mount
   useEffect(() => {
@@ -104,6 +106,30 @@ export default function ProfileScreen() {
       fetchPaymentMethods();
     }
   }, [user?.id, isFocused]);
+
+  // Reverse geocode location for display
+  useEffect(() => {
+    const reverseGeocodeLocation = async () => {
+      if (user?.location) {
+        const coordMatch = user.location.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+        if (coordMatch) {
+          try {
+            const lat = parseFloat(coordMatch[1]);
+            const lng = parseFloat(coordMatch[2]);
+            const address = await locationService.reverseGeocode(lat, lng);
+            setReadableLocation(address);
+          } catch (error) {
+            console.error('Failed to reverse geocode:', error);
+            setReadableLocation(user.location);
+          }
+        } else {
+          setReadableLocation(user.location);
+        }
+      }
+    };
+
+    reverseGeocodeLocation();
+  }, [user?.location]);
 
   if (!user) return null;
 
@@ -145,11 +171,36 @@ export default function ProfileScreen() {
 
     setIsLoading(true);
     try {
+      let locationToSave = editedUser.location;
+
+      // Check if location is already in coordinates format (lat,lng)
+      const coordMatch = editedUser.location.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+      if (!coordMatch) {
+        // Location is a text address, geocode it to coordinates
+        try {
+          const geocodedResults = await locationService.geocode(editedUser.location);
+          if (geocodedResults.length > 0) {
+            const coords = geocodedResults[0].coords;
+            locationToSave = `${coords.latitude},${coords.longitude}`;
+            console.log('Geocoded location:', editedUser.location, 'to coordinates:', locationToSave);
+          } else {
+            Alert.alert('Error', 'Could not find coordinates for the entered location. Please try a different address.');
+            setIsLoading(false);
+            return;
+          }
+        } catch (geocodeError) {
+          console.error('Geocoding failed:', geocodeError);
+          Alert.alert('Error', 'Failed to process location. Please try again.');
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const result = await updateProfile({
         firstName: editedUser.firstName,
         lastName: editedUser.lastName,
         phone: editedUser.phone,
-        location: editedUser.location,
+        location: locationToSave,
         truckType: editedUser.truckType,
         licenseNumber: editedUser.licenseNumber,
         services: editedUser.services,
@@ -524,7 +575,7 @@ export default function ProfileScreen() {
                   />
                 ) : (
                   <Text style={[styles.infoValue, { color: colors.text }]}>
-                    {user.location}
+                    {readableLocation || user.location}
                   </Text>
                 )}
               </View>
