@@ -115,6 +115,7 @@ export default function HomeScreen() {
   const [refreshing, setRefreshing] = React.useState(false);
   const [availableRequests, setAvailableRequests] = React.useState<any[]>([]);
   const locationUpdatedRef = React.useRef(false);
+  const lastLocationUpdateRef = React.useRef<number>(0);
   
   // Refresh data when screen comes into focus
   useFocusEffect(
@@ -134,17 +135,25 @@ export default function HomeScreen() {
     }
     
     try {
-      // Update provider's location with current live location for radius filtering (only once per screen visit)
+      // Update provider's location with current live location for radius filtering
+      // Only update if location has changed significantly and enough time has passed
       if (!locationUpdatedRef.current) {
         try {
           const currentLocation = await locationService.getCurrentPosition();
           const coords = `${currentLocation.coords.latitude},${currentLocation.coords.longitude}`;
+          const now = Date.now();
           
-          // Update the provider's location in database
-          await updateProfile({ location: coords });
+          // Skip update if location hasn't changed or updated recently (within 5 minutes)
+          if (coords !== user.location && (now - lastLocationUpdateRef.current) > 5 * 60 * 1000) {
+            // Update the provider's location in database
+            await updateProfile({ location: coords });
+            lastLocationUpdateRef.current = now;
+            console.log('Updated provider live location for radius filtering:', coords);
+          } else {
+            console.log('Location unchanged or updated recently, skipping update');
+          }
           
           locationUpdatedRef.current = true;
-          console.log('Updated provider live location for radius filtering:', coords);
         } catch (locationError) {
           console.error('Failed to get/update live location:', locationError);
           // Continue with request fetching even if location update fails
@@ -157,7 +166,7 @@ export default function HomeScreen() {
       console.error('Error loading available requests:', error);
       setAvailableRequests([]);
     }
-  }, [user?.id, user?.role, getAvailableRequests, updateProfile]);
+  }, [user?.id, user?.role, user?.location, getAvailableRequests, updateProfile]);
 
   // Load available requests on mount and when user changes
   React.useEffect(() => {
