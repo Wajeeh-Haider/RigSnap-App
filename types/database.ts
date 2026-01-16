@@ -27,6 +27,7 @@ export interface Database {
           join_date: string
           created_at: string
           updated_at: string
+          push_token: string | null
         }
         Insert: {
           id?: string
@@ -45,6 +46,7 @@ export interface Database {
           join_date?: string
           created_at?: string
           updated_at?: string
+          push_token?: string | null
         }
         Update: {
           id?: string
@@ -63,6 +65,7 @@ export interface Database {
           join_date?: string
           created_at?: string
           updated_at?: string
+          push_token?: string | null
         }
       }
       requests: {

@@ -9,6 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { User } from '@/types';
 import { otpService } from '@/utils/otpService';
 import { locationService } from '@/utils/location';
+import { initializePushNotifications, setupNotificationHandlers } from '@/utils/pushNotifications';
 
 interface AuthContextType {
   user: User | null;
@@ -37,6 +38,23 @@ const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+
+  // Setup notification handlers once when component mounts
+  useEffect(() => {
+    const cleanup = setupNotificationHandlers();
+    return cleanup;
+  }, []);
+
+  // Helper function to initialize push notifications for a user
+  const initializeUserPushNotifications = async (userData: User) => {
+    try {
+      console.log('Initializing push notifications for user:', userData.email);
+      await initializePushNotifications(userData.id);
+    } catch (error) {
+      console.error('Failed to initialize push notifications:', error);
+      // Don't fail the login process if push notifications fail
+    }
+  };
 
   // Helper function to convert database user to app user format
   const convertDbUserToAppUser = (dbUser: any): User => {
@@ -267,10 +285,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               if (freshUserData && (freshUserData.firstName !== 'User' || freshUserData.lastName !== '')) {
                 console.log('Found complete user profile, updating state');
                 setUser(freshUserData);
+                await initializeUserPushNotifications(freshUserData);
                 clearInterval(profileCheckInterval);
               } else if (attempts >= maxAttempts) {
                 console.log('Profile check timeout, using current data');
-                if (userData) setUser(userData);
+                if (userData) {
+                  setUser(userData);
+                  await initializeUserPushNotifications(userData);
+                }
                 clearInterval(profileCheckInterval);
               }
             }, 2000);
@@ -281,6 +303,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               userData.role
             );
             setUser(userData);
+            await initializeUserPushNotifications(userData);
           }
         } else if (mounted) {
           console.log('No valid session found, user will be null');
@@ -324,11 +347,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (userData) {
           console.log('Setting user data from sign in');
           setUser(userData);
+          await initializeUserPushNotifications(userData);
         } else {
           const fallbackUser = await createFallbackUser(session.user.id);
           if (fallbackUser) {
             console.log('Setting fallback user from sign in');
             setUser(fallbackUser);
+            await initializeUserPushNotifications(fallbackUser);
           } else {
             console.log('Could not create user data, signing out');
             await supabase.auth.signOut();

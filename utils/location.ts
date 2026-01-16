@@ -516,7 +516,50 @@ export async function requestLocationPermission(): Promise<boolean> {
   }
 
   try {
-    // Test if we can get location (this will trigger permission request)
+    // On mobile, explicitly check and request permissions first
+    if (Platform.OS !== 'web') {
+      try {
+        const { status: currentStatus } = await Location.getForegroundPermissionsAsync();
+        
+        if (currentStatus !== 'granted') {
+          Alert.alert(
+            'Location Permission Required',
+            'RigSnap needs access to your location to connect you with nearby service providers. This helps ensure faster response times.',
+            [
+              { text: 'Not Now', style: 'cancel', onPress: () => {} },
+              {
+                text: 'Allow Location',
+                onPress: async () => {
+                  try {
+                    const { status } = await Location.requestForegroundPermissionsAsync();
+                    if (status !== 'granted') {
+                      Alert.alert(
+                        'Permission Denied',
+                        'Location access was denied. You can enable it later in your device settings for better service matching.',
+                        [{ text: 'OK' }]
+                      );
+                    }
+                  } catch (permissionError) {
+                    console.error('Permission request error:', permissionError);
+                  }
+                },
+              },
+            ]
+          );
+          
+          // Request permissions
+          const { status } = await Location.requestForegroundPermissionsAsync();
+          if (status !== 'granted') {
+            return false;
+          }
+        }
+      } catch (locationModuleError) {
+        console.log('Location module error:', locationModuleError);
+        // Fall through to try getting location directly
+      }
+    }
+    
+    // Test if we can get location (for web, this will trigger permission request)
     await locationService.getCurrentPosition();
     return true;
   } catch (error: any) {
@@ -524,22 +567,20 @@ export async function requestLocationPermission(): Promise<boolean> {
 
     if (locationError.code === 1) {
       Alert.alert(
-        'Location Permission Required',
-        'RigSnap needs access to your location to help service providers find you. Please enable location access in your device settings.',
+        'Location Access Needed',
+        'For the best experience, please allow location access to find nearby service providers.',
         [
-          { text: 'Cancel', style: 'cancel' },
+          { text: 'Maybe Later', style: 'cancel' },
           {
-            text: 'Open Settings',
+            text: 'Enable in Settings',
             onPress: () => {
               if (Platform.OS === 'web') {
-                // Guide user to browser settings
                 Alert.alert(
                   'Enable Location Access',
                   'To enable location access:\n\n1. Click the location icon in your browser\'s address bar\n2. Select "Allow" for location access\n3. Refresh the page and try again',
                   [{ text: 'OK' }]
                 );
               } else {
-                // On mobile, guide user to device settings
                 Alert.alert(
                   'Enable Location Access',
                   'To enable location access:\n\n1. Go to your device Settings\n2. Find RigSnap in the app list\n3. Enable Location permissions\n4. Return to the app and try again',
@@ -551,7 +592,7 @@ export async function requestLocationPermission(): Promise<boolean> {
         ]
       );
     } else {
-      Alert.alert('Location Error', locationError.message, [{ text: 'OK' }]);
+      console.log('Location error:', locationError.message);
     }
 
     return false;

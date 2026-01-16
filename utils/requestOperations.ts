@@ -252,7 +252,7 @@ export const fetchAvailableRequests = async (providerId?: string): Promise<Servi
         let providerCoords = null;
         
         // Try to extract coordinates from location string
-        // Format could be "lat,lng" or a more complex format
+        // Format could be "lat,lng" or a place name like "Lahore"
         if (providerData.location.includes(',')) {
           const parts = providerData.location.split(',');
           if (parts.length >= 2) {
@@ -260,8 +260,28 @@ export const fetchAvailableRequests = async (providerId?: string): Promise<Servi
             const lng = parseFloat(parts[1].trim());
             if (!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
               providerCoords = { latitude: lat, longitude: lng };
+              console.log(`Parsed provider coordinates: ${lat}, ${lng}`);
             }
           }
+        } else {
+          // Handle place names with fallback coordinates
+          console.log(`Provider has location as place name: ${providerData.location}`);
+          
+          // Use fallback coordinates for common locations
+          if (providerData.location.toLowerCase().includes('lahore')) {
+            providerCoords = { latitude: 31.5204, longitude: 74.3587 };
+          } else if (providerData.location.toLowerCase().includes('nashville')) {
+            providerCoords = { latitude: 36.1627, longitude: -86.7816 };
+          } else if (providerData.location.toLowerCase().includes('karachi')) {
+            providerCoords = { latitude: 24.8607, longitude: 67.0011 };
+          } else if (providerData.location.toLowerCase().includes('islamabad')) {
+            providerCoords = { latitude: 33.6844, longitude: 73.0479 };
+          } else {
+            // Default fallback to a central location
+            providerCoords = { latitude: 31.5204, longitude: 74.3587 }; // Lahore as default
+          }
+          
+          console.log(`Using fallback coordinates for ${providerData.location}: ${providerCoords.latitude}, ${providerCoords.longitude}`);
         }
 
         if (providerCoords) {

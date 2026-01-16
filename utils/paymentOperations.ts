@@ -132,6 +132,33 @@ export const requestService: RequestService = {
       // The trucker will only be charged when a provider accepts their request
       console.log('Request created successfully - no charge applied to trucker');
 
+      // Send push notifications to nearby service providers
+      try {
+        console.log('Sending push notifications for new request:', request.id);
+        
+        const { data: notificationResult, error: notificationError } = await supabase.functions.invoke(
+          'send-push-notifications',
+          {
+            body: {
+              type: 'INSERT',
+              table: 'requests',
+              record: request,
+              schema: 'public'
+            }
+          }
+        );
+
+        if (notificationError) {
+          console.error('Error sending push notifications:', notificationError);
+          // Don't fail the request creation if push notifications fail
+        } else {
+          console.log('Push notifications sent successfully:', notificationResult);
+        }
+      } catch (notificationError) {
+        console.error('Exception sending push notifications:', notificationError);
+        // Don't fail the request creation if push notifications fail
+      }
+
       return {
         success: true,
         requestId: request.id,
