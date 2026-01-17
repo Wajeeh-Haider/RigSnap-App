@@ -387,7 +387,7 @@ export default function ChatDetailScreen() {
 
     // iOS 26+ might need different offset
     if (numericVersion >= 26) {
-      return 15; // Adjust this for iOS 26
+      return 50; // Adjust this for iOS 26
     }
 
     // iOS 18-25

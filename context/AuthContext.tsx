@@ -9,7 +9,7 @@ import { supabase } from '@/lib/supabase';
 import { User } from '@/types';
 import { otpService } from '@/utils/otpService';
 import { locationService } from '@/utils/location';
-import { initializePushNotifications, setupNotificationHandlers } from '@/utils/pushNotifications';
+import { initializePushNotifications, setupNotificationHandlers, debugCheckPushToken, testPushNotificationDelivery } from '@/utils/pushNotifications';
 
 interface AuthContextType {
   user: User | null;
@@ -48,10 +48,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Helper function to initialize push notifications for a user
   const initializeUserPushNotifications = async (userData: User) => {
     try {
-      console.log('Initializing push notifications for user:', userData.email);
+      console.log('🔔 AuthContext: Initializing push notifications for user:', userData.email);
       await initializePushNotifications(userData.id);
+      console.log('✅ AuthContext: Push notifications initialization completed');
+      
+      // Debug: Check if token was actually saved
+      setTimeout(() => {
+        debugCheckPushToken(userData.id);
+      }, 2000);
     } catch (error) {
-      console.error('Failed to initialize push notifications:', error);
+      console.error('❌ AuthContext: Failed to initialize push notifications:', error);
       // Don't fail the login process if push notifications fail
     }
   };
@@ -570,6 +576,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           const userData = await fetchUserData(sessionData.session.user.id);
           if (userData) {
             setUser(userData);
+            await initializeUserPushNotifications(userData);
             await otpService.consumeOTP(email);
             return { success: true };
           }
@@ -597,6 +604,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // Convert database user to app user format
           const userData = convertDbUserToAppUser(dbUser);
           setUser(userData);
+          await initializeUserPushNotifications(userData);
           console.log('User verified and signed in successfully');
           await otpService.consumeOTP(email);
           return { success: true };

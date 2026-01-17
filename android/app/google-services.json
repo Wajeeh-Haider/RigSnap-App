@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "151184876876",
+    "project_id": "rigsnap-505ea",
+    "storage_bucket": "rigsnap-505ea.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:151184876876:android:e2c756872cf098bdf1dbe9",
+        "android_client_info": {
+          "package_name": "com.alexchern.rigsnap"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApAPZ6IrJSoDXOuiQAld7G_mYkJskuueA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

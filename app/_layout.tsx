@@ -11,7 +11,6 @@ import * as NavigationBar from 'expo-navigation-bar';
 import { StripeProvider } from '@stripe/stripe-react-native';
 import { STRIPE_PUBLISHABLE_KEY } from '@/utils/stripe';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { registerForPushNotificationsAsync } from '@/utils/pushNotifications';
 import { requestLocationPermission } from '@/utils/location';
 
 // Create a separate component for the Stack with SafeAreaView
@@ -51,21 +50,17 @@ export default function RootLayout() {
 
   useFrameworkReady();
   useEffect(() => {
-    // Request both notification and location permissions on app launch
+    // Request location permissions on app launch
     const requestPermissions = async () => {
       try {
-        console.log('Requesting app permissions...');
-        
-        // Request notification permissions
-        await registerForPushNotificationsAsync();
-        console.log('Notification permissions requested');
+        console.log('Requesting location permissions...');
         
         // Request location permissions
         await requestLocationPermission();
         console.log('Location permissions requested');
         
       } catch (error) {
-        console.log('Failed to request permissions:', error);
+        console.log('Failed to request location permissions:', error);
       }
     };
 
