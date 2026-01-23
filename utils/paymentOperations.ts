@@ -135,7 +135,7 @@ export const requestService: RequestService = {
       // Send push notifications to nearby service providers
       try {
         console.log('Sending push notifications for new request:', request.id);
-        
+
         const { data: notificationResult, error: notificationError } = await supabase.functions.invoke(
           'send-push-notifications',
           {
@@ -149,14 +149,41 @@ export const requestService: RequestService = {
         );
 
         if (notificationError) {
-          console.error('Error sending push notifications:', notificationError);
-          // Don't fail the request creation if push notifications fail
+          console.error('Push notification error:', notificationError);
         } else {
           console.log('Push notifications sent successfully:', notificationResult);
         }
-      } catch (notificationError) {
-        console.error('Exception sending push notifications:', notificationError);
-        // Don't fail the request creation if push notifications fail
+      } catch (pushError) {
+        console.error('Failed to send push notifications:', pushError);
+      }
+
+      // Send email notifications to nearby service providers
+      try {
+        console.log('Sending email notifications for new request:', request.id);
+        console.log('Request object:', JSON.stringify(request, null, 2));
+
+        const { data: emailResult, error: emailError } = await supabase.functions.invoke(
+          'send-email',
+          {
+            body: {
+              type: 'INSERT',
+              table: 'requests',
+              record: {
+                ...request,
+                customer_id: request.trucker_id, // Map trucker_id to customer_id for the edge function
+              },
+              schema: 'public'
+            }
+          }
+        );
+
+        if (emailError) {
+          console.error('Email notification error:', emailError);
+        } else {
+          console.log('Email notifications sent successfully:', emailResult);
+        }
+      } catch (emailError) {
+        console.error('Failed to send email notifications:', emailError);
       }
 
       return {
