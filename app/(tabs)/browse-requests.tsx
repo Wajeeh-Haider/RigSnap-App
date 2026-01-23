@@ -295,69 +295,137 @@ export default function BrowseRequestsScreen() {
   };
 
   const handleCancelRequest = async (request: any) => {
-    Alert.alert(
-      'Cancel Request',
-      `Are you sure you want to cancel this ${request.serviceType.replace(
-        '_',
-        ' '
-      )} request?\n\n⚠️ Warning: You will be charged a $5 penalty fee in addition to the original $5 lead fee (total $10). The trucker will receive a full refund.`,
-      [
-        { text: 'Keep Request', style: 'cancel' },
-        {
-          text: 'Cancel Request',
-          style: 'destructive',
-          onPress: () => {
-            Alert.prompt(
-              'Cancellation Reason',
-              'Please provide a reason for cancelling this request:',
-              [
-                { text: 'Cancel', style: 'cancel' },
-                {
-                  text: 'Submit',
-                  onPress: async (reason?: string) => {
-                    if (!reason || reason.trim().length === 0) {
-                      Alert.alert(
-                        'Error',
-                        'Please provide a reason for cancellation.'
-                      );
-                      return;
-                    }
+    const isProviderCancellingAccepted = request.status === 'accepted' && request.providerId === user.id;
+    const isTruckerCancellingPending = request.status === 'pending' && request.truckerId === user.id;
 
-                    setIsCancelling(true);
-                    try {
-                      const success = await cancelRequest(
-                        request.id,
-                        user.id,
-                        reason.trim()
-                      );
-                      if (success) {
-                        setSelectedRequest(null);
+    if (isProviderCancellingAccepted) {
+      Alert.alert(
+        'Cancel Request',
+        `Are you sure you want to cancel this ${request.serviceType.replace(
+          '_',
+          ' '
+        )} request?\n\n⚠️ Warning: You will be charged a $5 penalty fee in addition to the original $5 lead fee (total $10). The trucker will receive a full refund.`,
+        [
+          { text: 'Keep Request', style: 'cancel' },
+          {
+            text: 'Cancel Request',
+            style: 'destructive',
+            onPress: () => {
+              Alert.prompt(
+                'Cancellation Reason',
+                'Please provide a reason for cancelling this request:',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Submit',
+                    onPress: async (reason?: string) => {
+                      if (!reason || reason.trim().length === 0) {
                         Alert.alert(
-                          'Request Cancelled',
-                          'The request has been cancelled. The trucker has been notified and will receive a full refund. You have been charged a $5 penalty fee.',
-                          [{ text: 'OK' }]
+                          'Error',
+                          'Please provide a reason for cancellation.'
                         );
+                        return;
                       }
-                      // Error alert is already shown in cancelRequest if payment fails
-                    } catch {
-                      Alert.alert(
-                        'Error',
-                        'Failed to cancel request. Please try again.'
-                      );
-                    } finally {
-                      setIsCancelling(false);
-                    }
+
+                      setIsCancelling(true);
+                      try {
+                        const success = await cancelRequest(
+                          request.id,
+                          user.id,
+                          reason.trim()
+                        );
+                        if (success) {
+                          setSelectedRequest(null);
+                          Alert.alert(
+                            'Request Cancelled',
+                            'The request has been cancelled. The trucker has been notified and will receive a full refund. You have been charged a $5 penalty fee.',
+                            [{ text: 'OK' }]
+                          );
+                        }
+                        // Error alert is already shown in cancelRequest if payment fails
+                      } catch {
+                        Alert.alert(
+                          'Error',
+                          'Failed to cancel request. Please try again.'
+                        );
+                      } finally {
+                        setIsCancelling(false);
+                      }
+                    },
                   },
-                },
-              ],
-              'plain-text',
-              '',
-              'default'
-            );
+                ],
+                'plain-text',
+                '',
+                'default'
+              );
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    } else if (isTruckerCancellingPending) {
+      Alert.alert(
+        'Cancel Request',
+        `Are you sure you want to cancel this ${request.serviceType.replace(
+          '_',
+          ' '
+        )} request? This action cannot be undone.`,
+        [
+          { text: 'Keep Request', style: 'cancel' },
+          {
+            text: 'Cancel Request',
+            style: 'destructive',
+            onPress: () => {
+              Alert.prompt(
+                'Cancellation Reason',
+                'Please provide a reason for cancelling this request:',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Submit',
+                    onPress: async (reason?: string) => {
+                      if (!reason || reason.trim().length === 0) {
+                        Alert.alert(
+                          'Error',
+                          'Please provide a reason for cancellation.'
+                        );
+                        return;
+                      }
+
+                      setIsCancelling(true);
+                      try {
+                        const success = await cancelRequest(
+                          request.id,
+                          user.id,
+                          reason.trim()
+                        );
+                        if (success) {
+                          setSelectedRequest(null);
+                          Alert.alert(
+                            'Request Cancelled',
+                            'Your request has been cancelled successfully.',
+                            [{ text: 'OK' }]
+                          );
+                        }
+                      } catch {
+                        Alert.alert(
+                          'Error',
+                          'Failed to cancel request. Please try again.'
+                        );
+                      } finally {
+                        setIsCancelling(false);
+                      }
+                    },
+                  },
+                ],
+                'plain-text',
+                '',
+                'default'
+              );
+            },
+          },
+        ]
+      );
+    }
   };
 
   const getFilterDisplayName = (filterType: string) => {
@@ -398,7 +466,8 @@ export default function BrowseRequestsScreen() {
     const ServiceIcon = getServiceIcon(request.serviceType);
     const StatusIcon = getStatusIcon(request.status);
     const canCancel =
-      request.status === 'accepted' && request.providerId === user.id;
+      (request.status === 'accepted' && request.providerId === user.id) ||
+      (request.status === 'pending' && request.truckerId === user.id);
 
     return (
       <Modal
@@ -599,7 +668,7 @@ export default function BrowseRequestsScreen() {
               </Text>
             </TouchableOpacity>
 
-            {request.status === 'pending' && (
+            {!isTrucker && request.status === 'pending' && (
               <TouchableOpacity
                 style={[
                   styles.acceptButton,

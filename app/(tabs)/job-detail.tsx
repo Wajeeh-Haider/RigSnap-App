@@ -112,6 +112,8 @@ export default function JobDetailScreen() {
     latitude: number;
     longitude: number;
   } | null>(null);
+  const [showImageModal, setShowImageModal] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   const requestId = params.requestId as string;
   const request = requests.find((r) => r.id === requestId);
@@ -592,8 +594,8 @@ export default function JobDetailScreen() {
                   <TouchableOpacity 
                     key={`photo-${index}`}
                     onPress={() => {
-                      // Could add photo viewer modal here later
-                      console.log('Photo tapped:', photo);
+                      setSelectedImage(photo);
+                      setShowImageModal(true);
                     }}
                   >
                     <Image
@@ -1809,6 +1811,30 @@ export default function JobDetailScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* Image Viewer Modal */}
+      <Modal
+        visible={showImageModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowImageModal(false)}
+      >
+        <View style={styles.imageModalContainer}>
+          <TouchableOpacity
+            style={styles.imageModalCloseButton}
+            onPress={() => setShowImageModal(false)}
+          >
+            <X size={24} color="white" />
+          </TouchableOpacity>
+          {selectedImage && (
+            <Image
+              source={{ uri: selectedImage }}
+              style={styles.fullScreenImage}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -2407,4 +2433,20 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
-});
+  imageModalContainer: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  imageModalCloseButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 1,
+    padding: 10,
+  },
+  fullScreenImage: {
+    width: '100%',
+    height: '100%',
+  },});
