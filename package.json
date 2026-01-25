@@ -8,7 +8,8 @@
     "build:web": "expo export --platform web",
     "ios": "EXPO_NO_TELEMETRY=1 expo run:ios",
     "lint": "expo lint",
-    "android": "expo run:android"
+    "android": "expo run:android",
+    "eas-build-pre-install": "sudo gem install cocoapods"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
@@ -49,6 +50,7 @@
     "react-native-url-polyfill": "^2.0.0",
     "react-native-web": "^0.21.0",
     "react-native-webview": "13.15.0",
+    "react-native-worklets": "0.5.1",
     "stripe": "^19.3.1"
   },
   "devDependencies": {
