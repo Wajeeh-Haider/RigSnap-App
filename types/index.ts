@@ -10,6 +10,9 @@ export interface User {
   joinDate: string;
   location: string;
   language: string;
+  pushNotifications: boolean;
+  emailNotifications: boolean;
+  requestUpdates: boolean;
   // Trucker specific
   truckType?: string;
   licenseNumber?: string;

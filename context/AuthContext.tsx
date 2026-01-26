@@ -76,6 +76,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       joinDate: dbUser.join_date || new Date().toISOString().split('T')[0],
       location: dbUser.location || '',
       language: dbUser.language || 'en',
+      pushNotifications: dbUser.push_notifications ?? true,
+      emailNotifications: dbUser.email_notifications ?? true,
+      requestUpdates: dbUser.request_updates ?? true,
       // Trucker specific fields
       truckType: dbUser.truck_type,
       licenseNumber: dbUser.license_number,
@@ -178,6 +181,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           combinedMetadata.location ||
           (userRole === 'trucker' ? 'Dallas, TX' : 'Houston, TX'),
         language: combinedMetadata.language || 'en',
+        pushNotifications: true,
+        emailNotifications: true,
+        requestUpdates: true,
         truckType:
           userRole === 'trucker'
             ? combinedMetadata.truckType || 'Semi-Trailer'
@@ -223,6 +229,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             language: fallbackUser.language,
             rating: fallbackUser.rating,
             join_date: fallbackUser.joinDate,
+            push_notifications: fallbackUser.pushNotifications,
+            email_notifications: fallbackUser.emailNotifications,
+            request_updates: fallbackUser.requestUpdates,
             truck_type: fallbackUser.truckType,
             license_number: fallbackUser.licenseNumber,
             services: fallbackUser.services,
@@ -678,6 +687,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         updatedUser.location = updates.location;
       if (updates.language !== undefined)
         updatedUser.language = updates.language;
+      if (updates.pushNotifications !== undefined)
+        updatedUser.pushNotifications = updates.pushNotifications;
+      if (updates.emailNotifications !== undefined)
+        updatedUser.emailNotifications = updates.emailNotifications;
+      if (updates.requestUpdates !== undefined)
+        updatedUser.requestUpdates = updates.requestUpdates;
       if (updates.truckType !== undefined)
         updatedUser.truckType = updates.truckType;
       if (updates.licenseNumber !== undefined)
@@ -708,6 +723,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           dbUpdates.location = updates.location;
         if (updates.language !== undefined)
           dbUpdates.language = updates.language;
+        if (updates.pushNotifications !== undefined)
+          dbUpdates.push_notifications = updates.pushNotifications;
+        if (updates.emailNotifications !== undefined)
+          dbUpdates.email_notifications = updates.emailNotifications;
+        if (updates.requestUpdates !== undefined)
+          dbUpdates.request_updates = updates.requestUpdates;
         if (updates.truckType !== undefined)
           dbUpdates.truck_type = updates.truckType;
         if (updates.licenseNumber !== undefined)
@@ -744,6 +765,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             role: updatedUser.role,
             location: updatedUser.location,
             phone: updatedUser.phone,
+            push_notifications: updatedUser.pushNotifications,
+            email_notifications: updatedUser.emailNotifications,
+            request_updates: updatedUser.requestUpdates,
             truck_type: updatedUser.truckType,
             license_number: updatedUser.licenseNumber,
             services: updatedUser.services,

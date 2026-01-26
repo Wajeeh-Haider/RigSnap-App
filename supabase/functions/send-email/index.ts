@@ -197,8 +197,9 @@ serve(async (req) => {
     // Find nearby service providers who have email notifications enabled
     const { data: providers, error: providersError } = await supabaseClient
       .from('users')
-      .select('id, name, email, location, service_radius, services')
+      .select('id, name, email, location, service_radius, services, email_notifications')
       .eq('role', 'provider')
+      .eq('email_notifications', true)
       .not('email', 'is', null)
 
     if (providersError) {

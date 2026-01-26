@@ -28,6 +28,9 @@ export interface Database {
           created_at: string
           updated_at: string
           push_token: string | null
+          push_notifications: boolean
+          email_notifications: boolean
+          request_updates: boolean
         }
         Insert: {
           id?: string
@@ -47,6 +50,9 @@ export interface Database {
           created_at?: string
           updated_at?: string
           push_token?: string | null
+          push_notifications?: boolean
+          email_notifications?: boolean
+          request_updates?: boolean
         }
         Update: {
           id?: string
@@ -66,6 +72,9 @@ export interface Database {
           created_at?: string
           updated_at?: string
           push_token?: string | null
+          push_notifications?: boolean
+          email_notifications?: boolean
+          request_updates?: boolean
         }
       }
       requests: {

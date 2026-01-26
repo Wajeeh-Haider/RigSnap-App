@@ -239,6 +239,29 @@ serve(async (req) => {
       )
     }
 
+    // Get notification preferences for all providers
+    const providerIds = providersWithTokens.map(p => p.id)
+    const { data: notificationPrefs, error: prefsError } = await supabaseClient
+      .from('users')
+      .select('id, push_notifications, email_notifications')
+      .in('id', providerIds)
+
+    if (prefsError) {
+      console.error('Error fetching notification preferences:', prefsError)
+      // Continue without preferences - assume notifications are enabled by default
+    }
+
+    // Create a map of notification preferences
+    const prefsMap = new Map()
+    if (notificationPrefs) {
+      notificationPrefs.forEach(pref => {
+        prefsMap.set(pref.id, {
+          pushNotifications: pref.push_notifications ?? true, // Default to true if null
+          emailNotifications: pref.email_notifications ?? true  // Default to true if null
+        })
+      })
+    }
+
     const notificationsToSend = []
 
     // Process each nearby provider (already filtered by distance and service radius)
@@ -272,6 +295,9 @@ serve(async (req) => {
     // Send push notifications to nearby providers
     const notificationPromises = notificationsToSend.map(async ({ pushToken, providerId, providerName, distance, email }) => {
       try {
+        // Get notification preferences for this provider
+        const prefs = prefsMap.get(providerId) || { pushNotifications: true, emailNotifications: true }
+        
         const urgencyText = newRequest.urgency === 'high' ? '🚨 URGENT' : 
                            newRequest.urgency === 'medium' ? '⚡ Priority' : '📋 New'
         
@@ -283,17 +309,25 @@ serve(async (req) => {
           .join(' ')
         const body = `${serviceTypeFormatted} needed ${distance}km away. Tap to view details.`
         
-        await sendPushNotification(pushToken, title, body, {
+        const notificationData = {
           type: 'new_request',
           requestId: newRequest.id,
           serviceType: newRequest.service_type,
           urgency: newRequest.urgency,
           distance: distance,
           location: newRequest.location
-        })
+        }
 
-        // Send email if available
-        if (email) {
+        // Send push notification only if enabled
+        if (prefs.pushNotifications) {
+          await sendPushNotification(pushToken, title, body, notificationData)
+          console.log(`Push notification sent to provider ${providerId}`)
+        } else {
+          console.log(`Push notifications disabled for provider ${providerId}`)
+        }
+
+        // Send email only if enabled
+        if (prefs.emailNotifications && email) {
           try {
             const { subject, html } = generateEmail(newRequest, customerName)
             await sendEmail({
@@ -306,6 +340,8 @@ serve(async (req) => {
           } catch (emailError) {
             console.error(`Failed to send email to provider ${providerId}:`, emailError)
           }
+        } else if (!prefs.emailNotifications) {
+          console.log(`Email notifications disabled for provider ${providerId}`)
         }
 
         return { providerId, status: 'sent' }

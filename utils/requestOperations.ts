@@ -494,6 +494,9 @@ export const findNearbyRequests = async (
 
   return data || [];
 };
+
+// Function to get provider's requests with user data
+export const getProviderRequestsWithUsers = async (providerId: string) => {
   try {
     // First get provider's requests
     const { data: requestsData, error: requestsError } = await supabase

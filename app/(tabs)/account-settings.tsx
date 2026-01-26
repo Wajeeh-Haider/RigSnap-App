@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { User } from '@/types';
 import {
   ArrowLeft,
   Bell,
@@ -46,19 +47,31 @@ interface NotificationSettings {
 }
 
 export default function AccountSettingsScreen() {
-  const { user } = useAuth();
+  const { user, updateProfile } = useAuth();
   const { isDarkMode, toggleDarkMode, followDeviceTheme, toggleFollowDeviceTheme, colors } = useTheme();
   const { currentLanguage, setLanguage, languages, getCurrentLanguage } =
     useLanguage();
   const { t } = useLanguage();
   const [notifications, setNotifications] = useState<NotificationSettings>({
-    pushNotifications: true,
-    emailNotifications: true,
+    pushNotifications: user?.pushNotifications ?? true,
+    emailNotifications: user?.emailNotifications ?? true,
     smsNotifications: false,
-    requestUpdates: true,
+    requestUpdates: user?.requestUpdates ?? true,
     marketingEmails: false,
     securityAlerts: true,
   });
+
+  // Update notifications when user data changes
+  useEffect(() => {
+    if (user) {
+      setNotifications(prev => ({
+        ...prev,
+        pushNotifications: user.pushNotifications ?? true,
+        emailNotifications: user.emailNotifications ?? true,
+        requestUpdates: user.requestUpdates ?? true,
+      }));
+    }
+  }, [user?.pushNotifications, user?.emailNotifications, user?.requestUpdates]);
 
   // Password change state
   const [showPasswordModal, setShowPasswordModal] = useState(false);
@@ -82,11 +95,30 @@ export default function AccountSettingsScreen() {
 
   if (!user) return null;
 
-  const updateNotificationSetting = (
+  const updateNotificationSetting = async (
     key: keyof NotificationSettings,
     value: boolean
   ) => {
     setNotifications((prev) => ({ ...prev, [key]: value }));
+    
+    // Map the setting to the user field
+    const userFieldMap: Record<string, keyof User> = {
+      pushNotifications: 'pushNotifications',
+      emailNotifications: 'emailNotifications',
+      requestUpdates: 'requestUpdates',
+    };
+    
+    const userField = userFieldMap[key];
+    if (userField) {
+      const result = await updateProfile({ [userField]: value });
+      if (!result.success) {
+        // Revert the change if update failed
+        setNotifications((prev) => ({ ...prev, [key]: !value }));
+        Alert.alert('Error', `Failed to update ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}: ${result.error}`);
+        return;
+      }
+    }
+    
     Alert.alert(
       'Settings Updated',
       `${key.replace(/([A-Z])/g, ' $1').toLowerCase()} has been ${
@@ -502,7 +534,7 @@ export default function AccountSettingsScreen() {
               }
             />
 
-            <SettingItem
+            {/* <SettingItem
               icon={MessageSquare}
               title={t('settings.smsNotifications')}
               description="Receive text message alerts"
@@ -510,7 +542,7 @@ export default function AccountSettingsScreen() {
               onToggle={(value) =>
                 updateNotificationSetting('smsNotifications', value)
               }
-            />
+            /> */}
           </View>
         </View>
 
@@ -653,46 +685,7 @@ export default function AccountSettingsScreen() {
           </View>
         </View>
 
-        {/* Notification Summary */}
-        <View
-          style={[
-            styles.summaryCard,
-            {
-              backgroundColor: colors.success + '20',
-              borderColor: colors.success + '40',
-            },
-          ]}
-        >
-          <View style={styles.summaryHeader}>
-            <Check size={20} color={colors.success} />
-            <Text style={[styles.summaryTitle, { color: colors.success }]}>
-              Notification Summary
-            </Text>
-          </View>
-          <Text style={[styles.summaryText, { color: colors.success }]}>
-            You`&apos;`ll receive notifications via{' '}
-            {[
-              notifications.pushNotifications && 'push notifications',
-              notifications.emailNotifications && 'email',
-              notifications.smsNotifications && 'SMS',
-            ]
-              .filter(Boolean)
-              .join(', ') || 'none of the selected methods'}
-            .
-          </Text>
-          {user.role === 'trucker' && (
-            <Text style={[styles.summarySubtext, { color: colors.success }]}>
-              As a trucker, you&apos;ll be notified when service providers
-              respond to your requests.
-            </Text>
-          )}
-          {user.role === 'provider' && (
-            <Text style={[styles.summarySubtext, { color: colors.success }]}>
-              As a service provider, you&apos;ll be notified about new requests
-              in your service area.
-            </Text>
-          )}
-        </View>
+     
       </ScrollView>
 
       {/* Password Change Modal */}
