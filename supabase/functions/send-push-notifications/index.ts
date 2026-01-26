@@ -195,121 +195,71 @@ serve(async (req) => {
 
     const customerName = customer.name
 
-    // Find nearby service providers
+    // Find nearby service providers using PostGIS RPC
     const { data: providers, error: providersError } = await supabaseClient
-      .from('users')
-      .select('id, name, location, service_radius, services, push_token, email')
-      .eq('role', 'provider')
-      .not('push_token', 'is', null)
-      .not('service_radius', 'is', null)
+      .rpc('nearby_locations', {
+        lat: requestCoords.latitude,
+        long: requestCoords.longitude,
+        radius_meters: 50000 // 50km search radius
+      })
 
     if (providersError) {
-      console.error('Error fetching providers:', providersError)
+      console.error('Error fetching nearby providers:', providersError)
       return new Response(
-        JSON.stringify({ error: 'Failed to fetch providers' }), 
+        JSON.stringify({ error: 'Failed to fetch nearby providers' }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 500 }
       )
     }
 
-    console.log(`Found ${providers?.length || 0} providers with push tokens`)
+    console.log(`Found ${providers?.length || 0} nearby providers`)
 
     if (!providers || providers.length === 0) {
       return new Response(
-        JSON.stringify({ message: 'No providers with push tokens found' }), 
+        JSON.stringify({ message: 'No nearby providers found' }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
+      )
+    }
+
+    // Filter providers who have push tokens and are within their service radius
+    const providersWithTokens = providers.filter(provider => {
+      // Check if provider has push token
+      if (!provider.push_token) return false
+
+      // Check if distance is within provider's service radius (convert km to meters)
+      const serviceRadiusMeters = provider.service_radius * 1000
+      return provider.distance_meters <= serviceRadiusMeters
+    })
+
+    console.log(`Found ${providersWithTokens.length} nearby providers with push tokens`)
+
+    if (providersWithTokens.length === 0) {
+      return new Response(
+        JSON.stringify({ message: 'No nearby providers with push tokens found' }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 200 }
       )
     }
 
     const notificationsToSend = []
 
-    // Check each provider's location and service radius
-    for (const provider of providers) {
+    // Process each nearby provider (already filtered by distance and service radius)
+    for (const provider of providersWithTokens) {
       try {
-        // Parse provider location (assuming it's stored as JSON coordinates)
-        let providerCoords: Coordinates
-        try {
-          if (typeof provider.location === 'string') {
-            // Try to parse as JSON first
-            try {
-              providerCoords = JSON.parse(provider.location)
-            } catch {
-              // Try parsing as "lat,lng" format
-              const parts = provider.location.split(',')
-              if (parts.length === 2) {
-                const lat = parseFloat(parts[0].trim())
-                const lng = parseFloat(parts[1].trim())
-                if (!isNaN(lat) && !isNaN(lng)) {
-                  providerCoords = { latitude: lat, longitude: lng }
-                  console.log(`Parsed provider ${provider.id} coordinates from string: ${lat}, ${lng}`)
-                } else {
-                  // It's a place name - use geocoding fallback
-                  console.log(`Provider ${provider.id} has location as place name: ${provider.location}`)
-                  // For now, use a default location (you can add Google Geocoding API later)
-                  // Using Lahore, Pakistan coordinates as default for demo
-                  providerCoords = { latitude: 31.5204, longitude: 74.3587 }
-                  console.log(`Using default coordinates for ${provider.location}: ${providerCoords.latitude}, ${providerCoords.longitude}`)
-                }
-              } else {
-                // It's a place name - use geocoding fallback
-                console.log(`Provider ${provider.id} has location as place name: ${provider.location}`)
-                // For now, use a default location based on common locations
-                if (provider.location.toLowerCase().includes('lahore')) {
-                  providerCoords = { latitude: 31.5204, longitude: 74.3587 }
-                } else if (provider.location.toLowerCase().includes('nashville')) {
-                  providerCoords = { latitude: 36.1627, longitude: -86.7816 }
-                } else {
-                  // Default fallback
-                  providerCoords = { latitude: 31.5204, longitude: 74.3587 }
-                }
-                console.log(`Using approximate coordinates for ${provider.location}: ${providerCoords.latitude}, ${providerCoords.longitude}`)
-              }
-            }
-          } else {
-            providerCoords = provider.location
-          }
-        } catch (error) {
-          console.log(`Skipping provider ${provider.id}: invalid location format`)
-          continue
-        }
+        // Check if provider offers the requested service type
+        const providerServices = provider.services || []
+        const requestServiceType = newRequest.service_type
 
-        if (!providerCoords.latitude || !providerCoords.longitude) {
-          console.log(`Skipping provider ${provider.id}: missing coordinates`)
-          continue
-        }
-
-        // Calculate distance between request and provider
-        const distance = calculateDistance(
-          requestCoords.latitude,
-          requestCoords.longitude,
-          providerCoords.latitude,
-          providerCoords.longitude
-        )
-
-        const serviceRadius = provider.service_radius || 50 // Default 50km if not set
-
-        console.log(`Provider ${provider.id}: Distance ${distance.toFixed(2)}km, Service radius: ${serviceRadius}km`)
-
-        // Check if provider is within service radius
-        if (distance <= serviceRadius) {
-          // Check if provider offers the requested service type
-          const providerServices = provider.services || []
-          const requestServiceType = newRequest.service_type
-
-          if (providerServices.length === 0 || providerServices.includes(requestServiceType)) {
-            console.log(`Adding notification for provider ${provider.id}`)
-            
-            notificationsToSend.push({
-              pushToken: provider.push_token,
-              providerId: provider.id,
-              providerName: provider.name,
-              distance: distance.toFixed(1),
-              email: provider.email
-            })
-          } else {
-            console.log(`Provider ${provider.id} doesn't offer service type: ${requestServiceType}`)
-          }
+        if (providerServices.length === 0 || providerServices.includes(requestServiceType)) {
+          console.log(`Adding notification for provider ${provider.id} (${(provider.distance_meters / 1000).toFixed(1)}km away)`)
+          
+          notificationsToSend.push({
+            pushToken: provider.push_token,
+            providerId: provider.id,
+            providerName: provider.name,
+            distance: (provider.distance_meters / 1000).toFixed(1),
+            email: provider.email
+          })
         } else {
-          console.log(`Provider ${provider.id} is outside service radius`)
+          console.log(`Skipping provider ${provider.id}: does not offer service ${requestServiceType}`)
         }
       } catch (error) {
         console.error(`Error processing provider ${provider.id}:`, error)

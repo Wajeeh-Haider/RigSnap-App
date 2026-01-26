@@ -186,7 +186,90 @@ export const fetchAvailableRequests = async (providerId?: string): Promise<Servi
       }
     }
 
-    // First get pending requests
+    // If we have provider data with location and radius, use PostGIS query
+    if (providerData && providerData.service_radius && providerData.location) {
+      try {
+        // Parse provider location coordinates
+        let providerCoords = null;
+        
+        // Try to extract coordinates from location string
+        if (providerData.location.includes(',')) {
+          const parts = providerData.location.split(',');
+          if (parts.length >= 2) {
+            const lat = parseFloat(parts[0].trim());
+            const lng = parseFloat(parts[1].trim());
+            if (!isNaN(lat) && !isNaN(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180) {
+              providerCoords = { latitude: lat, longitude: lng };
+              console.log(`Parsed provider coordinates: ${lat}, ${lng}`);
+            }
+          }
+        } else {
+          // Handle place names with fallback coordinates
+          console.log(`Provider has location as place name: ${providerData.location}`);
+          
+          // Use fallback coordinates for common locations
+          if (providerData.location.toLowerCase().includes('lahore')) {
+            providerCoords = { latitude: 31.5204, longitude: 74.3587 };
+          } else if (providerData.location.toLowerCase().includes('nashville')) {
+            providerCoords = { latitude: 36.1627, longitude: -86.7816 };
+          } else if (providerData.location.toLowerCase().includes('karachi')) {
+            providerCoords = { latitude: 24.8607, longitude: 67.0011 };
+          } else if (providerData.location.toLowerCase().includes('islamabad')) {
+            providerCoords = { latitude: 33.6844, longitude: 73.0479 };
+          } else {
+            // Default fallback to a central location
+            providerCoords = { latitude: 31.5204, longitude: 74.3587 }; // Lahore as default
+          }
+          
+          console.log(`Using fallback coordinates for ${providerData.location}: ${providerCoords.latitude}, ${providerCoords.longitude}`);
+        }
+
+        if (providerCoords) {
+          const radiusMeters = providerData.service_radius * 1609.34; // Convert miles to meters
+          
+          console.log(`Using PostGIS query with radius: ${radiusMeters} meters from ${providerCoords.latitude}, ${providerCoords.longitude}`);
+          
+          // Use PostGIS RPC for efficient filtering
+          const { data: nearbyRequests, error: rpcError } = await supabase
+            .rpc('nearby_requests', {
+              lat: providerCoords.latitude,
+              long: providerCoords.longitude,
+              radius_meters: radiusMeters,
+              provider_services: providerData.services && providerData.services.length > 0 ? providerData.services : null
+            });
+
+          if (rpcError) {
+            console.error('Error with PostGIS RPC:', rpcError);
+            throw rpcError; // Throw to trigger fallback
+          } else if (nearbyRequests) {
+            console.log(`PostGIS returned ${nearbyRequests.length} nearby requests`);
+            
+            // Transform the results to ServiceRequest format
+            const requests = nearbyRequests.map((dbRequest) => {
+              return transformDatabaseRequestToServiceRequest({
+                ...dbRequest,
+                coordinates: dbRequest.coordinates,
+                lead_fee_charged: false, // Default value
+                cancellation_reason: null,
+                cancelled_by: null,
+                accepted_at: null,
+                completed_at: null,
+                cancelled_at: null,
+                provider_id: null,
+                provider_name: null
+              });
+            });
+            
+            return requests;
+          }
+        }
+      } catch (error) {
+        console.error('Error with PostGIS query, falling back to local filtering:', error);
+      }
+    }
+
+    // Fallback: First get pending requests (old method)
+    console.log('Falling back to local filtering method');
     const { data: requestsData, error: requestsError } = await supabase
       .from('requests')
       .select('*')
@@ -245,7 +328,7 @@ export const fetchAvailableRequests = async (providerId?: string): Promise<Servi
       return serviceRequest;
     });
 
-    // Apply radius-based filtering if provider data is available
+    // Apply radius-based filtering if provider data is available (fallback)
     if (providerData && providerData.service_radius && providerData.location) {
       try {
         // Parse provider location coordinates
@@ -370,8 +453,47 @@ export const fetchAvailableRequests = async (providerId?: string): Promise<Servi
   }
 };
 
-// Fetch requests assigned to a specific service provider
-export const fetchProviderRequests = async (providerId: string): Promise<ServiceRequest[]> => {
+// Direct RPC function for finding nearby providers
+export const findNearbyProviders = async (
+  lat: number,
+  long: number,
+  radiusMeters: number
+) => {
+  const { data, error } = await supabase.rpc('nearby_locations', {
+    lat,
+    long,
+    radius_meters: radiusMeters
+  });
+
+  if (error) {
+    console.error('Error finding nearby providers:', error);
+    return [];
+  }
+
+  return data || [];
+};
+
+// Direct RPC function for finding nearby requests
+export const findNearbyRequests = async (
+  lat: number,
+  long: number,
+  radiusMeters: number,
+  providerServices?: string[]
+) => {
+  const { data, error } = await supabase.rpc('nearby_requests', {
+    lat,
+    long,
+    radius_meters: radiusMeters,
+    provider_services: providerServices
+  });
+
+  if (error) {
+    console.error('Error finding nearby requests:', error);
+    return [];
+  }
+
+  return data || [];
+};
   try {
     // First get provider's requests
     const { data: requestsData, error: requestsError } = await supabase
