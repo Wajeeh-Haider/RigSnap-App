@@ -3,27 +3,32 @@
 -- First, create the trigger function
 CREATE OR REPLACE FUNCTION public.trigger_push_notifications()
 RETURNS TRIGGER AS $$
+DECLARE
+  project_ref TEXT := 'YOUR_PROJECT_REF'; -- Replace with your actual project ref
+  service_role_key TEXT := 'YOUR_SERVICE_ROLE_KEY'; -- Replace with your actual service role key
 BEGIN
   -- Only trigger for INSERT operations and when status is 'pending'
   IF TG_OP = 'INSERT' AND NEW.status = 'pending' THEN
-    -- Call the edge function asynchronously using pg_net (if available)
-    -- Note: This requires the pg_net extension to be enabled
-    -- Alternative: Use supabase_functions.http_request if available
-    
-    -- For now, we'll use a simpler approach with webhooks
-    -- The actual HTTP call will be handled by a separate webhook trigger
-    
-    PERFORM pg_notify('new_request_created', json_build_object(
-      'request_id', NEW.id,
-      'trucker_id', NEW.trucker_id,
-      'service_type', NEW.service_type,
-      'coordinates', NEW.coordinates,
-      'location', NEW.location,
-      'urgency', NEW.urgency,
-      'description', NEW.description
-    )::text);
+    -- Call the edge function directly using supabase_functions.http_request
+    -- This will invoke the send-push-notifications edge function asynchronously
+
+    PERFORM supabase_functions.http_request(
+      'POST',
+      'https://' || project_ref || '.supabase.co/functions/v1/send-push-notifications',
+      jsonb_build_object(
+        'Content-Type', 'application/json',
+        'Authorization', 'Bearer ' || service_role_key
+      ),
+      jsonb_build_object(
+        'type', 'INSERT',
+        'table', 'requests',
+        'record', row_to_json(NEW)::jsonb,
+        'schema', 'public'
+      ),
+      '10000' -- 10 second timeout
+    );
   END IF;
-  
+
   RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

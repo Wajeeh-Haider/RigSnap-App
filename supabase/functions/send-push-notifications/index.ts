@@ -19,6 +19,13 @@ interface Coordinates {
   longitude: number
 }
 
+interface EmailPayload {
+  to: string
+  subject: string
+  html: string
+  from_name?: string
+}
+
 // Calculate distance between two coordinates using Haversine formula
 function calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const R = 6371; // Earth's radius in kilometers
@@ -68,6 +75,54 @@ async function sendPushNotification(pushToken: string, title: string, body: stri
   }
 }
 
+// Send email via backend API
+async function sendEmail(payload: EmailPayload) {
+  const backendUrl = Deno.env.get("EXPO_PUBLIC_BACKEND_URL")
+  if (!backendUrl) throw new Error("Backend URL not configured")
+
+  const res = await fetch(`${backendUrl}/api/send-email`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  })
+
+  if (!res.ok) {
+    const error = await res.text()
+    throw new Error(error)
+  }
+}
+
+// Generate email content for new request
+function generateEmail(request: any, customerName: string) {
+  return {
+    subject: `New Service Request - ${request.service_type}`,
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9;">
+        <div style="background-color: #ffffff; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
+          <h2 style="color: #2563eb; margin-bottom: 20px; text-align: center;">New Service Request</h2>
+          
+          <div style="background-color: #f0f9ff; padding: 15px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #2563eb;">
+            <p style="margin: 5px 0; color: #1e40af;"><strong>Customer:</strong> ${customerName}</p>
+            <p style="margin: 5px 0; color: #1e40af;"><strong>Service Type:</strong> ${request.service_type.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}</p>
+            <p style="margin: 5px 0; color: #1e40af;"><strong>Urgency:</strong> ${request.urgency ? request.urgency.charAt(0).toUpperCase() + request.urgency.slice(1) : 'Normal'}</p>
+            <p style="margin: 5px 0; color: #1e40af;"><strong>Location:</strong> ${request.location || "N/A"}</p>
+          </div>
+          
+          <div style="margin-bottom: 20px;">
+            <h3 style="color: #374151; margin-bottom: 10px;">Description:</h3>
+            <p style="color: #4b5563; line-height: 1.6; background-color: #f3f4f6; padding: 15px; border-radius: 6px;">${request.description || "No description provided"}</p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px;">
+            <p style="color: #6b7280; font-size: 14px;">Please respond promptly to this service request.</p>
+            <p style="color: #6b7280; font-size: 12px; margin-top: 10px;">Sent by RigSnap</p>
+          </div>
+        </div>
+      </div>
+    `,
+  }
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -92,35 +147,58 @@ serve(async (req) => {
 
     const newRequest = payload.record
     console.log('Processing new request:', newRequest.id)
+    console.log('Full request data:', JSON.stringify(newRequest, null, 2))
 
     // Parse request coordinates
     let requestCoords: Coordinates
     try {
+      console.log('Coordinates type:', typeof newRequest.coordinates)
+      console.log('Coordinates value:', newRequest.coordinates)
+      
       if (typeof newRequest.coordinates === 'string') {
         requestCoords = JSON.parse(newRequest.coordinates)
       } else {
         requestCoords = newRequest.coordinates
       }
+      
+      console.log('Parsed coordinates:', requestCoords)
     } catch (error) {
       console.error('Error parsing request coordinates:', error)
       return new Response(
-        JSON.stringify({ error: 'Invalid coordinates format' }), 
+        JSON.stringify({ error: 'Invalid coordinates format', details: error.message }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
 
-    if (!requestCoords.latitude || !requestCoords.longitude) {
-      console.error('Missing latitude or longitude in coordinates')
+    if (!requestCoords || !requestCoords.latitude || !requestCoords.longitude) {
+      console.error('Missing or invalid coordinates:', requestCoords)
       return new Response(
-        JSON.stringify({ error: 'Missing coordinates' }), 
+        JSON.stringify({ error: 'Missing coordinates', coordinates: requestCoords }), 
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
       )
     }
+
+    // Get customer name
+    const { data: customer, error: customerError } = await supabaseClient
+      .from('users')
+      .select('name')
+      .eq('id', newRequest.trucker_id)
+      .single()
+
+    if (customerError || !customer) {
+      console.error('Customer not found:', customerError)
+      return new Response(
+        JSON.stringify({ error: 'Customer not found' }), 
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
+      )
+    }
+
+    const customerName = customer.name
 
     // Find nearby service providers
     const { data: providers, error: providersError } = await supabaseClient
       .from('users')
-      .select('id, name, location, service_radius, services, push_token')
+      .select('id, name, location, service_radius, services, push_token, email')
       .eq('role', 'provider')
       .not('push_token', 'is', null)
       .not('service_radius', 'is', null)
@@ -224,7 +302,8 @@ serve(async (req) => {
               pushToken: provider.push_token,
               providerId: provider.id,
               providerName: provider.name,
-              distance: distance.toFixed(1)
+              distance: distance.toFixed(1),
+              email: provider.email
             })
           } else {
             console.log(`Provider ${provider.id} doesn't offer service type: ${requestServiceType}`)
@@ -241,7 +320,7 @@ serve(async (req) => {
     console.log(`Sending notifications to ${notificationsToSend.length} providers`)
 
     // Send push notifications to nearby providers
-    const notificationPromises = notificationsToSend.map(async ({ pushToken, providerId, providerName, distance }) => {
+    const notificationPromises = notificationsToSend.map(async ({ pushToken, providerId, providerName, distance, email }) => {
       try {
         const urgencyText = newRequest.urgency === 'high' ? '🚨 URGENT' : 
                            newRequest.urgency === 'medium' ? '⚡ Priority' : '📋 New'
@@ -262,6 +341,22 @@ serve(async (req) => {
           distance: distance,
           location: newRequest.location
         })
+
+        // Send email if available
+        if (email) {
+          try {
+            const { subject, html } = generateEmail(newRequest, customerName)
+            await sendEmail({
+              to: email,
+              subject,
+              html,
+              from_name: "RigSnap",
+            })
+            console.log(`Email sent to provider ${providerId}`)
+          } catch (emailError) {
+            console.error(`Failed to send email to provider ${providerId}:`, emailError)
+          }
+        }
 
         return { providerId, status: 'sent' }
       } catch (error) {

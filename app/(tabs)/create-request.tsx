@@ -645,7 +645,7 @@ export default function CreateRequestScreen() {
             </View>
           </View>
 
-          {coordinates && (
+          {/* {coordinates && (
             <View
               style={[
                 styles.coordinatesInfo,
@@ -661,9 +661,9 @@ export default function CreateRequestScreen() {
                 {formatCoordinates(coordinates.latitude, coordinates.longitude)}
               </Text>
             </View>
-          )}
+          )} */}
 
-          <View
+          {/* <View
             style={[
               styles.locationTip,
               {
@@ -675,7 +675,7 @@ export default function CreateRequestScreen() {
             <Text style={[styles.locationTipText, { color: colors.warning }]}>
               {t('create.locationTip')}
             </Text>
-          </View>
+          </View> */}
         </View>
 
         <View style={styles.section}>
