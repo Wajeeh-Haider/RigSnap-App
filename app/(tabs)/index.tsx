@@ -116,7 +116,7 @@ export default function HomeScreen() {
   const [availableRequests, setAvailableRequests] = React.useState<any[]>([]);
   const locationUpdatedRef = React.useRef(false);
   const lastLocationUpdateRef = React.useRef<number>(0);
-  
+
   // Refresh data when screen comes into focus
   useFocusEffect(
     React.useCallback(() => {
@@ -124,7 +124,7 @@ export default function HomeScreen() {
       locationUpdatedRef.current = false;
       refreshRequests();
       loadAvailableRequests();
-    }, [refreshRequests, loadAvailableRequests])
+    }, [refreshRequests, loadAvailableRequests]),
   );
 
   // Load available requests for providers
@@ -133,7 +133,7 @@ export default function HomeScreen() {
       setAvailableRequests([]);
       return;
     }
-    
+
     try {
       // Update provider's location with current live location for radius filtering
       // Only update if location has changed significantly and enough time has passed
@@ -142,17 +142,25 @@ export default function HomeScreen() {
           const currentLocation = await locationService.getCurrentPosition();
           const coords = `${currentLocation.coords.latitude},${currentLocation.coords.longitude}`;
           const now = Date.now();
-          
+
           // Skip update if location hasn't changed or updated recently (within 5 minutes)
-          if (coords !== user.location && (now - lastLocationUpdateRef.current) > 5 * 60 * 1000) {
+          if (
+            coords !== user.location &&
+            now - lastLocationUpdateRef.current > 5 * 60 * 1000
+          ) {
             // Update the provider's location in database
             await updateProfile({ location: coords });
             lastLocationUpdateRef.current = now;
-            console.log('Updated provider live location for radius filtering:', coords);
+            console.log(
+              'Updated provider live location for radius filtering:',
+              coords,
+            );
           } else {
-            console.log('Location unchanged or updated recently, skipping update');
+            console.log(
+              'Location unchanged or updated recently, skipping update',
+            );
           }
-          
+
           locationUpdatedRef.current = true;
         } catch (locationError) {
           console.error('Failed to get/update live location:', locationError);
@@ -166,7 +174,13 @@ export default function HomeScreen() {
       console.error('Error loading available requests:', error);
       setAvailableRequests([]);
     }
-  }, [user?.id, user?.role, user?.location, getAvailableRequests, updateProfile]);
+  }, [
+    user?.id,
+    user?.role,
+    user?.location,
+    getAvailableRequests,
+    updateProfile,
+  ]);
 
   // Load available requests on mount and when user changes
   React.useEffect(() => {
@@ -185,7 +199,7 @@ export default function HomeScreen() {
       setRefreshing(false);
     }
   }, [refreshRequests, loadAvailableRequests]);
-  
+
   if (!user) return null;
 
   const isTrucker = user.role === 'trucker';
@@ -205,13 +219,13 @@ export default function HomeScreen() {
         (r) =>
           r.status === 'pending' ||
           r.status === 'accepted' ||
-          r.status === 'in_progress'
+          r.status === 'in_progress',
       );
       return pendingRequests.length;
     } else {
       // For providers: count available requests + accepted/in_progress jobs
       const activeJobs = getProviderRequests(user.id).filter(
-        (r) => r.status === 'accepted' || r.status === 'in_progress'
+        (r) => r.status === 'accepted' || r.status === 'in_progress',
       );
       return availableRequests.length + activeJobs.length;
     }
@@ -248,7 +262,7 @@ https://rigsnap.app/download?ref=${referralCode}`;
           `Your referral code is ${referralCode}. You&apos;ll earn $10 credit for each friend who joins and completes their first ${
             isTrucker ? 'service request' : 'job'
           }!`,
-          [{ text: 'Awesome!' }]
+          [{ text: 'Awesome!' }],
         );
       }
     } catch {
@@ -257,7 +271,7 @@ https://rigsnap.app/download?ref=${referralCode}`;
         `Invite friends to join RigSnap!\n\nYour referral code: ${referralCode}\n\nShare this code with friends and you&apos;ll both get $10 credit when they complete their first ${
           isTrucker ? 'service request' : 'job'
         }!`,
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
     }
   };
@@ -267,7 +281,7 @@ https://rigsnap.app/download?ref=${referralCode}`;
       Alert.alert(
         'Notifications',
         'You have no pending notifications at this time.',
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
       return;
     }
@@ -277,14 +291,14 @@ https://rigsnap.app/download?ref=${referralCode}`;
         (r) =>
           r.status === 'pending' ||
           r.status === 'accepted' ||
-          r.status === 'in_progress'
+          r.status === 'in_progress',
       );
 
       const pendingCount = pendingRequests.filter(
-        (r) => r.status === 'pending'
+        (r) => r.status === 'pending',
       ).length;
       const activeCount = pendingRequests.filter(
-        (r) => r.status === 'accepted' || r.status === 'in_progress'
+        (r) => r.status === 'accepted' || r.status === 'in_progress',
       ).length;
 
       let message = '';
@@ -314,8 +328,8 @@ https://rigsnap.app/download?ref=${referralCode}`;
                 .map(
                   (r) =>
                     `• ${getServiceDisplayName(
-                      r.serviceType
-                    )} - ${r.status.toUpperCase()}`
+                      r.serviceType,
+                    )} - ${r.status.toUpperCase()}`,
                 )
                 .join('\n');
 
@@ -328,17 +342,17 @@ https://rigsnap.app/download?ref=${referralCode}`;
                     text: 'Create New Request',
                     onPress: () => router.push('/create-request'),
                   },
-                ]
+                ],
               );
             },
           },
           { text: 'OK', style: 'cancel' },
-        ]
+        ],
       );
     } else {
       const availableCount = getAvailableRequests().length;
       const activeJobs = getProviderRequests(user.id).filter(
-        (r) => r.status === 'accepted' || r.status === 'in_progress'
+        (r) => r.status === 'accepted' || r.status === 'in_progress',
       );
 
       let message = '';
@@ -364,7 +378,7 @@ https://rigsnap.app/download?ref=${referralCode}`;
             onPress: () => router.push('/browse-requests'),
           },
           { text: 'OK', style: 'cancel' },
-        ]
+        ],
       );
     }
   };
@@ -377,7 +391,10 @@ https://rigsnap.app/download?ref=${referralCode}`;
       }
       // Error alert is already shown in cancelRequest if payment fails
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'Failed to cancel request. Please try again.');
+      Alert.alert(
+        'Error',
+        error.message || 'Failed to cancel request. Please try again.',
+      );
     }
   };
 
@@ -521,7 +538,9 @@ https://rigsnap.app/download?ref=${referralCode}`;
                       ]}
                     >
                       <StatusIcon size={12} color="white" />
-                      <Text style={styles.statusText}>{request.status.replace('_', ' ').toUpperCase()}</Text>
+                      <Text style={styles.statusText}>
+                        {request.status.replace('_', ' ').toUpperCase()}
+                      </Text>
                     </View>
                   </View>
                   <Text
@@ -669,7 +688,9 @@ https://rigsnap.app/download?ref=${referralCode}`;
                       ]}
                     >
                       <StatusIcon size={12} color="white" />
-                      <Text style={styles.statusText}>{request.status.replace('_', ' ').toUpperCase()}</Text>
+                      <Text style={styles.statusText}>
+                        {request.status.replace('_', ' ').toUpperCase()}
+                      </Text>
                     </View>
                   </View>
                   <View style={styles.requestActions}>
@@ -705,20 +726,20 @@ https://rigsnap.app/download?ref=${referralCode}`;
                             [
                               {
                                 text: 'Cancel',
-                                style: 'cancel'
+                                style: 'cancel',
                               },
                               {
                                 text: 'Confirm',
                                 style: 'destructive',
-                                onPress: (reason:any) => {
+                                onPress: (reason: any) => {
                                   if (reason) {
                                     handleCancelRequest(request.id, reason);
                                   }
-                                }
-                              }
+                                },
+                              },
                             ],
                             'plain-text',
-                            ''
+                            '',
                           );
                         }}
                       >
@@ -829,29 +850,29 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   notificationIconContainer: {
-  position: 'relative',
-  padding: 8,
-  borderRadius: 20,
-},
+    position: 'relative',
+    padding: 8,
+    borderRadius: 20,
+  },
 
-notificationBadge: {
-  position: 'absolute',
-  top: 0,
-  right: 0,
-  backgroundColor: '#ef4444',
-  borderRadius: 20,
-  minWidth: 20,
-  height: 20,
-  paddingHorizontal: 6,       // allows width to grow for 3 digits
-  alignItems: 'center',
-  justifyContent: 'center',
-},
+  notificationBadge: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    backgroundColor: '#ef4444',
+    borderRadius: 20,
+    minWidth: 20,
+    height: 20,
+    paddingHorizontal: 6, // allows width to grow for 3 digits
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 
-notificationCount: {
-  color: 'white',
-  fontSize: 10,               // smaller to fit 3 digits
-  fontWeight: 'bold',
-},
+  notificationCount: {
+    color: 'white',
+    fontSize: 10, // smaller to fit 3 digits
+    fontWeight: 'bold',
+  },
 
   section: {
     padding: 24,
@@ -873,8 +894,8 @@ notificationCount: {
   },
   actionButtonsContainer: {
     flexDirection: 'row',
-    marginBottom:-16,
-    marginTop:10,
+    marginBottom: -16,
+    marginTop: 10,
     gap: 12,
   },
   actionButton: {
