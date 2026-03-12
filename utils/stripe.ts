@@ -218,6 +218,17 @@ export const createPaymentMethodInDB = async (
   isDefault: boolean = false
 ): Promise<{ success: boolean; error?: string; data?: PaymentMethod }> => {
   try {
+    const { count, error: countError } = await supabase
+      .from('payment_methods')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId);
+
+    if (countError) {
+      return { success: false, error: countError.message };
+    }
+
+    const shouldBeDefault = isDefault || (count ?? 0) === 0;
+
     const { data, error } = await supabase
       .from('payment_methods')
       .insert({
@@ -228,7 +239,7 @@ export const createPaymentMethodInDB = async (
         exp_month: expMonth,
         exp_year: expYear,
         cardholder_name: cardholderName,
-        is_default: isDefault,
+        is_default: shouldBeDefault,
       })
       .select()
       .single();

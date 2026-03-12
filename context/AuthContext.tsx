@@ -28,6 +28,7 @@ interface AuthContextType {
     email: string
   ) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
+  deleteAccount: () => Promise<{ success: boolean; error?: string }>;
   updateProfile: (
     updates: Partial<User>
   ) => Promise<{ success: boolean; error?: string }>;
@@ -663,6 +664,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const deleteAccount = async (): Promise<{
+    success: boolean;
+    error?: string;
+  }> => {
+    if (!user) {
+      return { success: false, error: 'No user logged in' };
+    }
+
+    try {
+      const { error } = await supabase.rpc('delete_my_account');
+
+      if (error) {
+        console.error('Delete account error:', error);
+
+        if (error.message.includes('Could not find the function')) {
+          return {
+            success: false,
+            error:
+              'Delete account is not enabled in Supabase yet. Run the SQL migration first.',
+          };
+        }
+
+        return { success: false, error: error.message };
+      }
+
+      try {
+        await supabase.auth.signOut();
+      } catch (signOutError) {
+        console.warn('Sign out after account deletion failed:', signOutError);
+      }
+
+      setUser(null);
+      return { success: true };
+    } catch (error: any) {
+      console.error('Delete account exception:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to delete account',
+      };
+    }
+  };
+
   const updateProfile = async (
     updates: Partial<User>
   ): Promise<{ success: boolean; error?: string }> => {
@@ -818,6 +861,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         verifyOtp,
         resendOtp,
         logout,
+        deleteAccount,
         updateProfile,
       }}
     >

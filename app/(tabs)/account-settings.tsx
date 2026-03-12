@@ -47,7 +47,7 @@ interface NotificationSettings {
 }
 
 export default function AccountSettingsScreen() {
-  const { user, updateProfile } = useAuth();
+  const { user, updateProfile, deleteAccount } = useAuth();
   const { isDarkMode, toggleDarkMode, followDeviceTheme, toggleFollowDeviceTheme, colors } = useTheme();
   const { currentLanguage, setLanguage, languages, getCurrentLanguage } =
     useLanguage();
@@ -203,15 +203,16 @@ export default function AccountSettingsScreen() {
 
     setIsDeletingAccount(true);
     try {
-      // Simulate API call for account deletion
-      await new Promise((resolve) => setTimeout(resolve, 3000));
+      const result = await deleteAccount();
 
-      // In a real app, this would:
-      // 1. Delete user data from database
-      // 2. Cancel any active requests/jobs
-      // 3. Process any pending payments/refunds
-      // 4. Delete the auth user account
-      // 5. Sign out the user
+      if (!result.success) {
+        Alert.alert(
+          'Error',
+          result.error ||
+            'Failed to delete account. Please try again or contact support.'
+        );
+        return;
+      }
 
       Alert.alert(
         'Account Deleted',
@@ -220,7 +221,6 @@ export default function AccountSettingsScreen() {
           {
             text: 'OK',
             onPress: () => {
-              // In a real app, this would sign out and redirect to login
               router.replace('/(auth)/login');
             },
           },

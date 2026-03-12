@@ -95,14 +95,6 @@ export default function AddPaymentMethodScreen() {
       const expMonth = paymentMethod.Card?.expMonth || 0;
       const expYear = paymentMethod.Card?.expYear || 0;
 
-      // We don't check for first card here as cleanly as in profile,
-      // but the backend or service usually handles default logic or we can refine it.
-      // For now, we'll pass false for isFirstCard or let the service handle logic if possible.
-      // Looking at profile.tsx, it checks local state length.
-      // We can fetch methods or just pass false/true if we knew.
-      // Safe bet: false, user can set default later, or service handles it.
-      const isFirstCard = false;
-
       const result = await paymentMethodService.addPaymentMethod(
         user.id,
         paymentMethod.id,
@@ -110,8 +102,7 @@ export default function AddPaymentMethodScreen() {
         last4,
         expMonth,
         expYear,
-        newCard.name,
-        isFirstCard
+        newCard.name
       );
 
       if (result.success) {
