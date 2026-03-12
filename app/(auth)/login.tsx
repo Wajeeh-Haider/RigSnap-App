@@ -53,7 +53,9 @@ export default function LoginScreen() {
             {
               text: 'Verify Email',
               onPress: () => {
-                router.push(`/(auth)/verify-otp?email=${encodeURIComponent(email)}`);
+                router.push(
+                  `/(auth)/verify-otp?email=${encodeURIComponent(email)}&autoSend=true`
+                );
               },
             },
           ]

@@ -244,6 +244,7 @@ export default function SignupScreen() {
           pathname: '/(auth)/verify-otp',
           params: {
             email: formData.email,
+            autoSend: 'false',
           },
         });
       } else {

@@ -24,8 +24,9 @@ import {
 } from 'lucide-react-native';
 
 export default function VerifyOtpScreen() {
-  const { email } = useLocalSearchParams<{
+  const { email, autoSend } = useLocalSearchParams<{
     email: string;
+    autoSend?: string;
   }>();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,6 +37,7 @@ export default function VerifyOtpScreen() {
   const { verifyOtp, resendOtp } = useAuth();
   const { colors } = useTheme();
   const inputRefs = useRef<TextInput[]>([]);
+  const hasAutoSentRef = useRef(false);
 
   useEffect(() => {
     if (!email) {
@@ -44,7 +46,12 @@ export default function VerifyOtpScreen() {
       return;
     }
 
-    // Auto-send OTP when component mounts (for users redirected from login)
+    if (autoSend !== 'true' || hasAutoSentRef.current) {
+      return;
+    }
+
+    hasAutoSentRef.current = true;
+
     const autoSendOtp = async () => {
       try {
         console.log('Auto-sending OTP for unverified user:', email);
@@ -61,6 +68,10 @@ export default function VerifyOtpScreen() {
 
     autoSendOtp();
 
+    return undefined;
+  }, [autoSend, email, resendOtp]);
+
+  useEffect(() => {
     // Start countdown timer
     const timer = setInterval(() => {
       setResendTimer((prev) => {
@@ -73,7 +84,7 @@ export default function VerifyOtpScreen() {
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [email, resendOtp]);
+  }, []);
 
   const handleOtpChange = (value: string, index: number) => {
     if (value.length > 1) {
@@ -192,18 +203,27 @@ export default function VerifyOtpScreen() {
               <Mail size={48} color={colors.primary} />
             </View>
 
-            <Text style={[styles.heading, { color: colors.text }]}>
+            <Text style={[styles.heading, { color: colors.text }]}> 
               Check your email
             </Text>
-            
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          We've sent a 6-digit verification code to{'\n'}
-          <Text style={{ color: colors.primary, fontWeight: '600' }}>{email}</Text>
-          {'\n\n'}
-          <Text style={{ fontSize: 14, color: colors.textSecondary }}>
-            Please verify your email to continue using RigSnap
-          </Text>
-        </Text>            <View style={styles.otpContainer}>
+
+            <Text style={[styles.subtitle, { color: colors.textSecondary }]}> 
+              We've sent a 6-digit verification code to
+            </Text>
+            <Text style={[styles.emailText, { color: colors.primary }]}> 
+              {email}
+            </Text>
+            <Text
+              style={[
+                styles.subtitle,
+                styles.subtitleSpacing,
+                { color: colors.textSecondary },
+              ]}
+            >
+              Please verify your email to continue using RigSnap
+            </Text>
+
+            <View style={styles.otpContainer}>
               {otp.map((digit, index) => (
                 <TextInput
                   key={index}
@@ -344,6 +364,15 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     marginBottom: 32,
     lineHeight: 24,
+  },
+  subtitleSpacing: {
+    marginBottom: 24,
+  },
+  emailText: {
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+    marginBottom: 12,
   },
   otpContainer: {
     flexDirection: 'row',
