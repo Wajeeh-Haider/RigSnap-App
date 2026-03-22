@@ -10,6 +10,7 @@ import {
   refundTrucker,
   PaymentMethod,
 } from './stripe';
+import { useCreditsForPayment, addCreditsToUser } from './creditOperations';
 
 export interface PaymentMethodService {
   fetchUserPaymentMethods: (userId: string) => Promise<PaymentMethod[]>;
@@ -92,14 +93,16 @@ export const paymentMethodService: PaymentMethodService = {
 export const requestService: RequestService = {
   createRequestWithPayment: async (requestData: any, userId: string) => {
     try {
-      // Get user's default payment method
-      const defaultPaymentMethod = await getDefaultPaymentMethod(userId);
+      // Note: For request creation, we currently don't charge any fees
+      // Users can create requests without payment methods or credits
+      // Fees are only charged when the request is accepted by a provider
 
+      // Check for default payment method before creating request
+      const defaultPaymentMethod = await getDefaultPaymentMethod(userId);
       if (!defaultPaymentMethod) {
         return {
           success: false,
-          error:
-            'No default payment method found. Please add a payment method first.',
+          error: 'Please add a default payment method before creating a request.',
         };
       }
 
@@ -188,15 +191,33 @@ export const requestService: RequestService = {
         };
       }
 
-      // Get provider's default payment method
-      const defaultPaymentMethod = await getDefaultPaymentMethod(providerId);
-
-      if (!defaultPaymentMethod) {
+      // ALWAYS require a default payment method for accepting a request
+      const providerPaymentMethod = await getDefaultPaymentMethod(providerId);
+      if (!providerPaymentMethod) {
         return {
           success: false,
-          error:
-            'No default payment method found. Please add a payment method first.',
+          error: 'Please add a default payment method before accepting a request.',
         };
+      }
+
+      // Check if user credits are sufficient - but we still required the payment method above
+      const { getUserCredits } = await import('./creditOperations');
+      const truckerCredits = await getUserCredits(currentRequest.trucker_id);
+      
+      const truckerAmount = 5.0;
+      const providerAmount = 5.0;
+      
+      const truckerHasSufficientCredits = (truckerCredits?.balance || 0) >= truckerAmount;
+      
+      // Still require trucker to have a payment method if they don't have credits
+      if (!truckerHasSufficientCredits) {
+        const truckerPaymentMethod = await getDefaultPaymentMethod(currentRequest.trucker_id);
+        if (!truckerPaymentMethod) {
+          return {
+            success: false,
+            error: 'Trucker has insufficient credits and no payment method. Request cannot be accepted.',
+          };
+        }
       }
 
       // NEW FLOW: First charge the trucker $5
@@ -206,21 +227,40 @@ export const requestService: RequestService = {
         requestStatus: currentRequest.status,
       });
       
-      // Check if trucker has any existing acceptance_fee transactions for this request
-      const { data: existingTransactions } = await supabase
-        .from('payment_transactions')
-        .select('id, status, transaction_type, amount_cents, created_at')
-        .eq('user_id', currentRequest.trucker_id)
-        .eq('request_id', requestId)
-        .eq('transaction_type', 'acceptance_fee')
-        .order('created_at', { ascending: false });
-      
-      console.log('🔄 Existing acceptance_fee transactions for trucker:', existingTransactions);
-      
-      const truckerPaymentResult = await chargeTruckerForRequest(
+      // Try to use credits first for trucker payment
+      const truckerCreditResult = await useCreditsForPayment(
         currentRequest.trucker_id,
+        truckerAmount,
+        'RigSnap Acceptance Fee (Trucker)', // Description (not used by DB function)
         requestId
       );
+      
+      let truckerPaymentResult: any = { success: false };
+      
+      if (truckerCreditResult.success && truckerCreditResult.remainingAmount === 0) {
+        // Payment fully covered by credits
+        console.log('Trucker payment fully covered by credits:', truckerCreditResult.creditsUsed);
+        truckerPaymentResult = { success: true, payment_intent_id: null };
+      } else if (truckerCreditResult.success && truckerCreditResult.remainingAmount > 0) {
+        // Partial payment with credits, charge remaining amount via Stripe
+        console.log('Partial payment with credits:', {
+          creditsUsed: truckerCreditResult.creditsUsed,
+          remainingAmount: truckerCreditResult.remainingAmount
+        });
+        truckerPaymentResult = await chargeTruckerForRequest(
+          currentRequest.trucker_id,
+          requestId,
+          truckerCreditResult.remainingAmount
+        );
+      } else {
+        // No credits available, charge full amount via Stripe
+        truckerPaymentResult = await chargeTruckerForRequest(
+          currentRequest.trucker_id,
+          requestId,
+          truckerAmount
+        );
+      }
+      
       console.log('Trucker payment result:', truckerPaymentResult);
 
       // If payment failed, check if it's because of insufficient funds or card issues
@@ -279,10 +319,41 @@ export const requestService: RequestService = {
         providerId,
         requestId,
       });
-      const providerPaymentResult = await chargeProviderForAcceptance(
+      
+      // Try to use credits first for provider payment
+      const providerCreditResult = await useCreditsForPayment(
         providerId,
+        providerAmount,
+        'RigSnap Acceptance Fee (Provider)', // Description (not used by DB function)
         requestId
       );
+      
+      let providerPaymentResult: any = { success: false };
+      
+      if (providerCreditResult.success && providerCreditResult.remainingAmount === 0) {
+        // Payment fully covered by credits
+        console.log('Provider payment fully covered by credits:', providerCreditResult.creditsUsed);
+        providerPaymentResult = { success: true, payment_intent_id: null };
+      } else if (providerCreditResult.success && providerCreditResult.remainingAmount > 0) {
+        // Partial payment with credits, charge remaining amount via Stripe
+        console.log('Partial payment with credits:', {
+          creditsUsed: providerCreditResult.creditsUsed,
+          remainingAmount: providerCreditResult.remainingAmount
+        });
+        providerPaymentResult = await chargeProviderForAcceptance(
+          providerId,
+          requestId,
+          providerCreditResult.remainingAmount
+        );
+      } else {
+        // No credits available, charge full amount via Stripe
+        providerPaymentResult = await chargeProviderForAcceptance(
+          providerId,
+          requestId,
+          providerAmount
+        );
+      }
+      
       console.log('Provider payment result:', providerPaymentResult);
 
       if (!providerPaymentResult.success) {
@@ -290,11 +361,34 @@ export const requestService: RequestService = {
         
         // REFUND LOGIC: If provider payment fails, refund the trucker
         console.log('🔄 Refunding trucker due to provider payment failure');
-        const refundResult = await refundTrucker(
-          currentRequest.trucker_id,
-          requestId,
-          500 // $5.00 refund
-        );
+        
+        // Refund both Stripe payment and credits if applicable
+        let refundResult: any = { success: true };
+        
+        // If trucker was charged via Stripe, refund that
+        if (truckerPaymentResult.payment_intent_id) {
+          const stripeRefundResult = await refundTrucker(
+            currentRequest.trucker_id,
+            requestId,
+            Math.round(truckerCreditResult.remainingAmount * 100) // Convert to cents
+          );
+          refundResult = stripeRefundResult;
+        }
+        
+        // If trucker paid with credits, refund those credits
+        if (truckerCreditResult.success && truckerCreditResult.creditsUsed > 0) {
+          const creditRefundResult = await addCreditsToUser(
+            currentRequest.trucker_id,
+            truckerCreditResult.creditsUsed,
+            'refund',
+            `Refund for failed request acceptance - Request #${requestId}`,
+            requestId
+          );
+          
+          if (!creditRefundResult.success) {
+            console.error('Failed to refund credits to trucker:', creditRefundResult.error);
+          }
+        }
         
         if (refundResult.success) {
           console.log('✅ Trucker refund successful');
@@ -408,27 +502,36 @@ export const requestService: RequestService = {
 
       console.log('📊 Updated request data:', updateData[0]);
 
-      // Create provider payment transaction record
-      const { error: transactionError } = await supabase
-        .from('payment_transactions')
-        .insert({
-          user_id: providerId,
-          request_id: requestId,
-          payment_method_id: defaultPaymentMethod.id,
-          stripe_payment_intent_id: providerPaymentResult.payment_intent_id || '',
-          amount_cents: 500, // $5.00 in cents
-          description: `RigSnap Acceptance Fee (Provider) - Request #${requestId}`,
-          transaction_type: 'acceptance_fee',
-          user_role: 'provider',
-          status: 'succeeded',
-        });
+      // Only create payment transaction record if there was an actual Stripe payment
+      if (providerPaymentResult.payment_intent_id) {
+        console.log('💳 Creating Stripe payment transaction record');
+        
+        // Get provider's payment method for transaction record
+        const providerPaymentMethod = await getDefaultPaymentMethod(providerId);
+        
+        const { error: transactionError } = await supabase
+          .from('payment_transactions')
+          .insert({
+            user_id: providerId,
+            request_id: requestId,
+            payment_method_id: providerPaymentMethod?.id || null,
+            stripe_payment_intent_id: providerPaymentResult.payment_intent_id,
+            amount_cents: 500, // $5.00 in cents
+            description: `RigSnap Acceptance Fee (Provider) - Request #${requestId}`,
+            transaction_type: 'acceptance_fee',
+            user_role: 'provider',
+            status: 'succeeded',
+          });
 
-      if (transactionError) {
-        console.error(
-          'Error creating payment transaction record:',
-          transactionError
-        );
-        // Don't fail the acceptance for this
+        if (transactionError) {
+          console.error(
+            'Error creating payment transaction record:',
+            transactionError
+          );
+          // Don't fail the acceptance for this
+        }
+      } else {
+        console.log('💰 Payment covered by credits - no Stripe transaction record needed');
       }
 
       return { success: true };

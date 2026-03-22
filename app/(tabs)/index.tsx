@@ -14,6 +14,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
+import { getUserCredits, getUserReferralCode } from '@/utils/creditOperations';
 import { router } from 'expo-router';
 import { locationService } from '@/utils/location';
 import {
@@ -114,6 +115,8 @@ export default function HomeScreen() {
   const { t } = useLanguage();
   const [refreshing, setRefreshing] = React.useState(false);
   const [availableRequests, setAvailableRequests] = React.useState<any[]>([]);
+  const [referralCode, setReferralCode] = React.useState<string | null>(null);
+  const [userCredits, setUserCredits] = React.useState<number>(0);
   const locationUpdatedRef = React.useRef(false);
   const lastLocationUpdateRef = React.useRef<number>(0);
 
@@ -124,8 +127,30 @@ export default function HomeScreen() {
       locationUpdatedRef.current = false;
       refreshRequests();
       loadAvailableRequests();
+      loadReferralData();
     }, [refreshRequests, loadAvailableRequests]),
   );
+
+  // Load referral code and credit balance
+  const loadReferralData = React.useCallback(async () => {
+    if (!user) return;
+
+    try {
+      const [code, credits] = await Promise.all([
+        getUserReferralCode(user.id),
+        getUserCredits(user.id),
+      ]);
+
+      setReferralCode(code);
+      setUserCredits(credits?.balance || 0);
+    } catch (error) {
+      console.error('Error loading referral data:', error);
+      // Generate fallback code if database call fails
+      const fallbackCode = `${user.firstName.toUpperCase().slice(0, 4)}${user.id.slice(-4)}`;
+      setReferralCode(fallbackCode);
+      setUserCredits(0);
+    }
+  }, [user?.id]);
 
   // Load available requests for providers
   const loadAvailableRequests = React.useCallback(async () => {
@@ -193,12 +218,13 @@ export default function HomeScreen() {
     try {
       await refreshRequests();
       await loadAvailableRequests();
+      await loadReferralData();
     } catch (error) {
       console.error('Error refreshing data:', error);
     } finally {
       setRefreshing(false);
     }
-  }, [refreshRequests, loadAvailableRequests]);
+  }, [refreshRequests, loadAvailableRequests, loadReferralData]);
 
   if (!user) return null;
 
@@ -233,7 +259,11 @@ export default function HomeScreen() {
 
   const notificationCount = getNotificationCount();
   const handleReferFriend = async () => {
-    const referralCode = `${user.firstName.toUpperCase()}${user.id.slice(-4)}`;
+    if (!referralCode) {
+      Alert.alert('Error', 'Referral code not available. Please try again.');
+      return;
+    }
+
     const referralMessage = `🚛 Join me on RigSnap - the best platform connecting truckers with reliable service providers!
 
 ${
@@ -244,11 +274,7 @@ ${
 
 Use my referral code: ${referralCode}
 
-Download RigSnap today and get $10 credit when you complete your first ${
-      isTrucker ? 'service request' : 'job'
-    }!
-
-https://rigsnap.app/download?ref=${referralCode}`;
+Download RigSnap today and get $10 credit when you sign up!`;
 
     try {
       const result = await Share.share({
@@ -259,18 +285,14 @@ https://rigsnap.app/download?ref=${referralCode}`;
       if (result.action === Share.sharedAction) {
         Alert.alert(
           'Thanks for Sharing! 🎉',
-          `Your referral code is ${referralCode}. You&apos;ll earn $10 credit for each friend who joins and completes their first ${
-            isTrucker ? 'service request' : 'job'
-          }!`,
+          `Your referral code is ${referralCode}. You'll earn $10 credit for each friend who joins using your code!`,
           [{ text: 'Awesome!' }],
         );
       }
     } catch {
       Alert.alert(
         'Share RigSnap',
-        `Invite friends to join RigSnap!\n\nYour referral code: ${referralCode}\n\nShare this code with friends and you&apos;ll both get $10 credit when they complete their first ${
-          isTrucker ? 'service request' : 'job'
-        }!`,
+        `Invite friends to join RigSnap!\n\nYour referral code: ${referralCode}\n\nShare this code with friends and you'll both get $10 credit when they sign up!`,
         [{ text: 'OK' }],
       );
     }
@@ -491,6 +513,44 @@ https://rigsnap.app/download?ref=${referralCode}`;
             </TouchableOpacity>
           )}
         </View>
+      </View>
+
+      {/* Referral Section */}
+      <View style={styles.section}>
+        <TouchableOpacity
+          style={[
+            styles.referralCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+          onPress={handleReferFriend}
+        >
+          <View style={styles.referralContent}>
+            <View style={styles.referralIcon}>
+              <Gift size={24} color="#2563eb" />
+            </View>
+            <View style={styles.referralTextContainer}>
+              <Text style={[styles.referralMainText, { color: colors.text }]}>
+                You both get $10!
+              </Text>
+              <Text
+                style={[
+                  styles.referralSubText,
+                  { color: colors.textSecondary },
+                ]}
+              >
+                Your referral code: {referralCode || 'Loading...'}
+              </Text>
+              {userCredits > 0 && (
+                <Text style={[styles.referralCredits, { color: '#10b981' }]}>
+                  Credits: ${userCredits.toFixed(2)}
+                </Text>
+              )}
+            </View>
+            <View style={styles.referralArrow}>
+              <Users size={20} color="#2563eb" />
+            </View>
+          </View>
+        </TouchableOpacity>
       </View>
 
       {!isTrucker && availableRequests.length > 0 && (
@@ -806,7 +866,7 @@ https://rigsnap.app/download?ref=${referralCode}`;
       </View>
 
       {/* Refer a Friend Button - Moved to bottom and made thinner */}
-      <View style={styles.referSection}>
+      {/* <View style={styles.referSection}>
         <TouchableOpacity
           style={styles.referButton}
           onPress={handleReferFriend}
@@ -824,7 +884,7 @@ https://rigsnap.app/download?ref=${referralCode}`;
             </View>
           </View>
         </TouchableOpacity>
-      </View>
+      </View> */}
     </ScrollView>
   );
 }
@@ -1085,86 +1145,180 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 4,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
   },
   emptyStateSubtext: {
     fontSize: 14,
-    textAlign: 'center',
     marginBottom: 16,
-    lineHeight: 20,
+    textAlign: 'center',
   },
   emptyStateButton: {
     flexDirection: 'row',
     alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
     borderRadius: 8,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    gap: 6,
+    gap: 8,
   },
   emptyStateButtonText: {
     color: 'white',
+    fontWeight: '600',
     fontSize: 14,
-    fontWeight: '500',
   },
-  // Refer a Friend Section - Moved to bottom and made thinner
   referSection: {
     padding: 24,
-    paddingTop: 8,
+    paddingTop: 0,
     paddingBottom: 32,
   },
   referButton: {
-    backgroundColor: '#7c3aed',
     borderRadius: 12,
+    backgroundColor: '#7c3aed',
     padding: 16,
     shadowColor: '#7c3aed',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
-    shadowRadius: 6,
+    shadowRadius: 4,
     elevation: 4,
   },
   referButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
-    position: 'relative',
+    justifyContent: 'center',
   },
   referIconContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
     marginRight: 12,
   },
   referTextContainer: {
     flex: 1,
   },
   referTitle: {
+    color: 'white',
     fontSize: 14,
     fontWeight: 'bold',
-    color: 'white',
-    marginBottom: 2,
   },
   referSubtitle: {
-    fontSize: 11,
     color: 'rgba(255, 255, 255, 0.8)',
-    lineHeight: 14,
+    fontSize: 11,
   },
   giftBadge: {
-    position: 'absolute',
-    top: -6,
-    right: 8,
-    width: 24,
-    height: 24,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 6,
+    borderRadius: 8,
+  },
+  // Referral section styles
+  // Referral Card styles
+  referralCard: {
     borderRadius: 12,
-    backgroundColor: 'white',
-    alignItems: 'center',
-    justifyContent: 'center',
+    padding: 16,
+    borderWidth: 1,
     shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  referralContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  referralIcon: {
+    marginRight: 12,
+  },
+  referralTextContainer: {
+    flex: 1,
+  },
+  referralMainText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  referralSubText: {
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  referralCredits: {
+    fontSize: 12,
+    fontWeight: 'bold',
+    marginTop: 2,
+  },
+  referralArrow: {
+    marginLeft: 12,
+  },
+  emptyState: {
+    borderRadius: 12,
+    padding: 32,
+    alignItems: 'center',
+    borderWidth: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  emptyStateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 8,
+    gap: 8,
+  },
+  emptyStateButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  referSection: {
+    padding: 24,
+    paddingTop: 0,
+    paddingBottom: 32,
+  },
+  referButton: {
+    borderRadius: 12,
+    backgroundColor: '#7c3aed',
+    padding: 16,
+    shadowColor: '#7c3aed',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
+  },
+  referButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  referIconContainer: {
+    marginRight: 12,
+  },
+  referTextContainer: {
+    flex: 1,
+  },
+  referTitle: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  referSubtitle: {
+    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 11,
+  },
+  giftBadge: {
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    padding: 6,
+    borderRadius: 8,
   },
 });

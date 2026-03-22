@@ -36,6 +36,7 @@ import {
 import LocationButton from '@/components/LocationButton';
 import { locationService } from '@/utils/location';
 import { useState } from 'react';
+import { getDefaultPaymentMethod } from '@/utils/stripe';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -251,6 +252,24 @@ export default function JobDetailScreen() {
   const handleAcceptRequest = async () => {
     setIsAccepting(true);
     try {
+      // Check for default payment method first
+      const defaultPaymentMethod = await getDefaultPaymentMethod(user.id);
+      if (!defaultPaymentMethod) {
+        Alert.alert(
+          'Payment Method Required',
+          'Please add a default payment method in your profile before accepting a request.',
+          [
+            { text: 'Later', style: 'cancel' },
+            { 
+              text: 'Add Payment Method', 
+              onPress: () => router.push('/add-payment-method') 
+            }
+          ]
+        );
+        setIsAccepting(false);
+        return;
+      }
+
       // Wait for payment confirmation before proceeding
       await acceptRequest(
         request.id,

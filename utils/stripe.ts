@@ -309,7 +309,8 @@ export const deletePaymentMethod = async (
 
 export const chargeTruckerForRequest = async (
   userId: string,
-  requestId: string
+  requestId: string,
+  amount: number = TRUCKER_REQUEST_FEE
 ): Promise<{
   success: boolean;
   error?: string;
@@ -348,7 +349,7 @@ export const chargeTruckerForRequest = async (
 
   const result = await chargePaymentMethod(
     defaultPaymentMethod.stripe_payment_method_id,
-    TRUCKER_REQUEST_FEE,
+    amount,
     `RigSnap Request Fee - Request #${requestId}`,
     userId
   );
@@ -359,7 +360,8 @@ export const chargeTruckerForRequest = async (
 
 export const chargeProviderForAcceptance = async (
   userId: string,
-  requestId: string
+  requestId: string,
+  amount: number = PROVIDER_ACCEPTANCE_FEE
 ): Promise<{
   success: boolean;
   error?: string;
@@ -377,7 +379,7 @@ export const chargeProviderForAcceptance = async (
 
   return await chargePaymentMethod(
     defaultPaymentMethod.stripe_payment_method_id,
-    PROVIDER_ACCEPTANCE_FEE,
+    amount,
     `RigSnap Acceptance Fee - Request #${requestId}`,
     userId
   );

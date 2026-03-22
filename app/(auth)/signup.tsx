@@ -18,6 +18,7 @@ import { Link, router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { useTheme } from '@/context/ThemeContext';
+import { validateReferralCode, processReferralBonus } from '@/utils/creditOperations';
 import {
   Truck,
   Wrench,
@@ -35,6 +36,7 @@ import {
   User,
   Mail,
   Phone,
+  Gift,
 } from 'lucide-react-native';
 
 const roles = [
@@ -112,6 +114,7 @@ export default function SignupScreen() {
     location: '',
     role: '' as 'trucker' | 'provider' | '',
     language: 'en',
+    referralCode: '',
     // Trucker specific
     truckType: '',
     licenseNumber: '',
@@ -239,12 +242,13 @@ export default function SignupScreen() {
 
       const result = await signup(userData);
       if (result.success) {
-        // Navigate to OTP verification screen
+        // Navigate to OTP verification screen first
         router.push({
           pathname: '/(auth)/verify-otp',
           params: {
             email: formData.email,
             autoSend: 'false',
+            referralCode: formData.referralCode.trim() || '', // Pass referral code to OTP screen
           },
         });
       } else {
@@ -426,6 +430,29 @@ export default function SignupScreen() {
                 autoCapitalize="words"
               />
             </View>
+          </View>
+
+          <View style={styles.inputGroup}>
+            <Text style={[styles.label, { color: colors.text }]}>
+              Referral Code{' '}
+              <Text style={[styles.optionalText, { color: colors.textSecondary }]}>
+                (Optional)
+              </Text>
+            </Text>
+            <View style={[styles.inputContainer, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Gift size={20} color={colors.textSecondary} style={styles.inputIcon} />
+              <TextInput
+                style={[styles.inputWithIcon, { color: colors.text }]}
+                value={formData.referralCode}
+                onChangeText={(value) => handleInputChange('referralCode', value.toUpperCase())}
+                placeholder="Enter referral code"
+                autoCapitalize="characters"
+                maxLength={20}
+              />
+            </View>
+            <Text style={[styles.helperText, { color: colors.textSecondary }]}>
+              Get $10 credit when you enter a friend's referral code
+            </Text>
           </View>
 
           {/* Trucker-specific fields */}
@@ -741,6 +768,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginBottom: 8,
+  },
+  optionalText: {
+    fontWeight: '400',
+    fontSize: 14,
   },
   helperText: {
     fontSize: 12,

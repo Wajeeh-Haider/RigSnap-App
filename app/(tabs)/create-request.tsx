@@ -54,6 +54,7 @@ import {
   CloudinaryUploadResponse,
   CloudinaryUploadError,
 } from '@/utils/cloudinaryUpload';
+import { getDefaultPaymentMethod } from '@/utils/stripe';
 
 const serviceTypes = [
   {
@@ -347,6 +348,24 @@ export default function CreateRequestScreen() {
 
     setIsLoading(true);
     try {
+      // Check for default payment method first
+      const defaultPaymentMethod = await getDefaultPaymentMethod(user.id);
+      if (!defaultPaymentMethod) {
+        Alert.alert(
+          'Payment Method Required',
+          'Please add a default payment method in your profile before creating a request.',
+          [
+            { text: 'Later', style: 'cancel' },
+            { 
+              text: 'Add Payment Method', 
+              onPress: () => router.push('/add-payment-method') 
+            }
+          ]
+        );
+        setIsLoading(false);
+        return;
+      }
+
       console.log('User:', user);
       console.log('Local photos:', photos);
       console.log('Cloudinary URLs:', cloudinaryUrls);

@@ -77,6 +77,122 @@ export interface Database {
           request_updates?: boolean
         }
       }
+      user_credits: {
+        Row: {
+          id: string
+          user_id: string
+          balance: number
+          total_earned: number
+          total_spent: number
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          balance?: number
+          total_earned?: number
+          total_spent?: number
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          balance?: number
+          total_earned?: number
+          total_spent?: number
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      referral_codes: {
+        Row: {
+          id: string
+          user_id: string
+          code: string
+          is_active: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          code: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          code?: string
+          is_active?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
+      referrals: {
+        Row: {
+          id: string
+          referrer_id: string
+          referee_id: string
+          referral_code: string
+          bonus_amount: number
+          credited_at: string
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          referrer_id: string
+          referee_id: string
+          referral_code: string
+          bonus_amount?: number
+          credited_at?: string
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          referrer_id?: string
+          referee_id?: string
+          referral_code?: string
+          bonus_amount?: number
+          credited_at?: string
+          created_at?: string
+        }
+      }
+      credit_transactions: {
+        Row: {
+          id: string
+          user_id: string
+          amount: number
+          transaction_type: string
+          description: string | null
+          request_id: string | null
+          referral_id: string | null
+          created_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          amount: number
+          transaction_type: string
+          description?: string | null
+          request_id?: string | null
+          referral_id?: string | null
+          created_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          amount?: number
+          transaction_type?: string
+          description?: string | null
+          request_id?: string | null
+          referral_id?: string | null
+          created_at?: string
+        }
+      }
       requests: {
         Row: {
           id: string

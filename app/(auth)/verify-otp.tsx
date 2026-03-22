@@ -16,6 +16,7 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import { processReferralBonus } from '@/utils/creditOperations';
 import {
   Mail,
   ArrowLeft,
@@ -24,9 +25,10 @@ import {
 } from 'lucide-react-native';
 
 export default function VerifyOtpScreen() {
-  const { email, autoSend } = useLocalSearchParams<{
+  const { email, autoSend, referralCode } = useLocalSearchParams<{
     email: string;
     autoSend?: string;
+    referralCode?: string;
   }>();
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [isLoading, setIsLoading] = useState(false);
@@ -34,7 +36,7 @@ export default function VerifyOtpScreen() {
   const [resendTimer, setResendTimer] = useState(60);
   const [canResend, setCanResend] = useState(false);
   const [isVerified, setIsVerified] = useState(false);
-  const { verifyOtp, resendOtp } = useAuth();
+  const { verifyOtp, resendOtp, user } = useAuth();
   const { colors } = useTheme();
   const inputRefs = useRef<TextInput[]>([]);
   const hasAutoSentRef = useRef(false);
@@ -137,14 +139,64 @@ export default function VerifyOtpScreen() {
       
       if (result.success) {
         setIsVerified(true);
-        Alert.alert('Success', 'Email verified successfully!', [
-          {
-            text: 'Continue',
-            onPress: () => {
-              router.replace('/(tabs)');
+        
+        // Process referral code if provided (user should be set in context after verification)
+        if (referralCode?.trim() && user?.id) {
+          try {
+            const referralResult = await processReferralBonus(
+              user.id,
+              referralCode.trim()
+            );
+            
+            if (referralResult.success) {
+              Alert.alert(
+                'Welcome to RigSnap! 🎉', 
+                'Your email has been verified successfully and you\'ve earned $10 credit from your referral!',
+                [
+                  {
+                    text: 'Get Started',
+                    onPress: () => router.replace('/(tabs)'),
+                  },
+                ]
+              );
+            } else {
+              // Show verification success but mention referral issue
+              Alert.alert(
+                'Email Verified Successfully!',
+                'Your account is ready to use. Note: There was an issue with the referral code, but you can still enjoy all RigSnap features.',
+                [
+                  {
+                    text: 'Continue',
+                    onPress: () => router.replace('/(tabs)'),
+                  },
+                ]
+              );
+            }
+          } catch (error) {
+            console.error('Error processing referral:', error);
+            // Show success but mention referral processing failed
+            Alert.alert(
+              'Email Verified Successfully!',
+              'Your account is ready to use!',
+              [
+                {
+                  text: 'Continue',
+                  onPress: () => router.replace('/(tabs)'),
+                },
+              ]
+            );
+          }
+        } else {
+          // No referral code or user not yet available, just show verification success
+          Alert.alert('Success', 'Email verified successfully!', [
+            {
+              text: 'Continue',
+              onPress: () => {
+                router.replace('/(tabs)');
+              },
             },
-          },
-        ]);
+          ]);
+        }
       } else {
         Alert.alert('Verification Failed', result.error || 'Invalid or expired code. Please try again.');
       }
