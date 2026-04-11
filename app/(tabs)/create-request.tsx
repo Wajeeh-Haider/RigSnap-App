@@ -54,7 +54,7 @@ import {
   CloudinaryUploadResponse,
   CloudinaryUploadError,
 } from '@/utils/cloudinaryUpload';
-import { getDefaultPaymentMethod } from '@/utils/stripe';
+import { getUserPaymentMethods } from '@/utils/stripe';
 
 const serviceTypes = [
   {
@@ -348,12 +348,12 @@ export default function CreateRequestScreen() {
 
     setIsLoading(true);
     try {
-      // Check for default payment method first
-      const defaultPaymentMethod = await getDefaultPaymentMethod(user.id);
-      if (!defaultPaymentMethod) {
+      // Require at least one saved payment method before creating requests
+      const paymentMethods = await getUserPaymentMethods(user.id);
+      if (!paymentMethods.length) {
         Alert.alert(
           'Payment Method Required',
-          'Please add a default payment method in your profile before creating a request.',
+          'Please add a payment method in your profile before creating a request.',
           [
             { text: 'Later', style: 'cancel' },
             { 

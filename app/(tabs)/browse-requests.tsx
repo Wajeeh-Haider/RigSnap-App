@@ -15,7 +15,7 @@ import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
-import { paymentMethodService } from '@/utils/paymentOperations';
+import { canUserAffordPayment } from '@/utils/creditOperations';
 import {
   Clock,
   CircleCheck as CheckCircle,
@@ -216,17 +216,14 @@ export default function BrowseRequestsScreen() {
       : requests.filter((r) => r.serviceType === filter);
 
   const handleAcceptRequest = async (request: any) => {
-    // First check if user has a payment method
+    // First check if user can pay via credits or payment method
     try {
-      // Check for payment methods
-      const paymentMethods = await paymentMethodService.fetchUserPaymentMethods(
-        user.id
-      );
+      const affordability = await canUserAffordPayment(user.id, 5);
 
-      if (!paymentMethods || paymentMethods.length === 0) {
+      if (!affordability.canAfford) {
         Alert.alert(
           'Payment Method Required',
-          'You need to add a payment method to accept requests. Would you like to add one now?',
+          'You need at least $5 credits or a payment method to accept requests. Would you like to add one now?',
           [
             { text: 'Cancel', style: 'cancel' },
             {

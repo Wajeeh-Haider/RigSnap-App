@@ -36,7 +36,7 @@ import {
 import LocationButton from '@/components/LocationButton';
 import { locationService } from '@/utils/location';
 import { useState } from 'react';
-import { getDefaultPaymentMethod } from '@/utils/stripe';
+import { canUserAffordPayment } from '@/utils/creditOperations';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -252,12 +252,12 @@ export default function JobDetailScreen() {
   const handleAcceptRequest = async () => {
     setIsAccepting(true);
     try {
-      // Check for default payment method first
-      const defaultPaymentMethod = await getDefaultPaymentMethod(user.id);
-      if (!defaultPaymentMethod) {
+      // Allow acceptance if user can pay via credits OR payment method
+      const affordability = await canUserAffordPayment(user.id, 5);
+      if (!affordability.canAfford) {
         Alert.alert(
           'Payment Method Required',
-          'Please add a default payment method in your profile before accepting a request.',
+          'You need at least $5 credits or a payment method in your profile before accepting a request.',
           [
             { text: 'Later', style: 'cancel' },
             { 

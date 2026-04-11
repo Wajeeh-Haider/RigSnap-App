@@ -93,16 +93,13 @@ export const paymentMethodService: PaymentMethodService = {
 export const requestService: RequestService = {
   createRequestWithPayment: async (requestData: any, userId: string) => {
     try {
-      // Note: For request creation, we currently don't charge any fees
-      // Users can create requests without payment methods or credits
-      // Fees are only charged when the request is accepted by a provider
-
-      // Check for default payment method before creating request
-      const defaultPaymentMethod = await getDefaultPaymentMethod(userId);
-      if (!defaultPaymentMethod) {
+      // Enforce payment setup before request creation.
+      // We only require at least one saved payment method here.
+      const paymentMethods = await getUserPaymentMethods(userId);
+      if (!paymentMethods.length) {
         return {
           success: false,
-          error: 'Please add a default payment method before creating a request.',
+          error: 'Please add a payment method before creating a request.',
         };
       }
 
@@ -191,31 +188,36 @@ export const requestService: RequestService = {
         };
       }
 
-      // ALWAYS require a default payment method for accepting a request
-      const providerPaymentMethod = await getDefaultPaymentMethod(providerId);
-      if (!providerPaymentMethod) {
-        return {
-          success: false,
-          error: 'Please add a default payment method before accepting a request.',
-        };
-      }
-
-      // Check if user credits are sufficient - but we still required the payment method above
+      // For acceptance, credits can fully cover fees.
+      // Only require payment methods if credits are insufficient.
       const { getUserCredits } = await import('./creditOperations');
       const truckerCredits = await getUserCredits(currentRequest.trucker_id);
+      const providerCredits = await getUserCredits(providerId);
       
       const truckerAmount = 5.0;
       const providerAmount = 5.0;
       
       const truckerHasSufficientCredits = (truckerCredits?.balance || 0) >= truckerAmount;
+      const providerHasSufficientCredits = (providerCredits?.balance || 0) >= providerAmount;
       
-      // Still require trucker to have a payment method if they don't have credits
+      // Require trucker payment method only when trucker credits are insufficient
       if (!truckerHasSufficientCredits) {
         const truckerPaymentMethod = await getDefaultPaymentMethod(currentRequest.trucker_id);
         if (!truckerPaymentMethod) {
           return {
             success: false,
             error: 'Trucker has insufficient credits and no payment method. Request cannot be accepted.',
+          };
+        }
+      }
+
+      // Require provider payment method only when provider credits are insufficient
+      if (!providerHasSufficientCredits) {
+        const providerPaymentMethod = await getDefaultPaymentMethod(providerId);
+        if (!providerPaymentMethod) {
+          return {
+            success: false,
+            error: 'Please add a payment method or sufficient credits before accepting a request.',
           };
         }
       }
