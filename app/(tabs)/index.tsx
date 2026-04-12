@@ -187,9 +187,15 @@ export default function HomeScreen() {
           }
 
           locationUpdatedRef.current = true;
-        } catch (locationError) {
-          console.error('Failed to get/update live location:', locationError);
-          // Continue with request fetching even if location update fails
+        } catch (locationError: any) {
+          // Log as warning instead of error as this is common in simulators/certain environments
+          if (locationError?.code === 'ERR_LOCATION_UNAVAILABLE' || locationError?.message?.includes('kCLErrorDomain error 0')) {
+            console.warn('Live location unavailable (Simulator / GPS issue). Using profile location as fallback.');
+          } else {
+            console.warn('Failed to get/update live location:', locationError?.message || locationError);
+          }
+          // Mark as updated even on failure to prevent infinite retry loops in current focus session
+          locationUpdatedRef.current = true;
         }
       }
 

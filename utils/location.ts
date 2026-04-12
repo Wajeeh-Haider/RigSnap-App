@@ -267,23 +267,43 @@ class MobileLocationService implements LocationService {
         } as LocationError;
       }
 
-      const location = await Location.getCurrentPositionAsync({
-        accuracy: Location.Accuracy.High,
-        timeInterval: 15000,
-        distanceInterval: 0,
-      });
+      try {
+        const location = await Location.getCurrentPositionAsync({
+          accuracy: Location.Accuracy.High,
+          timeInterval: 15000,
+          distanceInterval: 0,
+        });
 
-      return {
-        coords: {
-          latitude: location.coords.latitude,
-          longitude: location.coords.longitude,
-          accuracy: location.coords.accuracy || undefined,
-          altitude: location.coords.altitude || undefined,
-          heading: location.coords.heading || undefined,
-          speed: location.coords.speed || undefined,
-        },
-        timestamp: location.timestamp,
-      };
+        return {
+          coords: {
+            latitude: location.coords.latitude,
+            longitude: location.coords.longitude,
+            accuracy: location.coords.accuracy || undefined,
+            altitude: location.coords.altitude || undefined,
+            heading: location.coords.heading || undefined,
+            speed: location.coords.speed || undefined,
+          },
+          timestamp: location.timestamp,
+        };
+      } catch (innerError) {
+        // Fallback to last known position if current position fails
+        const lastKnown = await Location.getLastKnownPositionAsync();
+        if (lastKnown) {
+          console.log('Using last known position as fallback');
+          return {
+            coords: {
+              latitude: lastKnown.coords.latitude,
+              longitude: lastKnown.coords.longitude,
+              accuracy: lastKnown.coords.accuracy || undefined,
+              altitude: lastKnown.coords.altitude || undefined,
+              heading: lastKnown.coords.heading || undefined,
+              speed: lastKnown.coords.speed || undefined,
+            },
+            timestamp: lastKnown.timestamp,
+          };
+        }
+        throw innerError;
+      }
     } catch (error: any) {
       throw {
         code: error.code || 2,
