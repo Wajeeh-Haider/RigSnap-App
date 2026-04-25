@@ -55,6 +55,7 @@ import {
   CloudinaryUploadError,
 } from '@/utils/cloudinaryUpload';
 import { getUserPaymentMethods } from '@/utils/stripe';
+import { useStripe } from '@stripe/stripe-react-native';
 
 const serviceTypes = [
   {
@@ -128,6 +129,7 @@ export default function CreateRequestScreen() {
   const { createRequest } = useApp();
   const { colors } = useTheme();
   const { t } = useLanguage();
+  const { confirmPayment } = useStripe();
 
   const [selectedService, setSelectedService] = useState(
     (params.type as string) || ''
@@ -353,7 +355,7 @@ export default function CreateRequestScreen() {
       if (!paymentMethods.length) {
         Alert.alert(
           'Payment Method Required',
-          'Please add a payment method in your profile before creating a request.',
+          'Please add a payment method before creating a request. Your card will be authorized now and charged only when a provider accepts.',
           [
             { text: 'Later', style: 'cancel' },
             { 
@@ -393,11 +395,26 @@ export default function CreateRequestScreen() {
       console.log('Request data being submitted:', requestData);
 
       // This will now charge $5 and save to database
-      await createRequest(requestData);
+      try {
+        await createRequest(requestData);
+      } catch (err: any) {
+        // Handle SCA/3DS when Stripe returns requires_action
+        if (err?.requires_action && err?.client_secret) {
+          const { error } = await confirmPayment(err.client_secret, {
+            paymentMethodType: 'Card',
+          });
+          if (error) {
+            throw new Error(error.message);
+          }
+          // Request was already created; authorization should now be ready for capture later.
+        } else {
+          throw err;
+        }
+      }
 
       Alert.alert(
         t('create.requestCreated'),
-        t('create.requestCreatedDesc'),
+        `${t('create.requestCreatedDesc')}\n\nA temporary $5 authorization is now placed. You will only be charged when a provider accepts your request.`,
         [
           {
             text: t('create.viewRequest'),

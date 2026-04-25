@@ -7,10 +7,11 @@ import {
   deletePaymentMethod,
   chargeTruckerForRequest,
   chargeProviderForAcceptance,
-  refundTrucker,
   PaymentMethod,
+  authorizePaymentMethod,
+  capturePaymentIntent,
 } from './stripe';
-import { useCreditsForPayment, addCreditsToUser } from './creditOperations';
+import { useCreditsForPayment as applyCreditsForPayment, addCreditsToUser } from './creditOperations';
 
 export interface PaymentMethodService {
   fetchUserPaymentMethods: (userId: string) => Promise<PaymentMethod[]>;
@@ -38,11 +39,22 @@ export interface RequestService {
   createRequestWithPayment: (
     requestData: any,
     userId: string,
-  ) => Promise<{ success: boolean; error?: string; requestId?: string }>;
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+    requestId?: string;
+    requires_action?: boolean;
+    client_secret?: string;
+  }>;
   acceptRequestWithPayment: (
     requestId: string,
     providerId: string,
-  ) => Promise<{ success: boolean; error?: string }>;
+  ) => Promise<{
+    success: boolean;
+    error?: string;
+    requires_action?: boolean;
+    client_secret?: string;
+  }>;
 }
 
 // Payment Methods CRUD Operations
@@ -128,11 +140,89 @@ export const requestService: RequestService = {
         };
       }
 
-      // NOTE: Trucker is NOT charged when creating a request
-      // The trucker will only be charged when a provider accepts their request
-      console.log(
-        'Request created successfully - no charge applied to trucker',
+      // NEW: Apply credits now and authorize remaining amount (manual capture)
+      // This prevents "card not found" later if trucker deletes their card.
+      const truckerAmount = 5.0;
+      const creditResult = await applyCreditsForPayment(
+        userId,
+        truckerAmount,
+        'RigSnap Request Fee Authorization (Trucker)',
+        request.id
       );
+
+      if (!creditResult.success) {
+        // Roll back request creation on credit failure
+        await supabase.from('requests').delete().eq('id', request.id);
+        return { success: false, error: creditResult.error || 'Failed to apply credits' };
+      }
+
+      if (creditResult.remainingAmount > 0) {
+        const truckerPaymentMethod = await getDefaultPaymentMethod(userId);
+        if (!truckerPaymentMethod) {
+          // Roll back request creation and refund credits (if any used)
+          await supabase.from('requests').delete().eq('id', request.id);
+          if (creditResult.creditsUsed > 0) {
+            await addCreditsToUser(
+              userId,
+              creditResult.creditsUsed,
+              'refund',
+              `Refund credits (request creation failed) - Request #${request.id}`,
+              request.id
+            );
+          }
+          return { success: false, error: 'No default payment method found' };
+        }
+
+        const authResult = await authorizePaymentMethod(
+          truckerPaymentMethod.stripe_payment_method_id,
+          creditResult.remainingAmount,
+          `RigSnap Request Fee Authorization - Request #${request.id}`,
+          userId,
+          { request_id: request.id, user_role: 'trucker', kind: 'request_fee_auth' }
+        );
+
+        // Record the authorization intent for later capture
+        if (authResult.payment_intent_id) {
+          await supabase.from('payment_transactions').insert({
+            user_id: userId,
+            request_id: request.id,
+            payment_method_id: truckerPaymentMethod.id,
+            stripe_payment_intent_id: authResult.payment_intent_id,
+            amount_cents: Math.round(creditResult.remainingAmount * 100),
+            currency: 'usd',
+            description: `RigSnap Request Fee Authorization (Trucker) - Request #${request.id}`,
+            transaction_type: 'request_fee',
+            status: authResult.requires_action ? 'pending' : 'pending',
+            user_role: 'trucker',
+            metadata: { capture_method: 'manual', kind: 'auth' },
+          });
+        }
+
+        if (authResult.requires_action && authResult.client_secret) {
+          return {
+            success: false,
+            requestId: request.id,
+            requires_action: true,
+            client_secret: authResult.client_secret,
+            error: 'Authorization requires action',
+          };
+        }
+
+        if (!authResult.success) {
+          // Roll back request and refund credits
+          await supabase.from('requests').delete().eq('id', request.id);
+          if (creditResult.creditsUsed > 0) {
+            await addCreditsToUser(
+              userId,
+              creditResult.creditsUsed,
+              'refund',
+              `Refund credits (authorization failed) - Request #${request.id}`,
+              request.id
+            );
+          }
+          return { success: false, error: authResult.error || 'Authorization failed' };
+        }
+      }
 
       // Send push notifications asynchronously (fire-and-forget)
       // This won't block the request creation
@@ -204,8 +294,25 @@ export const requestService: RequestService = {
       const providerHasSufficientCredits =
         (providerCredits?.balance || 0) >= providerAmount;
 
+      // If we already have a trucker authorization intent from request creation,
+      // we should capture that at accept-time even if the trucker later deletes
+      // their saved payment method.
+      const { data: authTxns } = await supabase
+        .from('payment_transactions')
+        .select('id, stripe_payment_intent_id, amount_cents, status')
+        .eq('user_id', currentRequest.trucker_id)
+        .eq('request_id', requestId)
+        .eq('transaction_type', 'request_fee')
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const authTransactionId = authTxns?.[0]?.id || null;
+      const authIntentId = authTxns?.[0]?.stripe_payment_intent_id || null;
+      const hasPriorTruckerAuth = Boolean(authIntentId);
+
       // Require trucker payment method only when trucker credits are insufficient
-      if (!truckerHasSufficientCredits) {
+      // AND there is no prior authorization intent we can capture.
+      if (!truckerHasSufficientCredits && !hasPriorTruckerAuth) {
         const truckerPaymentMethod = await getDefaultPaymentMethod(
           currentRequest.trucker_id,
         );
@@ -230,121 +337,6 @@ export const requestService: RequestService = {
         }
       }
 
-      // NEW FLOW: First charge the trucker $5
-      console.log('Step 1: Attempting to charge trucker for acceptance:', {
-        truckerId: currentRequest.trucker_id,
-        requestId,
-        requestStatus: currentRequest.status,
-      });
-
-      // Try to use credits first for trucker payment
-      const truckerCreditResult = await useCreditsForPayment(
-        currentRequest.trucker_id,
-        truckerAmount,
-        'RigSnap Acceptance Fee (Trucker)', // Description (not used by DB function)
-        requestId,
-      );
-
-      let truckerPaymentResult: any = { success: false };
-
-      if (
-        truckerCreditResult.success &&
-        truckerCreditResult.remainingAmount === 0
-      ) {
-        // Payment fully covered by credits
-        console.log(
-          'Trucker payment fully covered by credits:',
-          truckerCreditResult.creditsUsed,
-        );
-        truckerPaymentResult = { success: true, payment_intent_id: null };
-      } else if (
-        truckerCreditResult.success &&
-        truckerCreditResult.remainingAmount > 0
-      ) {
-        // Partial payment with credits, charge remaining amount via Stripe
-        console.log('Partial payment with credits:', {
-          creditsUsed: truckerCreditResult.creditsUsed,
-          remainingAmount: truckerCreditResult.remainingAmount,
-        });
-        truckerPaymentResult = await chargeTruckerForRequest(
-          currentRequest.trucker_id,
-          requestId,
-          truckerCreditResult.remainingAmount,
-        );
-      } else {
-        // No credits available, charge full amount via Stripe
-        truckerPaymentResult = await chargeTruckerForRequest(
-          currentRequest.trucker_id,
-          requestId,
-          truckerAmount,
-        );
-      }
-
-      console.log('Trucker payment result:', truckerPaymentResult);
-
-      // If payment failed, check if it's because of insufficient funds or card issues
-      if (!truckerPaymentResult.success) {
-        console.error(
-          '🚨 Trucker payment failed during re-acceptance:',
-          truckerPaymentResult.error,
-        );
-
-        // Check if there are any recent refunds that might affect the charge
-        const { data: recentRefunds } = await supabase
-          .from('payment_transactions')
-          .select('id, status, transaction_type, amount_cents, created_at')
-          .eq('user_id', currentRequest.trucker_id)
-          .eq('request_id', requestId)
-          .eq('transaction_type', 'refund')
-          .gte(
-            'created_at',
-            new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          ) // Last 24 hours
-          .order('created_at', { ascending: false });
-
-        console.log('🔄 Recent refund transactions:', recentRefunds);
-
-        if (recentRefunds && recentRefunds.length > 0) {
-          console.log(
-            '💡 Trucker had recent refunds - this might be causing payment issues',
-          );
-        }
-      }
-
-      if (!truckerPaymentResult.success) {
-        console.error('Trucker payment failed:', truckerPaymentResult.error);
-        return {
-          success: false,
-          error: `Trucker payment failed: ${truckerPaymentResult.error}`,
-        };
-      }
-
-      // Record trucker payment transaction
-      const { error: truckerTransactionError } = await supabase
-        .from('payment_transactions')
-        .insert({
-          user_id: currentRequest.trucker_id,
-          request_id: requestId,
-          payment_method_id: null, // Will be filled by chargeTruckerForRequest
-          stripe_payment_intent_id:
-            truckerPaymentResult.payment_intent_id || '',
-          amount_cents: 500, // $5.00 in cents
-          description: `RigSnap Acceptance Fee (Trucker) - Request #${requestId}`,
-          transaction_type: 'acceptance_fee',
-          user_role: 'trucker',
-          status: 'succeeded',
-        });
-
-      if (truckerTransactionError) {
-        console.error(
-          'Error creating trucker payment transaction record:',
-          truckerTransactionError,
-        );
-        // Continue with provider charging even if transaction record fails
-      }
-
-      console.log('Trucker payment successful, proceeding to charge provider');
-
       // Step 2: Charge the service provider for accepting the request
       console.log('Step 2: Attempting to charge provider for acceptance:', {
         providerId,
@@ -352,7 +344,7 @@ export const requestService: RequestService = {
       });
 
       // Try to use credits first for provider payment
-      const providerCreditResult = await useCreditsForPayment(
+      const providerCreditResult = await applyCreditsForPayment(
         providerId,
         providerAmount,
         'RigSnap Acceptance Fee (Provider)', // Description (not used by DB function)
@@ -397,55 +389,54 @@ export const requestService: RequestService = {
       console.log('Provider payment result:', providerPaymentResult);
 
       if (!providerPaymentResult.success) {
+        if (providerPaymentResult.requires_action && providerPaymentResult.client_secret) {
+          // Provider must complete 3DS before we can proceed.
+          return {
+            success: false,
+            requires_action: true,
+            client_secret: providerPaymentResult.client_secret,
+            error: 'Provider payment requires action',
+          };
+        }
         console.error('Provider payment failed:', providerPaymentResult.error);
-
-        // REFUND LOGIC: If provider payment fails, refund the trucker
-        console.log('🔄 Refunding trucker due to provider payment failure');
-
-        // Refund both Stripe payment and credits if applicable
-        let refundResult: any = { success: true };
-
-        // If trucker was charged via Stripe, refund that
-        if (truckerPaymentResult.payment_intent_id) {
-          const stripeRefundResult = await refundTrucker(
-            currentRequest.trucker_id,
-            requestId,
-            Math.round(truckerCreditResult.remainingAmount * 100), // Convert to cents
-          );
-          refundResult = stripeRefundResult;
-        }
-
-        // If trucker paid with credits, refund those credits
-        if (
-          truckerCreditResult.success &&
-          truckerCreditResult.creditsUsed > 0
-        ) {
-          const creditRefundResult = await addCreditsToUser(
-            currentRequest.trucker_id,
-            truckerCreditResult.creditsUsed,
-            'refund',
-            `Refund for failed request acceptance - Request #${requestId}`,
-            requestId,
-          );
-
-          if (!creditRefundResult.success) {
-            console.error(
-              'Failed to refund credits to trucker:',
-              creditRefundResult.error,
-            );
-          }
-        }
-
-        if (refundResult.success) {
-          console.log('✅ Trucker refund successful');
-        } else {
-          console.error('❌ Trucker refund failed:', refundResult.error);
-        }
 
         return {
           success: false,
           error: `Provider payment failed: ${providerPaymentResult.error}. Trucker has been refunded $5.`,
         };
+      }
+
+      // Step 3: Capture trucker authorization (if exists), otherwise fallback to charging trucker now.
+      if (authIntentId) {
+        const captureResult = await capturePaymentIntent(authIntentId);
+        if (!captureResult.success) {
+          return {
+            success: false,
+            error: `Trucker authorization capture failed. The authorization may have expired or requires re-authorization: ${captureResult.error || 'capture_failed'}`,
+          };
+        }
+
+        // Keep the authorization transaction in sync after successful capture.
+        if (authTransactionId) {
+          await supabase
+            .from('payment_transactions')
+            .update({
+              status: 'succeeded',
+              description: `RigSnap Request Fee (Trucker) - Captured on acceptance - Request #${requestId}`,
+              metadata: {
+                capture_method: 'manual',
+                kind: 'capture',
+                captured_at: new Date().toISOString(),
+              },
+            })
+            .eq('id', authTransactionId);
+        }
+      } else {
+        // fallback: old behavior (charge trucker at acceptance)
+        const truckerPay = await chargeTruckerForRequest(currentRequest.trucker_id, requestId, truckerAmount);
+        if (!truckerPay.success) {
+          return { success: false, error: `Trucker payment failed: ${truckerPay.error}` };
+        }
       }
 
       console.log('Both payments successful, proceeding with request update');
@@ -529,7 +520,7 @@ export const requestService: RequestService = {
 
       if (!updateData || updateData.length === 0) {
         // Try to check what happened - maybe RLS policy issue
-        const { data: postUpdateCheck, error: postUpdateError } = await supabase
+        const { data: postUpdateCheck } = await supabase
           .from('requests')
           .select('id, status, provider_id')
           .eq('id', requestId)

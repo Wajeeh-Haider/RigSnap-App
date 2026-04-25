@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   View,
   Text,
@@ -16,6 +16,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
 import { canUserAffordPayment } from '@/utils/creditOperations';
+import { useStripe } from '@stripe/stripe-react-native';
 import {
   Clock,
   CircleCheck as CheckCircle,
@@ -115,12 +116,12 @@ export default function BrowseRequestsScreen() {
   const {
     getAvailableRequests,
     getUserRequests,
-    getProviderRequests,
     acceptRequest,
     cancelRequest,
     refreshRequests,
   } = useApp();
   const { colors } = useTheme();
+  const { confirmPayment } = useStripe();
   const [filter, setFilter] = useState<string>('all');
   const [selectedRequest, setSelectedRequest] = useState<any>(null);
   const [isAccepting, setIsAccepting] = useState(false);
@@ -148,7 +149,7 @@ export default function BrowseRequestsScreen() {
     }
   };
 
-  const loadAvailableRequests = async () => {
+  const loadAvailableRequests = useCallback(async () => {
     if (!user || user.role === 'trucker') return;
 
     setIsLoadingRequests(true);
@@ -160,7 +161,7 @@ export default function BrowseRequestsScreen() {
           const currentLocation = await locationService.getCurrentPosition();
           const coords = `${currentLocation.coords.latitude},${currentLocation.coords.longitude}`;
           const now = Date.now();
-          
+
           // Skip update if location hasn't changed or updated recently (within 5 minutes)
           if (coords !== user.location && (now - lastLocationUpdateRef.current) > 5 * 60 * 1000) {
             // Update the provider's location in database
@@ -170,7 +171,7 @@ export default function BrowseRequestsScreen() {
           } else {
             console.log('Location unchanged or updated recently, skipping update');
           }
-          
+
           locationUpdatedRef.current = true;
         } catch (locationError) {
           console.error('Failed to get/update live location:', locationError);
@@ -185,13 +186,13 @@ export default function BrowseRequestsScreen() {
     } finally {
       setIsLoadingRequests(false);
     }
-  };
+  }, [getAvailableRequests, updateProfile, user]);
 
   // Get user location and load requests on component mount
   useEffect(() => {
     getUserLocation();
     loadAvailableRequests();
-  }, [user?.id]);
+  }, [loadAvailableRequests, user?.id]);
 
   // Refresh data when screen comes into focus
   useFocusEffect(
@@ -200,7 +201,7 @@ export default function BrowseRequestsScreen() {
       locationUpdatedRef.current = false;
       refreshRequests();
       loadAvailableRequests();
-    }, [refreshRequests, user?.id])
+    }, [loadAvailableRequests, refreshRequests])
   );
 
   if (!user) return null;
@@ -246,7 +247,7 @@ export default function BrowseRequestsScreen() {
       `Are you sure you want to accept this ${request.serviceType.replace(
         '_',
         ' '
-      )} request? A $5 lead fee will be charged to both you and the trucker.`,
+      )} request? You will be charged $5 now, and the trucker's pre-authorized $5 will be captured at acceptance.`,
       [
         { text: 'Cancel', style: 'cancel' },
         {
@@ -255,11 +256,29 @@ export default function BrowseRequestsScreen() {
             setIsAccepting(true);
             try {
               // Wait for payment confirmation before proceeding
-              await acceptRequest(
-                request.id,
-                user.id,
-                `${user.firstName} ${user.lastName}`
-              );
+              try {
+                await acceptRequest(
+                  request.id,
+                  user.id,
+                  `${user.firstName} ${user.lastName}`
+                );
+              } catch (err: any) {
+                if (err?.requires_action && err?.client_secret) {
+                  const { error } = await confirmPayment(err.client_secret, {
+                    paymentMethodType: 'Card',
+                  });
+                  if (error) throw new Error(error.message);
+
+                  // Retry after successful 3DS confirmation
+                  await acceptRequest(
+                    request.id,
+                    user.id,
+                    `${user.firstName} ${user.lastName}`
+                  );
+                } else {
+                  throw err;
+                }
+              }
 
               // Refresh data to get updated request status
               await refreshRequests();
@@ -270,7 +289,13 @@ export default function BrowseRequestsScreen() {
               console.error('Error accepting request:', error);
               let errorMessage = 'Failed to accept request. Please try again.';
 
-              if (error?.message?.includes('No default payment method')) {
+              if (error?.message?.includes('Trucker authorization capture failed') || error?.message?.includes('Trucker capture failed')) {
+                errorMessage =
+                  'The trucker\'s card authorization is no longer capturable (it may have expired). Ask the trucker to re-create the request to re-authorize payment.';
+              } else if (error?.message?.includes('Trucker has insufficient credits and no payment method')) {
+                errorMessage =
+                  'This request has no active trucker authorization and the trucker has no fallback payment method. Ask the trucker to add a payment method or re-create the request.';
+              } else if (error?.message?.includes('No default payment method')) {
                 errorMessage =
                   'Please add a payment method in your profile to accept requests.';
               } else if (error?.message?.includes('card_declined')) {
@@ -301,7 +326,7 @@ export default function BrowseRequestsScreen() {
         `Are you sure you want to cancel this ${request.serviceType.replace(
           '_',
           ' '
-        )} request?\n\n⚠️ Warning: You will be charged a $5 penalty fee in addition to the original $5 lead fee (total $10). The trucker will receive a full refund.`,
+        )} request?\n\n⚠️ Warning: You will be charged a $5 penalty fee in addition to your original $5 acceptance fee (total $10). The trucker charge will be fully refunded.`,
         [
           { text: 'Keep Request', style: 'cancel' },
           {
@@ -335,7 +360,7 @@ export default function BrowseRequestsScreen() {
                           setSelectedRequest(null);
                           Alert.alert(
                             'Request Cancelled',
-                            'The request has been cancelled. The trucker has been notified and will receive a full refund. You have been charged a $5 penalty fee.',
+                            'The request has been cancelled. The trucker has been notified and will receive a full refund. You were charged a $5 penalty fee.',
                             [{ text: 'OK' }]
                           );
                         }

@@ -1,5 +1,5 @@
 -- Create user credits table
-CREATE TABLE user_credits (
+CREATE TABLE IF NOT EXISTS user_credits (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   balance DECIMAL(10,2) NOT NULL DEFAULT 0.00,
@@ -11,7 +11,7 @@ CREATE TABLE user_credits (
 );
 
 -- Create referral codes table
-CREATE TABLE referral_codes (
+CREATE TABLE IF NOT EXISTS referral_codes (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   code VARCHAR(20) NOT NULL UNIQUE,
@@ -21,7 +21,7 @@ CREATE TABLE referral_codes (
 );
 
 -- Create referral relationships table
-CREATE TABLE referrals (
+CREATE TABLE IF NOT EXISTS referrals (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   referrer_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   referee_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -33,7 +33,7 @@ CREATE TABLE referrals (
 );
 
 -- Create credit transactions table for tracking credit usage
-CREATE TABLE credit_transactions (
+CREATE TABLE IF NOT EXISTS credit_transactions (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
   amount DECIMAL(10,2) NOT NULL,
@@ -44,13 +44,27 @@ CREATE TABLE credit_transactions (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- Backfill missing columns for environments with pre-existing legacy tables
+ALTER TABLE referrals
+  ADD COLUMN IF NOT EXISTS referrer_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS referee_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  ADD COLUMN IF NOT EXISTS referral_code VARCHAR(20),
+  ADD COLUMN IF NOT EXISTS bonus_amount DECIMAL(10,2) NOT NULL DEFAULT 10.00,
+  ADD COLUMN IF NOT EXISTS credited_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
+ALTER TABLE credit_transactions
+  ADD COLUMN IF NOT EXISTS request_id UUID REFERENCES requests(id),
+  ADD COLUMN IF NOT EXISTS referral_id UUID REFERENCES referrals(id),
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW();
+
 -- Create indexes for performance
-CREATE INDEX idx_user_credits_user_id ON user_credits(user_id);
-CREATE INDEX idx_referral_codes_user_id ON referral_codes(user_id);
-CREATE INDEX idx_referral_codes_code ON referral_codes(code);
-CREATE INDEX idx_referrals_referrer_id ON referrals(referrer_id);
-CREATE INDEX idx_referrals_referee_id ON referrals(referee_id);
-CREATE INDEX idx_credit_transactions_user_id ON credit_transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_user_credits_user_id ON user_credits(user_id);
+CREATE INDEX IF NOT EXISTS idx_referral_codes_user_id ON referral_codes(user_id);
+CREATE INDEX IF NOT EXISTS idx_referral_codes_code ON referral_codes(code);
+CREATE INDEX IF NOT EXISTS idx_referrals_referrer_id ON referrals(referrer_id);
+CREATE INDEX IF NOT EXISTS idx_referrals_referee_id ON referrals(referee_id);
+CREATE INDEX IF NOT EXISTS idx_credit_transactions_user_id ON credit_transactions(user_id);
 
 -- Enable RLS on all tables
 ALTER TABLE user_credits ENABLE ROW LEVEL SECURITY;
@@ -59,40 +73,51 @@ ALTER TABLE referrals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE credit_transactions ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies for user_credits
+DROP POLICY IF EXISTS "Users can view their own credits" ON user_credits;
 CREATE POLICY "Users can view their own credits" ON user_credits
   FOR SELECT USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can update their own credits" ON user_credits;
 CREATE POLICY "Users can update their own credits" ON user_credits
   FOR UPDATE USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "System can insert credits" ON user_credits;
 CREATE POLICY "System can insert credits" ON user_credits
   FOR INSERT WITH CHECK (true);
 
 -- RLS Policies for referral_codes  
+DROP POLICY IF EXISTS "Users can view their own referral codes" ON referral_codes;
 CREATE POLICY "Users can view their own referral codes" ON referral_codes
   FOR SELECT USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can insert their own referral codes" ON referral_codes;
 CREATE POLICY "Users can insert their own referral codes" ON referral_codes
   FOR INSERT WITH CHECK (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "Users can update their own referral codes" ON referral_codes;
 CREATE POLICY "Users can update their own referral codes" ON referral_codes
   FOR UPDATE USING (user_id = auth.uid());
 
 -- RLS Policies for referrals
+DROP POLICY IF EXISTS "Users can view referrals they're involved in" ON referrals;
 CREATE POLICY "Users can view referrals they're involved in" ON referrals
   FOR SELECT USING (referrer_id = auth.uid() OR referee_id = auth.uid());
 
+DROP POLICY IF EXISTS "System can insert referrals" ON referrals;
 CREATE POLICY "System can insert referrals" ON referrals
   FOR INSERT WITH CHECK (true);
 
 -- RLS Policies for credit_transactions
+DROP POLICY IF EXISTS "Users can view their own credit transactions" ON credit_transactions;
 CREATE POLICY "Users can view their own credit transactions" ON credit_transactions
   FOR SELECT USING (user_id = auth.uid());
 
+DROP POLICY IF EXISTS "System can insert credit transactions" ON credit_transactions;
 CREATE POLICY "System can insert credit transactions" ON credit_transactions
   FOR INSERT WITH CHECK (true);
 
 -- Function to generate unique referral code
+DROP FUNCTION IF EXISTS generate_referral_code();
 CREATE OR REPLACE FUNCTION generate_referral_code()
 RETURNS TEXT AS $$
 DECLARE
@@ -117,6 +142,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to create referral code for new user
+DROP FUNCTION IF EXISTS create_user_referral_code();
 CREATE OR REPLACE FUNCTION create_user_referral_code()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -131,6 +157,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to process referral bonus
+DROP FUNCTION IF EXISTS process_referral_bonus(UUID, TEXT);
 CREATE OR REPLACE FUNCTION process_referral_bonus(referee_user_id UUID, referral_code_param TEXT)
 RETURNS BOOLEAN AS $$
 DECLARE
@@ -187,6 +214,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Function to use credits for payment
+DROP FUNCTION IF EXISTS use_user_credits(UUID, DECIMAL, TEXT, UUID);
 CREATE OR REPLACE FUNCTION use_user_credits(user_id_param UUID, amount_param DECIMAL(10,2), description_param TEXT, request_id_param UUID DEFAULT NULL)
 RETURNS DECIMAL(10,2) AS $$
 DECLARE
@@ -226,6 +254,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger to create referral code for new users
+DROP TRIGGER IF EXISTS trigger_create_user_referral_code ON auth.users;
 CREATE TRIGGER trigger_create_user_referral_code
   AFTER INSERT ON auth.users
   FOR EACH ROW

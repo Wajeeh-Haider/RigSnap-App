@@ -1,9 +1,10 @@
 // Cleaned version without console logs
-import { StripeProvider, useStripe } from '@stripe/stripe-react-native';
 import { supabase } from '../lib/supabase';
 
 export const STRIPE_PUBLISHABLE_KEY =
-  'pk_live_51RUKY4CdgBZ7XSAjMDtMKMQiQHkQ0BeRZyY05QTgTglLAafd07psh291sdnPLApfv51ObWzhR6cS4u7496jKgylO00l71cI50N';
+  process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
+  process.env.EXPO_PUBLIC_STRIPE_PUBLISHED_KEY ||
+  '';
 const BACKEND_URL =
   process.env.EXPO_PUBLIC_BACKEND_URL ||
   'https://rigsnap-backend-vqqg.vercel.app';
@@ -35,6 +36,8 @@ export interface CreatePaymentIntentResponse {
 export interface ChargePaymentResponse {
   success: boolean;
   payment_intent_id?: string;
+  requires_action?: boolean;
+  client_secret?: string;
   error?: string;
 }
 
@@ -78,7 +81,7 @@ export const createPaymentIntent = async (
     }
 
     return { success: true, client_secret: data.client_secret };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Network error' };
   }
 };
@@ -112,7 +115,7 @@ export const createSetupIntent = async (
       client_secret: data.client_secret,
       setup_intent_id: data.setup_intent_id,
     };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Network error' };
   }
 };
@@ -157,6 +160,15 @@ export const chargePaymentMethod = async (
       return { success: false, error: data.error || 'Payment failed' };
     }
 
+    if (data.requires_action && data.payment_intent?.client_secret) {
+      return {
+        success: false,
+        requires_action: true,
+        client_secret: data.payment_intent.client_secret,
+        payment_intent_id: data.payment_intent.id,
+      };
+    }
+
     return { success: true, payment_intent_id: data.payment_intent_id };
   } catch (error: any) {
     if (error.name === 'AbortError' || error.message?.includes('timeout')) {
@@ -166,6 +178,95 @@ export const chargePaymentMethod = async (
       };
     }
 
+    return { success: false, error: 'Network error' };
+  }
+};
+
+export interface AuthorizePaymentResponse {
+  success: boolean;
+  payment_intent_id?: string;
+  requires_action?: boolean;
+  client_secret?: string;
+  error?: string;
+  status?: string;
+}
+
+export const authorizePaymentMethod = async (
+  paymentMethodId: string,
+  amount: number,
+  description: string,
+  userId: string,
+  metadata?: Record<string, any>
+): Promise<AuthorizePaymentResponse> => {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/stripe/authorize-payment-method`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        payment_method_id: paymentMethodId,
+        amount: Math.round(amount * 100),
+        currency: 'usd',
+        description,
+        userId,
+        metadata: metadata || {},
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: data.error || 'Authorization failed' };
+    }
+
+    if (data.requires_action && data.payment_intent?.client_secret) {
+      return {
+        success: false,
+        requires_action: true,
+        client_secret: data.payment_intent.client_secret,
+        payment_intent_id: data.payment_intent.id,
+        status: data.status,
+      };
+    }
+
+    return {
+      success: !!data.success,
+      payment_intent_id: data.payment_intent_id,
+      status: data.status,
+    };
+  } catch {
+    return { success: false, error: 'Network error' };
+  }
+};
+
+export interface CapturePaymentIntentResponse {
+  success: boolean;
+  payment_intent_id?: string;
+  status?: string;
+  error?: string;
+}
+
+export const capturePaymentIntent = async (
+  paymentIntentId: string
+): Promise<CapturePaymentIntentResponse> => {
+  try {
+    const response = await fetch(`${BACKEND_URL}/api/stripe/capture-payment-intent`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ payment_intent_id: paymentIntentId }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      return { success: false, error: data.error || 'Capture failed' };
+    }
+
+    return {
+      success: !!data.success,
+      payment_intent_id: data.payment_intent_id,
+      status: data.status,
+    };
+  } catch {
     return { success: false, error: 'Network error' };
   }
 };
@@ -183,7 +284,7 @@ export const getUserPaymentMethods = async (
     if (error) return [];
 
     return data || [];
-  } catch (error) {
+  } catch {
     return [];
   }
 };
@@ -202,7 +303,7 @@ export const getDefaultPaymentMethod = async (
     if (error) return null;
 
     return data;
-  } catch (error) {
+  } catch {
     return null;
   }
 };
@@ -247,7 +348,7 @@ export const createPaymentMethodInDB = async (
     if (error) return { success: false, error: error.message };
 
     return { success: true, data };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Database error' };
   }
 };
@@ -265,7 +366,7 @@ export const updatePaymentMethodDefault = async (
     if (error) return { success: false, error: error.message };
 
     return { success: true };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Database error' };
   }
 };
@@ -302,7 +403,7 @@ export const deletePaymentMethod = async (
     if (error) return { success: false, error: error.message };
 
     return { success: true };
-  } catch (error) {
+  } catch {
     return { success: false, error: 'Network error' };
   }
 };
@@ -443,7 +544,8 @@ export const refundTrucker = async (
       )
       .eq('user_id', userId)
       .eq('request_id', requestId)
-      .eq('transaction_type', 'acceptance_fee') // Only look for acceptance fees (trucker charged when provider accepts)
+      // Support both legacy and new authorization/capture naming.
+      .in('transaction_type', ['request_fee', 'acceptance_fee'])
       .in('status', ['succeeded', 'pending']) // Check for both succeeded and pending payments
       .order('created_at', { ascending: false })
       .limit(1);

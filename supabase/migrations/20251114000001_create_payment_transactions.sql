@@ -29,14 +29,17 @@ ALTER TABLE payment_transactions ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies
 -- Users can only see their own payment transactions
+DROP POLICY IF EXISTS "Users can view own payment transactions" ON payment_transactions;
 CREATE POLICY "Users can view own payment transactions" ON payment_transactions
     FOR SELECT USING (auth.uid() = user_id);
 
 -- Users can insert their own payment transactions
+DROP POLICY IF EXISTS "Users can insert own payment transactions" ON payment_transactions;
 CREATE POLICY "Users can insert own payment transactions" ON payment_transactions
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Users can update their own payment transactions (mainly for status updates)
+DROP POLICY IF EXISTS "Users can update own payment transactions" ON payment_transactions;
 CREATE POLICY "Users can update own payment transactions" ON payment_transactions
     FOR UPDATE USING (auth.uid() = user_id);
 
@@ -50,6 +53,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger to update updated_at timestamp
+DROP TRIGGER IF EXISTS trigger_update_payment_transactions_updated_at ON payment_transactions;
 CREATE TRIGGER trigger_update_payment_transactions_updated_at
     BEFORE UPDATE ON payment_transactions
     FOR EACH ROW

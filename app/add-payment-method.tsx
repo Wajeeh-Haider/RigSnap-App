@@ -14,7 +14,7 @@ import {
 import { router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { useConfirmSetupIntent, CardForm } from '@stripe/stripe-react-native';
+import { useConfirmSetupIntent, CardField } from '@stripe/stripe-react-native';
 import { paymentMethodService } from '@/utils/paymentOperations';
 import { createSetupIntent } from '@/utils/stripe';
 import { X, CreditCard } from 'lucide-react-native';
@@ -26,17 +26,11 @@ export default function AddPaymentMethodScreen() {
   const { confirmSetupIntent } = useConfirmSetupIntent();
 
   const [isLoading, setIsLoading] = useState(false);
-  const [cardFormComplete, setCardFormComplete] = useState(false);
-  const [newCard, setNewCard] = useState({
-    number: '',
-    expiryMonth: '',
-    expiryYear: '',
-    cvc: '',
-    name: '',
-  });
+  const [cardComplete, setCardComplete] = useState(false);
+  const [cardholderName, setCardholderName] = useState('');
 
   const handleAddCard = async () => {
-    if (!cardFormComplete || !newCard.name) {
+    if (!cardComplete || !cardholderName.trim()) {
       Alert.alert(
         'Error',
         'Please fill in all card details and cardholder name'
@@ -66,6 +60,11 @@ export default function AddPaymentMethodScreen() {
         setupIntentResponse.client_secret,
         {
           paymentMethodType: 'Card',
+          paymentMethodData: {
+            billingDetails: {
+              name: cardholderName.trim(),
+            },
+          },
         }
       );
 
@@ -102,7 +101,7 @@ export default function AddPaymentMethodScreen() {
         last4,
         expMonth,
         expYear,
-        newCard.name
+        cardholderName.trim()
       );
 
       if (result.success) {
@@ -180,10 +179,8 @@ export default function AddPaymentMethodScreen() {
                     color: colors.text,
                   },
                 ]}
-                value={newCard.name}
-                onChangeText={(text) =>
-                  setNewCard((prev) => ({ ...prev, name: text }))
-                }
+                value={cardholderName}
+                onChangeText={setCardholderName}
                 placeholder="John Doe"
                 placeholderTextColor={colors.textSecondary}
                 autoCapitalize="words"
@@ -196,26 +193,26 @@ export default function AddPaymentMethodScreen() {
                 Card Details
               </Text>
 
-              <CardForm
-                placeholders={{
-                  number: '1234 5678 9012 3456',
-                  cvc: 'CVC',
+              <CardField
+                style={{
+                  width: '100%',
+                  height: 50,
+                  marginVertical: 8,
                 }}
                 cardStyle={{
                   backgroundColor: colors.surface,
                   textColor: colors.text,
                   placeholderColor: colors.textSecondary,
-                  borderRadius: 8,
-                  borderWidth: 1,
                   borderColor: colors.border,
-                  fontSize: 16,
+                  borderWidth: 1,
+                  borderRadius: 8,
                 }}
-                style={{
-                  width: '100%',
-                  height: 250,
+                placeholders={{
+                  number: '1234 5678 9012 3456',
                 }}
-                onFormComplete={(cardDetails) => {
-                  setCardFormComplete(cardDetails.complete);
+                postalCodeEnabled={false}
+                onCardChange={(details) => {
+                  setCardComplete(!!details.complete);
                 }}
               />
             </View>
@@ -266,11 +263,11 @@ export default function AddPaymentMethodScreen() {
               style={[
                 styles.addCardButton,
                 { backgroundColor: colors.primary },
-                (!cardFormComplete || !newCard.name || isLoading) &&
+                (!cardComplete || !cardholderName.trim() || isLoading) &&
                   styles.addCardButtonDisabled,
               ]}
               onPress={handleAddCard}
-              disabled={!cardFormComplete || !newCard.name || isLoading}
+              disabled={!cardComplete || !cardholderName.trim() || isLoading}
             >
               {isLoading ? (
                 <ActivityIndicator size="small" color="white" />

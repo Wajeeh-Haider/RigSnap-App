@@ -12,7 +12,7 @@ import { ServiceRequest, Lead, ChatMessage, Chat } from '@/types';
 import { useAuth } from './AuthContext';
 import { requestService } from '@/utils/paymentOperations';
 import { chargeProviderPenalty, refundTrucker } from '@/utils/stripe';
-import { fetchAllRequests, fetchUserRequests, fetchAvailableRequests, fetchProviderRequests, updateRequestStatusInDB } from '@/utils/requestOperations';
+import { fetchAllRequests, fetchUserRequests, fetchAvailableRequests, updateRequestStatusInDB } from '@/utils/requestOperations';
 import { fetchUserLeads, fetchAllLeads, createLead } from '@/utils/leadOperations';
 import { 
   createChatInDB, 
@@ -207,6 +207,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     let chatSubscription: any = null;
     let messageSubscription: any = null;
+    let isCleaningUp = false;
 
     // Set up realtime subscription for chat updates
     chatSubscription = subscribeToChats(
@@ -312,7 +313,11 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (status === 'SUBSCRIBED') {
           console.log('✅ Global realtime message subscription is ACTIVE!');
         } else if (status === 'CLOSED') {
-          console.error('❌ Global message subscription CLOSED');
+          if (isCleaningUp) {
+            console.log('ℹ️ Global message subscription closed during cleanup');
+          } else {
+            console.warn('⚠️ Global message subscription closed unexpectedly');
+          }
         } else if (status === 'CHANNEL_ERROR') {
           console.error('❌ Global message subscription ERROR');
         }
@@ -320,6 +325,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     // Cleanup subscriptions
     return () => {
+      isCleaningUp = true;
       if (chatSubscription) {
         console.log('Cleaning up chat realtime subscription');
         chatSubscription.unsubscribe();
@@ -373,9 +379,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
           photos: requestData.photos,
         }, user.id);
         
-        if (!result.success || !result.requestId) {
+        if (!result.success) {
+          if (result.requires_action && result.client_secret && result.requestId) {
+            const err: any = new Error('Payment authorization requires action');
+            err.requires_action = true;
+            err.client_secret = result.client_secret;
+            err.requestId = result.requestId;
+            throw err;
+          }
           throw new Error(result.error || 'Failed to create request');
         }
+        if (!result.requestId) throw new Error('Failed to create request');
 
         // Create a ServiceRequest object with the data we have
         console.log('Request created with ID:', result.requestId);
@@ -392,7 +406,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
           status: 'pending',
           urgency: requestData.urgency,
           createdAt: new Date().toISOString(),
-          leadFeeCharged: true, // Payment was charged
+          leadFeeCharged: true, // Credits deducted and/or card authorized
           estimatedCost: requestData.estimatedCost,
           photos: requestData.photos || [],
         };
@@ -420,6 +434,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
         console.log('💳 Payment result:', result);
         
         if (!result.success) {
+          if (result.requires_action && result.client_secret) {
+            const err: any = new Error('Provider payment requires action');
+            err.requires_action = true;
+            err.client_secret = result.client_secret;
+            throw err;
+          }
           throw new Error(result.error || 'Failed to accept request');
         }
 
@@ -441,7 +461,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setTimeout(() => {
           Alert.alert(
             'Request Accepted! 🎉',
-            'You have successfully accepted this request and been charged $5. The trucker has been notified and you can now start chatting.',
+            'You have successfully accepted this request and were charged $5. The trucker\'s earlier $5 authorization was captured, and they have been notified. You can now start chatting.',
             [{ text: 'OK' }]
           );
         }, 100);

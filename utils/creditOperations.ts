@@ -199,10 +199,25 @@ export const addCreditsToUser = async (
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     // Update user credits
+    // Note: supabase-js doesn't support `supabase.sql` here. Do a safe read-modify-write.
+    const { data: userRow, error: fetchError } = await supabase
+      .from('users')
+      .select('credits')
+      .eq('id', userId)
+      .single();
+
+    if (fetchError) {
+      console.error('Error fetching user credits for update:', fetchError);
+      return { success: false, error: fetchError.message };
+    }
+
+    const currentCredits = typeof userRow?.credits === 'number' ? userRow.credits : 0;
+    const nextCredits = currentCredits + amount;
+
     const { error: updateError } = await supabase
       .from('users')
       .update({
-        credits: supabase.sql`credits + ${amount}`,
+        credits: nextCredits,
         updated_at: new Date().toISOString(),
       })
       .eq('id', userId);

@@ -24,18 +24,22 @@ ALTER TABLE payment_methods ENABLE ROW LEVEL SECURITY;
 
 -- Create RLS policies
 -- Users can only see their own payment methods
+DROP POLICY IF EXISTS "Users can view own payment methods" ON payment_methods;
 CREATE POLICY "Users can view own payment methods" ON payment_methods
     FOR SELECT USING (auth.uid() = user_id);
 
 -- Users can insert their own payment methods
+DROP POLICY IF EXISTS "Users can insert own payment methods" ON payment_methods;
 CREATE POLICY "Users can insert own payment methods" ON payment_methods
     FOR INSERT WITH CHECK (auth.uid() = user_id);
 
 -- Users can update their own payment methods
+DROP POLICY IF EXISTS "Users can update own payment methods" ON payment_methods;
 CREATE POLICY "Users can update own payment methods" ON payment_methods
     FOR UPDATE USING (auth.uid() = user_id);
 
 -- Users can delete their own payment methods
+DROP POLICY IF EXISTS "Users can delete own payment methods" ON payment_methods;
 CREATE POLICY "Users can delete own payment methods" ON payment_methods
     FOR DELETE USING (auth.uid() = user_id);
 
@@ -56,6 +60,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- Create trigger to ensure only one default payment method per user
+DROP TRIGGER IF EXISTS trigger_ensure_single_default_payment_method ON payment_methods;
 CREATE TRIGGER trigger_ensure_single_default_payment_method
     BEFORE INSERT OR UPDATE ON payment_methods
     FOR EACH ROW
@@ -71,6 +76,7 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger to update updated_at timestamp
+DROP TRIGGER IF EXISTS trigger_update_payment_methods_updated_at ON payment_methods;
 CREATE TRIGGER trigger_update_payment_methods_updated_at
     BEFORE UPDATE ON payment_methods
     FOR EACH ROW

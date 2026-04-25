@@ -162,7 +162,7 @@ BEGIN
         
       EXCEPTION
         WHEN OTHERS THEN
-          RAISE ERROR 'Complete failure to create user profile for %: % - %', NEW.id, SQLSTATE, SQLERRM;
+          RAISE EXCEPTION 'Complete failure to create user profile for %: % - %', NEW.id, SQLSTATE, SQLERRM;
       END;
   END;
   

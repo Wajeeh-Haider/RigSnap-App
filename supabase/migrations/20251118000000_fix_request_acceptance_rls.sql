@@ -5,6 +5,7 @@
 DROP POLICY IF EXISTS "Providers can update requests they're involved in" ON public.requests;
 
 -- Create a new policy that allows providers to accept pending requests
+DROP POLICY IF EXISTS "Providers can accept pending requests" ON public.requests;
 CREATE POLICY "Providers can accept pending requests" ON public.requests
   FOR UPDATE USING (
     -- Allow if user is already the provider (for status updates)

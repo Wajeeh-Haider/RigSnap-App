@@ -37,6 +37,7 @@ import LocationButton from '@/components/LocationButton';
 import { locationService } from '@/utils/location';
 import { useState } from 'react';
 import { canUserAffordPayment } from '@/utils/creditOperations';
+import { useStripe } from '@stripe/stripe-react-native';
 
 const getStatusColor = (status: string) => {
   switch (status) {
@@ -98,6 +99,7 @@ export default function JobDetailScreen() {
     sendMessage,
   } = useApp();
   const { colors } = useTheme();
+  const { confirmPayment } = useStripe();
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
   const [showProviderCancelModal, setShowProviderCancelModal] = useState(false);
@@ -271,11 +273,28 @@ export default function JobDetailScreen() {
       }
 
       // Wait for payment confirmation before proceeding
-      await acceptRequest(
-        request.id,
-        user.id,
-        `${user.firstName} ${user.lastName}`
-      );
+      try {
+        await acceptRequest(
+          request.id,
+          user.id,
+          `${user.firstName} ${user.lastName}`
+        );
+      } catch (err: any) {
+        if (err?.requires_action && err?.client_secret) {
+          const { error } = await confirmPayment(err.client_secret, {
+            paymentMethodType: 'Card',
+          });
+          if (error) throw new Error(error.message);
+
+          await acceptRequest(
+            request.id,
+            user.id,
+            `${user.firstName} ${user.lastName}`
+          );
+        } else {
+          throw err;
+        }
+      }
       setShowAcceptModal(false);
 
       // Refresh local data to get updated request status
@@ -306,7 +325,13 @@ export default function JobDetailScreen() {
 
       let errorMessage = 'Failed to accept request. Please try again.';
 
-      if (error?.message?.includes('Trucker payment failed')) {
+      if (error?.message?.includes('Trucker authorization capture failed') || error?.message?.includes('Trucker capture failed')) {
+        errorMessage =
+          'The trucker\'s card authorization is no longer capturable (it may have expired). Ask the trucker to re-create the request to re-authorize payment.';
+      } else if (error?.message?.includes('Trucker has insufficient credits and no payment method')) {
+        errorMessage =
+          'This request has no active trucker authorization and the trucker has no fallback payment method. Ask the trucker to add a payment method or re-create the request.';
+      } else if (error?.message?.includes('Trucker payment failed')) {
         errorMessage = `Trucker payment failed: ${
           error.message.split('Trucker payment failed: ')[1] ||
           'The trucker\'s payment method may be invalid.'

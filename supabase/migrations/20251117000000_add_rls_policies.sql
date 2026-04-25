@@ -8,39 +8,50 @@ ALTER TABLE public.payment_methods ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.payment_transactions ENABLE ROW LEVEL SECURITY;
 
 -- Users table policies
+DROP POLICY IF EXISTS "Users can view all profiles" ON public.users;
 CREATE POLICY "Users can view all profiles" ON public.users
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Users can insert their own profile" ON public.users;
 CREATE POLICY "Users can insert their own profile" ON public.users
   FOR INSERT WITH CHECK (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update their own profile" ON public.users;
 CREATE POLICY "Users can update their own profile" ON public.users
   FOR UPDATE USING (auth.uid() = id);
 
 -- Requests table policies
+DROP POLICY IF EXISTS "Users can view all requests" ON public.requests;
 CREATE POLICY "Users can view all requests" ON public.requests
   FOR SELECT USING (true);
 
+DROP POLICY IF EXISTS "Truckers can insert their own requests" ON public.requests;
 CREATE POLICY "Truckers can insert their own requests" ON public.requests
   FOR INSERT WITH CHECK (auth.uid() = trucker_id);
 
+DROP POLICY IF EXISTS "Truckers can update their own requests" ON public.requests;
 CREATE POLICY "Truckers can update their own requests" ON public.requests
   FOR UPDATE USING (auth.uid() = trucker_id);
 
+DROP POLICY IF EXISTS "Providers can update requests they're involved in" ON public.requests;
 CREATE POLICY "Providers can update requests they're involved in" ON public.requests
   FOR UPDATE USING (auth.uid() = provider_id);
 
 -- Chats table policies
+DROP POLICY IF EXISTS "Users can view chats they're part of" ON public.chats;
 CREATE POLICY "Users can view chats they're part of" ON public.chats
   FOR SELECT USING (auth.uid() = trucker_id OR auth.uid() = provider_id);
 
+DROP POLICY IF EXISTS "System can insert chats" ON public.chats;
 CREATE POLICY "System can insert chats" ON public.chats
   FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Users can update chats they're part of" ON public.chats;
 CREATE POLICY "Users can update chats they're part of" ON public.chats
   FOR UPDATE USING (auth.uid() = trucker_id OR auth.uid() = provider_id);
 
 -- Messages table policies
+DROP POLICY IF EXISTS "Users can view messages in their chats" ON public.messages;
 CREATE POLICY "Users can view messages in their chats" ON public.messages
   FOR SELECT USING (
     EXISTS (
@@ -50,6 +61,7 @@ CREATE POLICY "Users can view messages in their chats" ON public.messages
     )
   );
 
+DROP POLICY IF EXISTS "Users can insert messages in their chats" ON public.messages;
 CREATE POLICY "Users can insert messages in their chats" ON public.messages
   FOR INSERT WITH CHECK (
     auth.uid() = sender_id AND
@@ -60,9 +72,11 @@ CREATE POLICY "Users can insert messages in their chats" ON public.messages
     )
   );
 
+DROP POLICY IF EXISTS "Users can update messages they sent" ON public.messages;
 CREATE POLICY "Users can update messages they sent" ON public.messages
   FOR UPDATE USING (auth.uid() = sender_id);
 
+DROP POLICY IF EXISTS "Users can update read status of messages in their chats" ON public.messages;
 CREATE POLICY "Users can update read status of messages in their chats" ON public.messages
   FOR UPDATE USING (
     EXISTS (
@@ -73,34 +87,44 @@ CREATE POLICY "Users can update read status of messages in their chats" ON publi
   );
 
 -- Leads table policies
+DROP POLICY IF EXISTS "Users can view their own leads" ON public.leads;
 CREATE POLICY "Users can view their own leads" ON public.leads
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "System can insert leads" ON public.leads;
 CREATE POLICY "System can insert leads" ON public.leads
   FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "Users can update their own leads" ON public.leads;
 CREATE POLICY "Users can update their own leads" ON public.leads
   FOR UPDATE USING (auth.uid() = user_id);
 
 -- Payment methods table policies
+DROP POLICY IF EXISTS "Users can view their own payment methods" ON public.payment_methods;
 CREATE POLICY "Users can view their own payment methods" ON public.payment_methods
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can insert their own payment methods" ON public.payment_methods;
 CREATE POLICY "Users can insert their own payment methods" ON public.payment_methods
   FOR INSERT WITH CHECK (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can update their own payment methods" ON public.payment_methods;
 CREATE POLICY "Users can update their own payment methods" ON public.payment_methods
   FOR UPDATE USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "Users can delete their own payment methods" ON public.payment_methods;
 CREATE POLICY "Users can delete their own payment methods" ON public.payment_methods
   FOR DELETE USING (auth.uid() = user_id);
 
 -- Payment transactions table policies
+DROP POLICY IF EXISTS "Users can view their own transactions" ON public.payment_transactions;
 CREATE POLICY "Users can view their own transactions" ON public.payment_transactions
   FOR SELECT USING (auth.uid() = user_id);
 
+DROP POLICY IF EXISTS "System can insert transactions" ON public.payment_transactions;
 CREATE POLICY "System can insert transactions" ON public.payment_transactions
   FOR INSERT WITH CHECK (true);
 
+DROP POLICY IF EXISTS "System can update transactions" ON public.payment_transactions;
 CREATE POLICY "System can update transactions" ON public.payment_transactions
   FOR UPDATE USING (true);
