@@ -33,7 +33,7 @@ export default function AddPaymentMethodScreen() {
     if (!cardComplete || !cardholderName.trim()) {
       Alert.alert(
         'Error',
-        'Please fill in all card details and cardholder name'
+        'Please fill in all card details and cardholder name',
       );
       return;
     }
@@ -55,6 +55,11 @@ export default function AddPaymentMethodScreen() {
         return;
       }
 
+      console.log({
+        client_secret: setupIntentResponse.client_secret,
+        success: setupIntentResponse.success,
+      });
+
       // Step 2: Confirm the SetupIntent with the card details
       const { error, setupIntent } = await confirmSetupIntent(
         setupIntentResponse.client_secret,
@@ -65,18 +70,19 @@ export default function AddPaymentMethodScreen() {
               name: cardholderName.trim(),
             },
           },
-        }
+        },
       );
 
       if (error) {
-        console.error('Setup intent error:', error);
-        Alert.alert('Payment Error', error.message);
+        console.log({ error });
+
+        Alert.alert('Something went wrong. Please try again.', error.message);
         setIsLoading(false);
         return;
       }
 
       if (setupIntent?.status !== 'Succeeded') {
-        Alert.alert('Error', 'Payment method setup failed');
+        Alert.alert('Something went wrong. Please try again.');
         setIsLoading(false);
         return;
       }
@@ -101,7 +107,7 @@ export default function AddPaymentMethodScreen() {
         last4,
         expMonth,
         expYear,
-        cardholderName.trim()
+        cardholderName.trim(),
       );
 
       if (result.success) {

@@ -73,9 +73,13 @@ export default function RootLayout() {
       <AuthProvider>
         <LanguageProvider>
           <AppProvider>
-            <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
+            {STRIPE_PUBLISHABLE_KEY ? (
+              <StripeProvider publishableKey={STRIPE_PUBLISHABLE_KEY}>
+                <StackWithSafeArea />
+              </StripeProvider>
+            ) : (
               <StackWithSafeArea />
-            </StripeProvider>
+            )}
           </AppProvider>
         </LanguageProvider>
       </AuthProvider>

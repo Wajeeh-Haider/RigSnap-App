@@ -1,13 +1,15 @@
 // Cleaned version without console logs
 import { supabase } from '../lib/supabase';
 
-export const STRIPE_PUBLISHABLE_KEY =
+const resolvedStripePublishableKey =
   process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ||
+  process.env.STRIPE_PUBLISHABLE_KEY ||
   process.env.EXPO_PUBLIC_STRIPE_PUBLISHED_KEY ||
   '';
+
+export const STRIPE_PUBLISHABLE_KEY = resolvedStripePublishableKey.trim();
 const BACKEND_URL =
-  process.env.EXPO_PUBLIC_BACKEND_URL ||
-  'https://rigsnap-backend-vqqg.vercel.app';
+  process.env.EXPO_PUBLIC_BACKEND_URL || 'https://rigsnap-backend.vercel.app';
 const BYPASS_PAYMENTS_FOR_TESTING = false;
 
 export const TRUCKER_REQUEST_FEE = 5.0;
@@ -52,8 +54,10 @@ export const createPaymentIntent = async (
   amount: number,
   currency: string = 'usd',
   description: string,
-  userId: string
+  userId: string,
 ): Promise<CreatePaymentIntentResponse> => {
+  console.log({ BACKEND_URL });
+
   try {
     const response = await fetch(
       `${BACKEND_URL}/api/stripe/create-payment-intent`,
@@ -68,7 +72,7 @@ export const createPaymentIntent = async (
           description,
           userId,
         }),
-      }
+      },
     );
 
     const data = await response.json();
@@ -87,7 +91,7 @@ export const createPaymentIntent = async (
 };
 
 export const createSetupIntent = async (
-  userId: string
+  userId: string,
 ): Promise<CreateSetupIntentResponse> => {
   try {
     const response = await fetch(
@@ -98,7 +102,7 @@ export const createSetupIntent = async (
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ userId }),
-      }
+      },
     );
 
     const data = await response.json();
@@ -124,7 +128,7 @@ export const chargePaymentMethod = async (
   paymentMethodId: string,
   amount: number,
   description: string,
-  userId: string
+  userId: string,
 ): Promise<ChargePaymentResponse> => {
   try {
     const requestBody = {
@@ -149,7 +153,7 @@ export const chargePaymentMethod = async (
         },
         body: JSON.stringify(requestBody),
         signal: controller.signal,
-      }
+      },
     );
 
     clearTimeout(timeoutId);
@@ -196,21 +200,24 @@ export const authorizePaymentMethod = async (
   amount: number,
   description: string,
   userId: string,
-  metadata?: Record<string, any>
+  metadata?: Record<string, any>,
 ): Promise<AuthorizePaymentResponse> => {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/stripe/authorize-payment-method`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        payment_method_id: paymentMethodId,
-        amount: Math.round(amount * 100),
-        currency: 'usd',
-        description,
-        userId,
-        metadata: metadata || {},
-      }),
-    });
+    const response = await fetch(
+      `${BACKEND_URL}/api/stripe/authorize-payment-method`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          payment_method_id: paymentMethodId,
+          amount: Math.round(amount * 100),
+          currency: 'usd',
+          description,
+          userId,
+          metadata: metadata || {},
+        }),
+      },
+    );
 
     const data = await response.json();
 
@@ -246,14 +253,17 @@ export interface CapturePaymentIntentResponse {
 }
 
 export const capturePaymentIntent = async (
-  paymentIntentId: string
+  paymentIntentId: string,
 ): Promise<CapturePaymentIntentResponse> => {
   try {
-    const response = await fetch(`${BACKEND_URL}/api/stripe/capture-payment-intent`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ payment_intent_id: paymentIntentId }),
-    });
+    const response = await fetch(
+      `${BACKEND_URL}/api/stripe/capture-payment-intent`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payment_intent_id: paymentIntentId }),
+      },
+    );
 
     const data = await response.json();
 
@@ -272,7 +282,7 @@ export const capturePaymentIntent = async (
 };
 
 export const getUserPaymentMethods = async (
-  userId: string
+  userId: string,
 ): Promise<PaymentMethod[]> => {
   try {
     const { data, error } = await supabase
@@ -290,7 +300,7 @@ export const getUserPaymentMethods = async (
 };
 
 export const getDefaultPaymentMethod = async (
-  userId: string
+  userId: string,
 ): Promise<PaymentMethod | null> => {
   try {
     const { data, error } = await supabase
@@ -316,7 +326,7 @@ export const createPaymentMethodInDB = async (
   expMonth: number,
   expYear: number,
   cardholderName: string | null = null,
-  isDefault: boolean = false
+  isDefault: boolean = false,
 ): Promise<{ success: boolean; error?: string; data?: PaymentMethod }> => {
   try {
     const { count, error: countError } = await supabase
@@ -355,7 +365,7 @@ export const createPaymentMethodInDB = async (
 
 export const updatePaymentMethodDefault = async (
   paymentMethodId: string,
-  isDefault: boolean
+  isDefault: boolean,
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const { error } = await supabase
@@ -373,7 +383,7 @@ export const updatePaymentMethodDefault = async (
 
 export const deletePaymentMethod = async (
   paymentMethodId: string,
-  stripePaymentMethodId: string
+  stripePaymentMethodId: string,
 ): Promise<{ success: boolean; error?: string }> => {
   try {
     const response = await fetch(
@@ -384,7 +394,7 @@ export const deletePaymentMethod = async (
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ payment_method_id: stripePaymentMethodId }),
-      }
+      },
     );
 
     if (!response.ok) {
@@ -411,7 +421,7 @@ export const deletePaymentMethod = async (
 export const chargeTruckerForRequest = async (
   userId: string,
   requestId: string,
-  amount: number = TRUCKER_REQUEST_FEE
+  amount: number = TRUCKER_REQUEST_FEE,
 ): Promise<{
   success: boolean;
   error?: string;
@@ -422,14 +432,14 @@ export const chargeTruckerForRequest = async (
 
   if (BYPASS_PAYMENTS_FOR_TESTING) {
     console.log(
-      '⚠️ chargeTruckerForRequest - TEST MODE - Bypassing actual charge'
+      '⚠️ chargeTruckerForRequest - TEST MODE - Bypassing actual charge',
     );
     return { success: true, payment_intent_id: 'test_bypass' };
   }
 
   console.log(
     '🔍 chargeTruckerForRequest - Fetching default payment method for user:',
-    userId
+    userId,
   );
   const defaultPaymentMethod = await getDefaultPaymentMethod(userId);
   console.log('💳 Default payment method result:', defaultPaymentMethod);
@@ -440,7 +450,7 @@ export const chargeTruckerForRequest = async (
   }
 
   console.log(
-    '✅ chargeTruckerForRequest - Payment method found, proceeding with charge'
+    '✅ chargeTruckerForRequest - Payment method found, proceeding with charge',
   );
   console.log('💰 chargeTruckerForRequest - Charge details:', {
     amount: TRUCKER_REQUEST_FEE,
@@ -452,7 +462,7 @@ export const chargeTruckerForRequest = async (
     defaultPaymentMethod.stripe_payment_method_id,
     amount,
     `RigSnap Request Fee - Request #${requestId}`,
-    userId
+    userId,
   );
 
   console.log('✅ chargeTruckerForRequest - Charge completed:', result);
@@ -462,7 +472,7 @@ export const chargeTruckerForRequest = async (
 export const chargeProviderForAcceptance = async (
   userId: string,
   requestId: string,
-  amount: number = PROVIDER_ACCEPTANCE_FEE
+  amount: number = PROVIDER_ACCEPTANCE_FEE,
 ): Promise<{
   success: boolean;
   error?: string;
@@ -482,13 +492,13 @@ export const chargeProviderForAcceptance = async (
     defaultPaymentMethod.stripe_payment_method_id,
     amount,
     `RigSnap Acceptance Fee - Request #${requestId}`,
-    userId
+    userId,
   );
 };
 
 export const chargeProviderPenalty = async (
   userId: string,
-  requestId: string
+  requestId: string,
 ): Promise<{
   success: boolean;
   error?: string;
@@ -508,14 +518,14 @@ export const chargeProviderPenalty = async (
     defaultPaymentMethod.stripe_payment_method_id,
     5, // $5.00 penalty fee
     `RigSnap Cancellation Penalty - Request #${requestId}`,
-    userId
+    userId,
   );
 };
 
 export const refundTrucker = async (
   userId: string,
   requestId: string,
-  amount: number = 500 // $5.00 refund
+  amount: number = 500, // $5.00 refund
 ): Promise<{
   success: boolean;
   error?: string;
@@ -540,7 +550,7 @@ export const refundTrucker = async (
     const { data: transactions, error } = await supabase
       .from('payment_transactions')
       .select(
-        'stripe_payment_intent_id, status, amount_cents, description, transaction_type, created_at'
+        'stripe_payment_intent_id, status, amount_cents, description, transaction_type, created_at',
       )
       .eq('user_id', userId)
       .eq('request_id', requestId)
@@ -553,21 +563,21 @@ export const refundTrucker = async (
     console.log('🔍 refundTrucker - Database query completed');
     console.log(
       '🔍 refundTrucker - Found transactions:',
-      JSON.stringify(transactions, null, 2)
+      JSON.stringify(transactions, null, 2),
     );
     console.log('🔍 refundTrucker - Query error:', error);
     console.log(
       '🔍 refundTrucker - Total transactions found:',
-      transactions?.length || 0
+      transactions?.length || 0,
     );
 
     if (error || !transactions || transactions.length === 0) {
       console.log('❌ refundTrucker - No trucker payment transaction found');
       console.log(
-        '❌ refundTrucker - This means the trucker was not charged for this request'
+        '❌ refundTrucker - This means the trucker was not charged for this request',
       );
       console.log(
-        '❌ refundTrucker - Returning success since no payment was made'
+        '❌ refundTrucker - Returning success since no payment was made',
       );
       return { success: true, refund_id: 'no_payment_found' };
     }
@@ -590,7 +600,7 @@ export const refundTrucker = async (
     // If payment is still pending, no refund needed
     if (transactionStatus === 'pending') {
       console.log(
-        '⚠️ refundTrucker - Payment is still pending - no refund needed'
+        '⚠️ refundTrucker - Payment is still pending - no refund needed',
       );
       return { success: true, refund_id: 'payment_pending' };
     }
@@ -602,7 +612,7 @@ export const refundTrucker = async (
       paymentIntentId === ''
     ) {
       console.log(
-        '⚠️ refundTrucker - No actual payment was processed - no refund needed'
+        '⚠️ refundTrucker - No actual payment was processed - no refund needed',
       );
       console.log('⚠️ refundTrucker - Payment intent ID:', paymentIntentId);
       return { success: true, refund_id: 'no_actual_payment' };
@@ -612,7 +622,7 @@ export const refundTrucker = async (
     if (!paymentIntentId.startsWith('pi_')) {
       console.log(
         '⚠️ refundTrucker - Invalid payment intent ID format:',
-        paymentIntentId
+        paymentIntentId,
       );
       console.log('⚠️ refundTrucker - Expected format: pi_xxxxxxxxxxxxx');
       return { success: true, refund_id: 'invalid_payment_intent' };
@@ -620,7 +630,7 @@ export const refundTrucker = async (
 
     console.log('✅ refundTrucker - Payment intent validated successfully');
     console.log(
-      '🔄 refundTrucker - Preparing to call Stripe backend for refund'
+      '🔄 refundTrucker - Preparing to call Stripe backend for refund',
     );
 
     const controller = new AbortController();
@@ -655,11 +665,11 @@ export const refundTrucker = async (
     const data = await response.json();
     console.log(
       '🔄 refundTrucker - Refund API response status:',
-      response.status
+      response.status,
     );
     console.log(
       '🔄 refundTrucker - Refund API response data:',
-      JSON.stringify(data, null, 2)
+      JSON.stringify(data, null, 2),
     );
 
     if (!response.ok) {
