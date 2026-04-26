@@ -17,6 +17,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
 import { User } from '@/types';
+import { useToast } from '@/hooks/useToast';
 import {
   ArrowLeft,
   Bell,
@@ -48,10 +49,17 @@ interface NotificationSettings {
 
 export default function AccountSettingsScreen() {
   const { user, updateProfile, deleteAccount } = useAuth();
-  const { isDarkMode, toggleDarkMode, followDeviceTheme, toggleFollowDeviceTheme, colors } = useTheme();
+  const {
+    isDarkMode,
+    toggleDarkMode,
+    followDeviceTheme,
+    toggleFollowDeviceTheme,
+    colors,
+  } = useTheme();
   const { currentLanguage, setLanguage, languages, getCurrentLanguage } =
     useLanguage();
   const { t } = useLanguage();
+  const { showError, showSuccess, showInfo } = useToast();
   const [notifications, setNotifications] = useState<NotificationSettings>({
     pushNotifications: user?.pushNotifications ?? true,
     emailNotifications: user?.emailNotifications ?? true,
@@ -64,7 +72,7 @@ export default function AccountSettingsScreen() {
   // Update notifications when user data changes
   useEffect(() => {
     if (user) {
-      setNotifications(prev => ({
+      setNotifications((prev) => ({
         ...prev,
         pushNotifications: user.pushNotifications ?? true,
         emailNotifications: user.emailNotifications ?? true,
@@ -97,33 +105,34 @@ export default function AccountSettingsScreen() {
 
   const updateNotificationSetting = async (
     key: keyof NotificationSettings,
-    value: boolean
+    value: boolean,
   ) => {
     setNotifications((prev) => ({ ...prev, [key]: value }));
-    
+
     // Map the setting to the user field
     const userFieldMap: Record<string, keyof User> = {
       pushNotifications: 'pushNotifications',
       emailNotifications: 'emailNotifications',
       requestUpdates: 'requestUpdates',
     };
-    
+
     const userField = userFieldMap[key];
     if (userField) {
       const result = await updateProfile({ [userField]: value });
       if (!result.success) {
         // Revert the change if update failed
         setNotifications((prev) => ({ ...prev, [key]: !value }));
-        Alert.alert('Error', `Failed to update ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}: ${result.error}`);
+        showError(
+          `Failed to update ${key.replace(/([A-Z])/g, ' $1').toLowerCase()}: ${result.error}`,
+        );
         return;
       }
     }
-    
-    Alert.alert(
-      'Settings Updated',
+
+    showSuccess(
       `${key.replace(/([A-Z])/g, ' $1').toLowerCase()} has been ${
         value ? 'enabled' : 'disabled'
-      }`
+      }`,
     );
   };
 
@@ -133,25 +142,22 @@ export default function AccountSettingsScreen() {
       !passwordData.newPassword ||
       !passwordData.confirmPassword
     ) {
-      Alert.alert('Error', 'Please fill in all password fields');
+      showError('Please fill in all password fields');
       return;
     }
 
     if (passwordData.newPassword !== passwordData.confirmPassword) {
-      Alert.alert('Error', 'New passwords do not match');
+      showError('New passwords do not match');
       return;
     }
 
     if (passwordData.newPassword.length < 8) {
-      Alert.alert('Error', 'New password must be at least 8 characters long');
+      showError('New password must be at least 8 characters long');
       return;
     }
 
     if (passwordData.currentPassword === passwordData.newPassword) {
-      Alert.alert(
-        'Error',
-        'New password must be different from current password'
-      );
+      showError('New password must be different from current password');
       return;
     }
 
@@ -169,13 +175,11 @@ export default function AccountSettingsScreen() {
       });
       setShowPasswords({ current: false, new: false, confirm: false });
 
-      Alert.alert(
-        'Password Changed',
-        'Your password has been successfully updated. Please use your new password for future logins.',
-        [{ text: 'OK' }]
+      showSuccess(
+        'Password changed successfully. Please use your new password for future logins.',
       );
     } catch {
-      Alert.alert('Error', 'Failed to change password. Please try again.');
+      showError('Failed to change password. Please try again.');
     } finally {
       setIsChangingPassword(false);
     }
@@ -191,13 +195,13 @@ export default function AccountSettingsScreen() {
       // Language changes instantly, no need for alert
       // The selected language is already applied by setLanguage(languageCode) above
     } else {
-      Alert.alert('Error', 'Failed to change language. Please try again.');
+      showError('Failed to change language. Please try again.');
     }
   };
 
   const handleDeleteAccount = async () => {
     if (deleteConfirmation.toLowerCase() !== 'delete') {
-      Alert.alert('Error', 'Please type "DELETE" to confirm account deletion');
+      showError('Please type "DELETE" to confirm account deletion');
       return;
     }
 
@@ -206,30 +210,18 @@ export default function AccountSettingsScreen() {
       const result = await deleteAccount();
 
       if (!result.success) {
-        Alert.alert(
-          'Error',
+        showError(
           result.error ||
-            'Failed to delete account. Please try again or contact support.'
+            'Failed to delete account. Please try again or contact support.',
         );
         return;
       }
 
-      Alert.alert(
-        'Account Deleted',
-        'Your account has been permanently deleted. All your data has been removed from our servers.',
-        [
-          {
-            text: 'OK',
-            onPress: () => {
-              router.replace('/(auth)/login');
-            },
-          },
-        ]
-      );
+      showSuccess('Account deleted successfully.');
+      router.replace('/(auth)/login');
     } catch {
-      Alert.alert(
-        'Error',
-        'Failed to delete account. Please try again or contact support.'
+      showError(
+        'Failed to delete account. Please try again or contact support.',
       );
     } finally {
       setIsDeletingAccount(false);
@@ -253,7 +245,7 @@ export default function AccountSettingsScreen() {
           style: 'destructive',
           onPress: () => setShowDeleteModal(true),
         },
-      ]
+      ],
     );
   };
 
@@ -287,6 +279,9 @@ export default function AccountSettingsScreen() {
   };
 
   const currentLang = getCurrentLanguage();
+  const dividerColor = isDarkMode
+    ? 'rgba(255, 255, 255, 0.08)'
+    : 'rgba(15, 23, 42, 0.08)';
 
   const SettingItem = ({
     icon,
@@ -297,6 +292,7 @@ export default function AccountSettingsScreen() {
     showSwitch = true,
     onPress,
     rightContent,
+    isLast = false,
   }: {
     icon: any;
     title: string;
@@ -306,12 +302,17 @@ export default function AccountSettingsScreen() {
     showSwitch?: boolean;
     onPress?: () => void;
     rightContent?: React.ReactNode;
+    isLast?: boolean;
   }) => {
     const Icon = icon;
 
     return (
       <TouchableOpacity
-        style={[styles.settingItem, { borderBottomColor: colors.border }]}
+        style={[
+          styles.settingItem,
+          { borderBottomColor: dividerColor },
+          isLast && styles.settingItemLast,
+        ]}
         onPress={onPress}
         disabled={!onPress && !onToggle}
       >
@@ -470,6 +471,7 @@ export default function AccountSettingsScreen() {
               description={t('settings.updatePassword')}
               showSwitch={false}
               onPress={() => setShowPasswordModal(true)}
+              isLast={true}
             />
           </View>
         </View>
@@ -499,6 +501,7 @@ export default function AccountSettingsScreen() {
                   <ChevronRight size={20} color={colors.textSecondary} />
                 </View>
               }
+              isLast={true}
             />
           </View>
         </View>
@@ -532,6 +535,7 @@ export default function AccountSettingsScreen() {
               onToggle={(value) =>
                 updateNotificationSetting('emailNotifications', value)
               }
+              isLast={true}
             />
 
             {/* <SettingItem
@@ -589,6 +593,7 @@ export default function AccountSettingsScreen() {
               onToggle={(value) =>
                 updateNotificationSetting('marketingEmails', value)
               }
+              isLast={true}
             />
           </View>
         </View>
@@ -612,11 +617,17 @@ export default function AccountSettingsScreen() {
               onToggle={toggleDarkMode}
               showSwitch={!followDeviceTheme}
               onPress={followDeviceTheme ? toggleDarkMode : undefined}
-              rightContent={followDeviceTheme ? 
-                <Text style={[styles.autoThemeText, { color: colors.textSecondary }]}>
-                  Auto
-                </Text> : 
-                undefined
+              rightContent={
+                followDeviceTheme ? (
+                  <Text
+                    style={[
+                      styles.autoThemeText,
+                      { color: colors.textSecondary },
+                    ]}
+                  >
+                    Auto
+                  </Text>
+                ) : undefined
               }
             />
             <SettingItem
@@ -625,6 +636,7 @@ export default function AccountSettingsScreen() {
               description="Automatically switch theme based on device settings"
               value={followDeviceTheme}
               onToggle={toggleFollowDeviceTheme}
+              isLast={true}
             />
           </View>
         </View>
@@ -645,12 +657,7 @@ export default function AccountSettingsScreen() {
               title={t('settings.helpCenter')}
               description="Get help and support"
               showSwitch={false}
-              onPress={() =>
-                Alert.alert(
-                  'Help Center',
-                  'Contact support at support@rigsnap.com'
-                )
-              }
+              onPress={() => showInfo('Contact support at support@rigsnap.com')}
             />
 
             <SettingItem
@@ -659,6 +666,7 @@ export default function AccountSettingsScreen() {
               description="Review our privacy policy"
               showSwitch={false}
               onPress={() => router.push('/privacy-policy')}
+              isLast={true}
             />
           </View>
         </View>
@@ -681,11 +689,10 @@ export default function AccountSettingsScreen() {
               description="Permanently delete your account and all data"
               showSwitch={false}
               onPress={showDeleteAccountConfirmation}
+              isLast={true}
             />
           </View>
         </View>
-
-     
       </ScrollView>
 
       {/* Password Change Modal */}
@@ -1126,8 +1133,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 24,
-    paddingTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
     borderBottomWidth: 1,
   },
   backButton: {
@@ -1136,7 +1143,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   placeholder: {
     width: 40,
@@ -1150,7 +1157,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 12,
   },
   card: {
@@ -1168,6 +1175,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     padding: 16,
     borderBottomWidth: 1,
+  },
+  settingItemLast: {
+    borderBottomWidth: 0,
   },
   settingContent: {
     flexDirection: 'row',
@@ -1187,7 +1197,7 @@ const styles = StyleSheet.create({
   },
   settingTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     marginBottom: 2,
   },
   settingDescription: {
@@ -1215,7 +1225,7 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginLeft: 8,
   },
   summaryText: {
@@ -1241,7 +1251,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   closeButton: {
     padding: 8,
@@ -1258,7 +1268,7 @@ const styles = StyleSheet.create({
   },
   passwordLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     marginBottom: 8,
   },
   passwordInputWrapper: {
@@ -1271,6 +1281,7 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 16,
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
   },
   passwordToggle: {
     padding: 16,
@@ -1290,7 +1301,7 @@ const styles = StyleSheet.create({
   },
   strengthText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   passwordRequirements: {
     borderRadius: 12,
@@ -1299,7 +1310,7 @@ const styles = StyleSheet.create({
   },
   requirementsTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     marginBottom: 8,
   },
   requirementItem: {
@@ -1321,12 +1332,14 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   changePasswordButton: {
     flex: 1,
     borderRadius: 12,
-    padding: 16,
+    // minHeight: 56,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1337,8 +1350,10 @@ const styles = StyleSheet.create({
   },
   changePasswordButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     color: 'white',
+    flexShrink: 1,
+    textAlign: 'center',
   },
   languageList: {
     flex: 1,
@@ -1371,18 +1386,18 @@ const styles = StyleSheet.create({
   },
   languageName: {
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
     marginBottom: 2,
   },
   selectedLanguageName: {
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   languageNativeName: {
     fontSize: 14,
   },
   dangerSectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 12,
   },
   dangerCard: {
@@ -1394,7 +1409,7 @@ const styles = StyleSheet.create({
   },
   deleteWarningTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#ef4444',
     marginTop: 16,
     marginBottom: 8,
@@ -1402,6 +1417,7 @@ const styles = StyleSheet.create({
   },
   deleteWarningText: {
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
     color: '#6b7280',
     textAlign: 'center',
     lineHeight: 24,
@@ -1422,6 +1438,7 @@ const styles = StyleSheet.create({
   },
   consequenceText: {
     fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
     color: '#dc2626',
     lineHeight: 20,
     flex: 1,
@@ -1431,12 +1448,13 @@ const styles = StyleSheet.create({
   },
   confirmationLabel: {
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
     color: '#374151',
     marginBottom: 12,
     textAlign: 'center',
   },
   confirmationKeyword: {
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#ef4444',
   },
   confirmationInput: {
@@ -1447,7 +1465,7 @@ const styles = StyleSheet.create({
     padding: 16,
     fontSize: 16,
     textAlign: 'center',
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#ef4444',
   },
   deleteAlternatives: {
@@ -1459,12 +1477,13 @@ const styles = StyleSheet.create({
   },
   alternativesTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#0369a1',
     marginBottom: 12,
   },
   alternativesText: {
     fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
     color: '#0369a1',
     lineHeight: 20,
     marginBottom: 4,
@@ -1484,12 +1503,12 @@ const styles = StyleSheet.create({
   },
   deleteAccountButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     color: 'white',
   },
   autoThemeText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
     marginRight: 8,
   },
 });

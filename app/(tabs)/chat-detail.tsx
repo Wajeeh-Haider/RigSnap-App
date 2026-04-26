@@ -17,6 +17,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useToast } from '@/hooks/useToast';
 import {
   ArrowLeft,
   Send,
@@ -35,6 +36,7 @@ export default function ChatDetailScreen() {
   const params = useLocalSearchParams();
   const { user } = useAuth();
   const { colors } = useTheme();
+  const { showInfo, showSuccess } = useToast();
   const {
     getChatMessages,
     sendMessage,
@@ -226,38 +228,26 @@ export default function ChatDetailScreen() {
 
   const handleCompleteService = () => {
     if (rating === 0) {
-      Alert.alert(
-        'Rating Required',
-        'Please provide a rating before completing the service.'
-      );
+      showInfo('Please provide a rating before completing the service.');
       return;
     }
 
     // In a real app, this would update the provider's rating and save feedback
-    Alert.alert(
-      'Service Completed',
-      `Thank you for your feedback! You rated ${
+    showSuccess(
+      `Thanks for your feedback! You rated ${
         otherParticipant.name
       } ${rating} star${rating !== 1 ? 's' : ''}.`,
-      [
-        {
-          text: 'OK',
-          onPress: () => {
-            setShowCompletionModal(false);
-            // Send a system message about the completion
-            sendMessage(
-              requestId,
-              'system',
-              'System',
-              user.role,
-              `Service completed with ${rating} star rating${
-                feedback ? ': "' + feedback + '"' : ''
-              }`,
-              'system'
-            );
-          },
-        },
-      ]
+    );
+    setShowCompletionModal(false);
+    sendMessage(
+      requestId,
+      'system',
+      'System',
+      user.role,
+      `Service completed with ${rating} star rating${
+        feedback ? ': "' + feedback + '"' : ''
+      }`,
+      'system'
     );
   };
 
@@ -413,7 +403,7 @@ export default function ChatDetailScreen() {
       >
         <TouchableOpacity
           style={styles.backButton}
-          onPress={() => router.back()}
+          onPress={() => router.replace('/chat')}
         >
           <ArrowLeft size={24} color={colors.text} />
         </TouchableOpacity>
@@ -902,7 +892,7 @@ const styles = StyleSheet.create({
   },
   participantName: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#1e293b',
   },
   participantRole: {
@@ -912,7 +902,7 @@ const styles = StyleSheet.create({
   },
   roleText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
     marginLeft: 4,
   },
   headerActions: {
@@ -937,7 +927,7 @@ const styles = StyleSheet.create({
   },
   requestTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#2563eb',
   },
   statusBadge: {
@@ -948,7 +938,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 10,
     color: 'white',
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   requestLocation: {
     flexDirection: 'row',
@@ -956,6 +946,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
     color: '#6b7280',
     marginLeft: 6,
   },
@@ -971,6 +962,7 @@ const styles = StyleSheet.create({
   },
   dateText: {
     fontSize: 12,
+    fontFamily: 'Poppins_500Medium',
     color: '#6b7280',
     backgroundColor: '#f1f5f9',
     paddingHorizontal: 12,
@@ -1006,6 +998,7 @@ const styles = StyleSheet.create({
   },
   messageText: {
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
     lineHeight: 20,
   },
   ownMessageText: {
@@ -1023,6 +1016,7 @@ const styles = StyleSheet.create({
   },
   messageTime: {
     fontSize: 11,
+    fontFamily: 'Poppins_500Medium',
   },
   ownMessageTime: {
     color: 'rgba(255, 255, 255, 0.7)',
@@ -1036,6 +1030,7 @@ const styles = StyleSheet.create({
   },
   systemMessageText: {
     fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
     color: '#6b7280',
     backgroundColor: '#f1f5f9',
     paddingHorizontal: 16,
@@ -1045,6 +1040,7 @@ const styles = StyleSheet.create({
   },
   systemMessageTime: {
     fontSize: 10,
+    fontFamily: 'Poppins_500Medium',
     color: '#9ca3af',
     marginTop: 4,
   },
@@ -1074,7 +1070,7 @@ const styles = StyleSheet.create({
   statusButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   inputContainer: {
     backgroundColor: 'white',
@@ -1096,6 +1092,7 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     maxHeight: 100,
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
   },
   sendButton: {
     width: 44,
@@ -1127,7 +1124,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#1e293b',
   },
   closeButton: {
@@ -1156,14 +1153,14 @@ const styles = StyleSheet.create({
   },
   providerName: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#1e293b',
     marginBottom: 8,
   },
   serviceCompleted: {
     fontSize: 16,
     color: '#10b981',
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   ratingSection: {
     alignItems: 'center',
@@ -1171,12 +1168,13 @@ const styles = StyleSheet.create({
   },
   ratingTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#1e293b',
     marginBottom: 8,
   },
   ratingSubtitle: {
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
     color: '#6b7280',
     marginBottom: 24,
   },
@@ -1190,6 +1188,7 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
     color: '#6b7280',
     textAlign: 'center',
     fontStyle: 'italic',
@@ -1199,7 +1198,7 @@ const styles = StyleSheet.create({
   },
   feedbackTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#1e293b',
     marginBottom: 12,
   },
@@ -1210,6 +1209,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
     minHeight: 100,
     textAlignVertical: 'top',
     shadowColor: '#000',
@@ -1220,6 +1220,7 @@ const styles = StyleSheet.create({
   },
   characterCount: {
     fontSize: 12,
+    fontFamily: 'Poppins_500Medium',
     color: '#9ca3af',
     textAlign: 'right',
     marginTop: 4,
@@ -1237,7 +1238,7 @@ const styles = StyleSheet.create({
   },
   serviceDetailsTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#1e293b',
     marginBottom: 12,
   },
@@ -1251,11 +1252,12 @@ const styles = StyleSheet.create({
   },
   serviceDetailLabel: {
     fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
     color: '#6b7280',
   },
   serviceDetailValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     color: '#1e293b',
     flex: 1,
     textAlign: 'right',
@@ -1277,7 +1279,7 @@ const styles = StyleSheet.create({
   },
   skipButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     color: '#6b7280',
   },
   completeServiceButton: {
@@ -1295,7 +1297,7 @@ const styles = StyleSheet.create({
   },
   completeServiceButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     color: 'white',
   },
   loadingContainer: {

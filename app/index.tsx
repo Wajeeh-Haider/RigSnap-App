@@ -57,6 +57,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
     color: '#64748b',
   },
 });

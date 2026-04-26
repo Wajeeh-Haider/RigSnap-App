@@ -5,7 +5,6 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Alert,
   TextInput,
   KeyboardAvoidingView,
   Platform,
@@ -18,28 +17,42 @@ import { useConfirmSetupIntent, CardField } from '@stripe/stripe-react-native';
 import { paymentMethodService } from '@/utils/paymentOperations';
 import { createSetupIntent } from '@/utils/stripe';
 import { X, CreditCard } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import InScreenAlert from '@/components/InScreenAlert';
 
 export default function AddPaymentMethodScreen() {
   const { user } = useAuth();
   const { colors } = useTheme();
   const { confirmSetupIntent } = useConfirmSetupIntent();
+  const insets = useSafeAreaInsets();
 
   const [isLoading, setIsLoading] = useState(false);
   const [cardComplete, setCardComplete] = useState(false);
   const [cardholderName, setCardholderName] = useState('');
+  const [inlineAlert, setInlineAlert] = useState<{
+    visible: boolean;
+    message: string;
+    type: 'success' | 'error' | 'info';
+  }>({
+    visible: false,
+    message: '',
+    type: 'info',
+  });
+  const showInlineAlert = (
+    message: string,
+    type: 'success' | 'error' | 'info' = 'info',
+  ) => {
+    setInlineAlert({ visible: true, message, type });
+  };
 
   const handleAddCard = async () => {
     if (!cardComplete || !cardholderName.trim()) {
-      Alert.alert(
-        'Error',
-        'Please fill in all card details and cardholder name',
-      );
+      showInlineAlert('Please fill in all card details and cardholder name', 'error');
       return;
     }
 
     if (!user?.id) {
-      Alert.alert('Error', 'User not found');
+      showInlineAlert('User not found', 'error');
       return;
     }
 
@@ -50,7 +63,7 @@ export default function AddPaymentMethodScreen() {
       const setupIntentResponse = await createSetupIntent(user.id);
 
       if (!setupIntentResponse.success || !setupIntentResponse.client_secret) {
-        Alert.alert('Error', 'Failed to initialize payment setup');
+        showInlineAlert('Failed to initialize payment setup', 'error');
         setIsLoading(false);
         return;
       }
@@ -76,13 +89,13 @@ export default function AddPaymentMethodScreen() {
       if (error) {
         console.log({ error });
 
-        Alert.alert('Something went wrong. Please try again.', error.message);
+        showInlineAlert(error.message || 'Something went wrong. Please try again.', 'error');
         setIsLoading(false);
         return;
       }
 
       if (setupIntent?.status !== 'Succeeded') {
-        Alert.alert('Something went wrong. Please try again.');
+        showInlineAlert('Something went wrong. Please try again.', 'error');
         setIsLoading(false);
         return;
       }
@@ -90,7 +103,7 @@ export default function AddPaymentMethodScreen() {
       // Step 3: Save the payment method to our database
       const paymentMethod = setupIntent.paymentMethod;
       if (!paymentMethod?.id) {
-        Alert.alert('Error', 'Failed to create payment method');
+        showInlineAlert('Failed to create payment method', 'error');
         setIsLoading(false);
         return;
       }
@@ -111,15 +124,14 @@ export default function AddPaymentMethodScreen() {
       );
 
       if (result.success) {
-        Alert.alert('Success', 'Payment method added successfully!', [
-          { text: 'OK', onPress: () => router.back() },
-        ]);
+        showInlineAlert('Payment method added successfully!', 'success');
+        router.back();
       } else {
-        Alert.alert('Error', result.error || 'Failed to save payment method');
+        showInlineAlert(result.error || 'Failed to save payment method', 'error');
       }
     } catch (error) {
       console.error('Error adding payment method:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showInlineAlert('An unexpected error occurred', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -170,6 +182,18 @@ export default function AddPaymentMethodScreen() {
               flexGrow: 1,
             }}
           >
+            <InScreenAlert
+              visible={inlineAlert.visible}
+              message={inlineAlert.message}
+              type={inlineAlert.type}
+              onClose={() =>
+                setInlineAlert((prev) => ({
+                  ...prev,
+                  visible: false,
+                }))
+              }
+            />
+
             {/* Cardholder Name */}
             <View style={styles.formGroup}>
               <Text style={[styles.formLabel, { color: colors.text }]}>
@@ -244,6 +268,7 @@ export default function AddPaymentMethodScreen() {
             style={{
               paddingHorizontal: 16,
               paddingTop: 16,
+              paddingBottom: Math.max(insets.bottom, 12),
               borderTopWidth: 1,
               borderTopColor: colors.border,
               backgroundColor: colors.background,
@@ -306,7 +331,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   closeButton: {
     padding: 4,
@@ -316,7 +341,7 @@ const styles = StyleSheet.create({
   },
   formLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     marginBottom: 8,
   },
   formInput: {
@@ -324,6 +349,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
   },
   securityNotice: {
     borderRadius: 12,
@@ -344,7 +370,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   addCardButton: {
     flex: 2,
@@ -360,7 +386,7 @@ const styles = StyleSheet.create({
   },
   addCardButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     color: 'white',
   },
 });

@@ -17,6 +17,7 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useToast } from '@/hooks/useToast';
 import {
   ArrowLeft,
   // MapPin,
@@ -99,6 +100,7 @@ export default function JobDetailScreen() {
     sendMessage,
   } = useApp();
   const { colors } = useTheme();
+  const { showError, showSuccess, showInfo } = useToast();
   const { confirmPayment } = useStripe();
   const [showCompleteModal, setShowCompleteModal] = useState(false);
   const [showAcceptModal, setShowAcceptModal] = useState(false);
@@ -130,7 +132,7 @@ export default function JobDetailScreen() {
   useFocusEffect(
     React.useCallback(() => {
       refreshRequests();
-    }, [refreshRequests])
+    }, [refreshRequests]),
   );
 
   // Get user location on component mount
@@ -212,7 +214,7 @@ export default function JobDetailScreen() {
     if (!phoneNumber) {
       Alert.alert(
         'No Phone Number',
-        `No phone number available for ${contactName}.`
+        `No phone number available for ${contactName}.`,
       );
       return;
     }
@@ -238,7 +240,7 @@ export default function JobDetailScreen() {
               },
             },
             { text: 'OK', style: 'cancel' },
-          ]
+          ],
         );
       }
     } catch (error) {
@@ -246,7 +248,7 @@ export default function JobDetailScreen() {
       Alert.alert(
         'Call Error',
         `Unable to make the call. The number is: ${phoneNumber}`,
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
     }
   };
@@ -262,11 +264,11 @@ export default function JobDetailScreen() {
           'You need at least $5 credits or a payment method in your profile before accepting a request.',
           [
             { text: 'Later', style: 'cancel' },
-            { 
-              text: 'Add Payment Method', 
-              onPress: () => router.push('/add-payment-method') 
-            }
-          ]
+            {
+              text: 'Add Payment Method',
+              onPress: () => router.push('/add-payment-method'),
+            },
+          ],
         );
         setIsAccepting(false);
         return;
@@ -277,7 +279,7 @@ export default function JobDetailScreen() {
         await acceptRequest(
           request.id,
           user.id,
-          `${user.firstName} ${user.lastName}`
+          `${user.firstName} ${user.lastName}`,
         );
       } catch (err: any) {
         if (err?.requires_action && err?.client_secret) {
@@ -289,7 +291,7 @@ export default function JobDetailScreen() {
           await acceptRequest(
             request.id,
             user.id,
-            `${user.firstName} ${user.lastName}`
+            `${user.firstName} ${user.lastName}`,
           );
         } else {
           throw err;
@@ -318,23 +320,30 @@ export default function JobDetailScreen() {
             text: 'View Job',
             style: 'cancel',
           },
-        ]
+        ],
       );
     } catch (error: any) {
       console.error('Error accepting request:', error);
 
       let errorMessage = 'Failed to accept request. Please try again.';
 
-      if (error?.message?.includes('Trucker authorization capture failed') || error?.message?.includes('Trucker capture failed')) {
+      if (
+        error?.message?.includes('Trucker authorization capture failed') ||
+        error?.message?.includes('Trucker capture failed')
+      ) {
         errorMessage =
-          'The trucker\'s card authorization is no longer capturable (it may have expired). Ask the trucker to re-create the request to re-authorize payment.';
-      } else if (error?.message?.includes('Trucker has insufficient credits and no payment method')) {
+          "The trucker's card authorization is no longer capturable (it may have expired). Ask the trucker to re-create the request to re-authorize payment.";
+      } else if (
+        error?.message?.includes(
+          'Trucker has insufficient credits and no payment method',
+        )
+      ) {
         errorMessage =
           'This request has no active trucker authorization and the trucker has no fallback payment method. Ask the trucker to add a payment method or re-create the request.';
       } else if (error?.message?.includes('Trucker payment failed')) {
         errorMessage = `Trucker payment failed: ${
           error.message.split('Trucker payment failed: ')[1] ||
-          'The trucker\'s payment method may be invalid.'
+          "The trucker's payment method may be invalid."
         }`;
       } else if (error?.message?.includes('Provider payment failed')) {
         errorMessage = `Your payment failed: ${
@@ -360,13 +369,13 @@ export default function JobDetailScreen() {
 
   // Function to handle cancellation with reason - moved outside handleCancelRequest for modal access
   const processCancellation = async (reason: string) => {
-    console.log('🔄 processCancellation - Starting cancellation with reason:', reason);
+    console.log(
+      '🔄 processCancellation - Starting cancellation with reason:',
+      reason,
+    );
     if (!reason || reason.trim().length === 0) {
       console.log('❌ processCancellation - Empty reason provided');
-      Alert.alert(
-        'Error',
-        'Please provide a reason for cancellation.'
-      );
+      Alert.alert('Error', 'Please provide a reason for cancellation.');
       return;
     }
 
@@ -376,30 +385,29 @@ export default function JobDetailScreen() {
       console.log('🔄 processCancellation - Calling cancelRequest with:', {
         requestId: request.id,
         userId: user.id,
-        reason: reason.trim()
+        reason: reason.trim(),
       });
       const success = await cancelRequest(request.id, user.id, reason.trim());
       console.log('🔄 processCancellation - cancelRequest result:', success);
       if (success) {
-        const message = user.role === 'provider' 
-          ? 'The request has been cancelled. The trucker has been notified and will receive a full refund. You have been charged a $5 penalty fee.'
-          : 'Your request has been cancelled.';
-        console.log('✅ processCancellation - Success, showing alert:', message);
-        Alert.alert(
-          'Request Cancelled',
+        const message =
+          user.role === 'provider'
+            ? 'The request has been cancelled. The trucker has been notified and will receive a full refund. You have been charged a $5 penalty fee.'
+            : 'Your request has been cancelled.';
+        console.log(
+          '✅ processCancellation - Success, showing alert:',
           message,
-          [{ text: 'OK', onPress: () => router.back() }]
         );
+        Alert.alert('Request Cancelled', message, [
+          { text: 'OK', onPress: () => router.back() },
+        ]);
       } else {
         console.log('❌ processCancellation - cancelRequest returned false');
       }
       // Error alert is already shown in cancelRequest if payment fails
     } catch (error) {
       console.log('❌ processCancellation - Error occurred:', error);
-      Alert.alert(
-        'Error',
-        'Failed to cancel request. Please try again.'
-      );
+      Alert.alert('Error', 'Failed to cancel request. Please try again.');
     } finally {
       console.log('🔄 processCancellation - Setting isCancelling to false');
       setIsCancelling(false);
@@ -409,16 +417,18 @@ export default function JobDetailScreen() {
   };
 
   const handleCancelRequest = async () => {
-    console.log("jereee")
+    console.log('jereee');
     const isProvider = user.role === 'provider';
     const isTrucker = user.role === 'trucker';
-    console.log(user.role)
+    console.log(user.role);
 
     // Function to show reason input
     const showReasonInput = () => {
       console.log('📝 showReasonInput - Starting reason input flow');
       // Skip Alert.prompt entirely and use custom modal for reliability
-      console.log('📝 showReasonInput - Using custom modal (Alert.prompt skipped for reliability)');
+      console.log(
+        '📝 showReasonInput - Using custom modal (Alert.prompt skipped for reliability)',
+      );
       setCancellationReason('');
       setShowCancelReasonModal(true);
     };
@@ -450,16 +460,16 @@ export default function JobDetailScreen() {
               'System',
               user.role,
               'Request marked as in progress',
-              'system'
+              'system',
             );
             Alert.alert(
               'Work Started',
               'You have started working on this request. The trucker has been notified.',
-              [{ text: 'OK' }]
+              [{ text: 'OK' }],
             );
           },
         },
-      ]
+      ],
     );
   };
 
@@ -482,25 +492,22 @@ export default function JobDetailScreen() {
               'System',
               user.role,
               'Request marked as completed',
-              'system'
+              'system',
             );
             Alert.alert(
               'Job Completed',
               'The job has been marked as completed. The trucker will be notified.',
-              [{ text: 'OK', onPress: () => router.back() }]
+              [{ text: 'OK', onPress: () => router.back() }],
             );
           },
         },
-      ]
+      ],
     );
   };
 
   const handleRateService = async () => {
     if (rating === 0) {
-      Alert.alert(
-        'Rating Required',
-        'Please provide a rating before submitting.'
-      );
+      showInfo('Please provide a rating before submitting.');
       return;
     }
 
@@ -510,15 +517,14 @@ export default function JobDetailScreen() {
       await new Promise((resolve) => setTimeout(resolve, 1500));
 
       setShowCompleteModal(false);
-      Alert.alert(
-        'Thank You!',
-        `You rated this service ${rating} star${
+      showSuccess(
+        `Thanks! You rated this service ${rating} star${
           rating !== 1 ? 's' : ''
-        }. Your feedback helps improve our platform.`,
-        [{ text: 'OK', onPress: () => router.back() }]
+        }.`,
       );
+      router.back();
     } catch {
-      Alert.alert('Error', 'Failed to submit rating. Please try again.');
+      showError('Failed to submit rating. Please try again.');
     } finally {
       setIsCompleting(false);
     }
@@ -605,8 +611,8 @@ export default function JobDetailScreen() {
                         request.urgency === 'high'
                           ? '#ef4444'
                           : request.urgency === 'medium'
-                          ? '#f59e0b'
-                          : '#10b981',
+                            ? '#f59e0b'
+                            : '#10b981',
                     },
                   ]}
                 >
@@ -635,7 +641,7 @@ export default function JobDetailScreen() {
                 contentContainerStyle={{ paddingHorizontal: 4 }}
               >
                 {request.photos.map((photo, index) => (
-                  <TouchableOpacity 
+                  <TouchableOpacity
                     key={`photo-${index}`}
                     onPress={() => {
                       setSelectedImage(photo);
@@ -859,7 +865,7 @@ export default function JobDetailScreen() {
                   onPress={() =>
                     handlePhoneCall(
                       request.truckerPhone,
-                      request.providerName || 'Service Provider'
+                      request.providerName || 'Service Provider',
                     )
                   }
                 >
@@ -1190,9 +1196,9 @@ export default function JobDetailScreen() {
                           request.urgency === 'high'
                             ? '#ef4444'
                             : request.urgency === 'medium'
-                            ? '#f59e0b'
-                            : '#10b981',
-                        fontWeight: 'bold',
+                              ? '#f59e0b'
+                              : '#10b981',
+                        fontFamily: 'Poppins_700Bold',
                       },
                     ]}
                   >
@@ -1212,7 +1218,10 @@ export default function JobDetailScreen() {
                     <Text
                       style={[
                         styles.summaryValue,
-                        { color: colors.success, fontWeight: 'bold' },
+                        {
+                          color: colors.success,
+                          fontFamily: 'Poppins_700Bold',
+                        },
                       ]}
                     >
                       ${request.estimatedCost}
@@ -1221,7 +1230,6 @@ export default function JobDetailScreen() {
                 )}
               </View>
 
-           
               <View
                 style={[
                   styles.benefitsSection,
@@ -1567,7 +1575,9 @@ export default function JobDetailScreen() {
                 onChangeText={setCancellationReason}
                 maxLength={200}
               />
-              <Text style={[styles.characterCount, { color: colors.textSecondary }]}>
+              <Text
+                style={[styles.characterCount, { color: colors.textSecondary }]}
+              >
                 {cancellationReason.length}/200
               </Text>
             </View>
@@ -1587,7 +1597,10 @@ export default function JobDetailScreen() {
               onPress={() => setShowCancelReasonModal(false)}
             >
               <Text
-                style={[styles.cancelButtonText, { color: colors.textSecondary }]}
+                style={[
+                  styles.cancelButtonText,
+                  { color: colors.textSecondary },
+                ]}
               >
                 Cancel
               </Text>
@@ -1597,7 +1610,8 @@ export default function JobDetailScreen() {
               style={[
                 styles.confirmAcceptButton,
                 { backgroundColor: '#ef4444' },
-                !cancellationReason.trim() && styles.confirmAcceptButtonDisabled,
+                !cancellationReason.trim() &&
+                  styles.confirmAcceptButtonDisabled,
               ]}
               onPress={() => processCancellation(cancellationReason.trim())}
               disabled={!cancellationReason.trim()}
@@ -1683,7 +1697,8 @@ export default function JobDetailScreen() {
                     ⚠️ Warning:
                   </Text>
                   <Text style={[styles.summaryValue, { color: colors.text }]}>
-                    You will be charged a $5 penalty fee in addition to the original $5 lead fee (total $10).
+                    You will be charged a $5 penalty fee in addition to the
+                    original $5 lead fee (total $10).
                   </Text>
                 </View>
                 <View style={styles.summaryItem}>
@@ -1695,7 +1710,9 @@ export default function JobDetailScreen() {
                   >
                     Refund:
                   </Text>
-                  <Text style={[styles.summaryValue, { color: colors.success }]}>
+                  <Text
+                    style={[styles.summaryValue, { color: colors.success }]}
+                  >
                     The trucker will receive a full refund.
                   </Text>
                 </View>
@@ -1717,7 +1734,10 @@ export default function JobDetailScreen() {
               onPress={() => setShowProviderCancelModal(false)}
             >
               <Text
-                style={[styles.cancelButtonText, { color: colors.textSecondary }]}
+                style={[
+                  styles.cancelButtonText,
+                  { color: colors.textSecondary },
+                ]}
               >
                 Keep Request
               </Text>
@@ -1735,9 +1755,7 @@ export default function JobDetailScreen() {
               }}
             >
               <X size={16} color="white" />
-              <Text style={styles.confirmAcceptButtonText}>
-                Cancel Request
-              </Text>
+              <Text style={styles.confirmAcceptButtonText}>Cancel Request</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1830,7 +1848,10 @@ export default function JobDetailScreen() {
               onPress={() => setShowTruckerCancelModal(false)}
             >
               <Text
-                style={[styles.cancelButtonText, { color: colors.textSecondary }]}
+                style={[
+                  styles.cancelButtonText,
+                  { color: colors.textSecondary },
+                ]}
               >
                 Keep Request
               </Text>
@@ -1848,9 +1869,7 @@ export default function JobDetailScreen() {
               }}
             >
               <X size={16} color="white" />
-              <Text style={styles.confirmAcceptButtonText}>
-                Cancel Request
-              </Text>
+              <Text style={styles.confirmAcceptButtonText}>Cancel Request</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -1891,8 +1910,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 24,
-    paddingTop: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
     borderBottomWidth: 1,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
@@ -1906,7 +1925,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   placeholder: {
     width: 40,
@@ -1944,7 +1963,7 @@ const styles = StyleSheet.create({
   },
   serviceType: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     letterSpacing: 0.5,
   },
   statusContainer: {
@@ -1964,7 +1983,7 @@ const styles = StyleSheet.create({
   statusText: {
     color: 'white',
     fontSize: 10,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     textAlign: 'center',
     flexShrink: 1,
   },
@@ -1978,7 +1997,7 @@ const styles = StyleSheet.create({
   urgencyText: {
     color: 'white',
     fontSize: 10,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     textAlign: 'center',
     flexShrink: 1,
   },
@@ -1992,7 +2011,7 @@ const styles = StyleSheet.create({
   },
   photosTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 12,
   },
   photosScroll: {
@@ -2018,12 +2037,12 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
     marginBottom: 4,
   },
   detailValue: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   locationButton: {
     marginTop: 8,
@@ -2046,7 +2065,7 @@ const styles = StyleSheet.create({
   },
   cardTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 16,
   },
   participantItem: {
@@ -2069,7 +2088,7 @@ const styles = StyleSheet.create({
   },
   participantName: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 4,
   },
   participantRole: {
@@ -2079,7 +2098,7 @@ const styles = StyleSheet.create({
   },
   roleText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   contactButton: {
     width: 36,
@@ -2116,7 +2135,7 @@ const styles = StyleSheet.create({
   },
   timelineTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 4,
   },
   timelineTime: {
@@ -2142,7 +2161,7 @@ const styles = StyleSheet.create({
   acceptButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   cancelRequestButton: {
     backgroundColor: '#ef4444',
@@ -2159,7 +2178,7 @@ const styles = StyleSheet.create({
   cancelRequestButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   chatButton: {
     backgroundColor: '#3b82f6',
@@ -2173,7 +2192,7 @@ const styles = StyleSheet.create({
   chatButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   completeButton: {
     backgroundColor: '#10b981',
@@ -2187,7 +2206,7 @@ const styles = StyleSheet.create({
   completeButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   startWorkButton: {
     backgroundColor: '#8b5cf6',
@@ -2201,7 +2220,7 @@ const styles = StyleSheet.create({
   startWorkButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   rateButton: {
     backgroundColor: '#f59e0b',
@@ -2215,7 +2234,7 @@ const styles = StyleSheet.create({
   rateButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   modalContainer: {
     flex: 1,
@@ -2230,7 +2249,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   closeButton: {
     padding: 8,
@@ -2247,7 +2266,7 @@ const styles = StyleSheet.create({
   },
   acceptTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     textAlign: 'center',
     marginBottom: 8,
   },
@@ -2271,14 +2290,14 @@ const styles = StyleSheet.create({
   },
   summaryLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   summaryValue: {
     fontSize: 14,
-    fontWeight: 'bold',
-    width:'90%',
-    paddingLeft:5,
-    paddingRight:5
+    fontFamily: 'Poppins_700Bold',
+    width: '90%',
+    paddingLeft: 5,
+    paddingRight: 5,
   },
   feeNotice: {
     width: '100%',
@@ -2295,7 +2314,7 @@ const styles = StyleSheet.create({
   },
   feeTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 4,
   },
   feeDescription: {
@@ -2311,7 +2330,7 @@ const styles = StyleSheet.create({
   },
   benefitsTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 12,
   },
   benefitItem: {
@@ -2339,7 +2358,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   confirmAcceptButton: {
     flex: 2,
@@ -2356,7 +2375,7 @@ const styles = StyleSheet.create({
   confirmAcceptButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   providerInfo: {
     alignItems: 'center',
@@ -2372,12 +2391,12 @@ const styles = StyleSheet.create({
   },
   providerName: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 8,
   },
   serviceCompleted: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   ratingSection: {
     alignItems: 'center',
@@ -2385,7 +2404,7 @@ const styles = StyleSheet.create({
   },
   ratingTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 8,
   },
   ratingSubtitle: {
@@ -2410,7 +2429,7 @@ const styles = StyleSheet.create({
   },
   feedbackTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 12,
   },
   feedbackInput: {
@@ -2418,6 +2437,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
     minHeight: 100,
     marginBottom: 8,
   },
@@ -2432,7 +2452,7 @@ const styles = StyleSheet.create({
   },
   serviceDetailsTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 12,
   },
   serviceDetailItem: {
@@ -2443,11 +2463,11 @@ const styles = StyleSheet.create({
   },
   serviceDetailLabel: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   serviceDetailValue: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   skipButton: {
     flex: 1,
@@ -2458,7 +2478,7 @@ const styles = StyleSheet.create({
   },
   skipButtonText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   submitRatingButton: {
     flex: 2,
@@ -2475,7 +2495,7 @@ const styles = StyleSheet.create({
   submitRatingButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   imageModalContainer: {
     flex: 1,
@@ -2493,4 +2513,5 @@ const styles = StyleSheet.create({
   fullScreenImage: {
     width: '100%',
     height: '100%',
-  },});
+  },
+});

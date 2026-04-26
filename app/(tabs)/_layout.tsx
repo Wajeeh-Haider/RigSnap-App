@@ -10,13 +10,14 @@ import {
   DollarSign,
   MessageCircle,
 } from 'lucide-react-native';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 export default function TabLayout() {
   const { user } = useAuth();
   const { messages } = useApp();
   const { colors } = useTheme();
   const { t } = useLanguage();
+  const insets = useSafeAreaInsets();
 
   if (!user) {
     return null;
@@ -29,14 +30,6 @@ export default function TabLayout() {
   const unreadCount = 0;
 
   return (
-    // <SafeAreaView
-    //   edges={['top']}
-    //   style={{
-    //     flex: 1,
-    //     backgroundColor: colors.background,
-    //     height: '100%',
-    //   }}
-    // >
       <Tabs
         screenOptions={{
           headerShown: false,
@@ -46,9 +39,9 @@ export default function TabLayout() {
             backgroundColor: colors.surface,
             borderTopColor: colors.border,
             borderTopWidth: 1,
-            paddingBottom: 8,
+            paddingBottom: Math.max(insets.bottom, 8),
             paddingTop: 8,
-            height: 80,
+            height: 72 + Math.max(insets.bottom, 8),
             shadowColor: colors.shadow,
             shadowOffset: { width: 0, height: -2 },
             shadowOpacity: 0.1,
@@ -57,7 +50,7 @@ export default function TabLayout() {
           },
           tabBarLabelStyle: {
             fontSize: 12,
-            fontWeight: '500',
+            fontFamily: 'Poppins_500Medium',
             marginTop: 4,
           },
           tabBarItemStyle: {
@@ -89,7 +82,7 @@ export default function TabLayout() {
               backgroundColor: '#ef4444',
               color: 'white',
               fontSize: 11,
-              fontWeight: 'bold',
+              fontFamily: 'Poppins_700Bold',
               minWidth: 20,
               height: 20,
               borderRadius: 10,
@@ -165,7 +158,13 @@ export default function TabLayout() {
             href: null, // This hides the tab from the tab bar
           }}
         />
+
+        <Tabs.Screen
+          name="notifications"
+          options={{
+            href: null, // Open from bell button only
+          }}
+        />
       </Tabs>
-    // </SafeAreaView>
   );
 }

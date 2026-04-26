@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -16,7 +16,6 @@ import {
   Clock,
   CircleCheck as CheckCircle,
   CircleX as CloseCircle,
-  TrendingUp,
   RefreshCw,
   TriangleAlert as AlertTriangle,
   AlertCircle,
@@ -65,24 +64,30 @@ export default function LeadsScreen() {
   const { leads, requests } = useApp();
   const { colors } = useTheme();
   const { t } = useLanguage();
-  const [filter, setFilter] = useState<'all' | 'charged' | 'pending' | 'refunded' | 'penalty'>('all');
+  const [filter, setFilter] = useState<
+    'all' | 'charged' | 'pending' | 'refunded' | 'penalty'
+  >('all');
   const [showSpendingBreakdown, setShowSpendingBreakdown] = useState(false);
-
-  if (!user) return null;
 
   // Reset filter to 'all' if provider has 'pending' or 'refunded' selected
   // Reset filter to 'all' if trucker has 'penalty' selected
-  React.useEffect(() => {
-    if (user.role === 'provider' && (filter === 'pending' || filter === 'refunded')) {
+  useEffect(() => {
+    if (!user) return;
+    if (
+      user.role === 'provider' &&
+      (filter === 'pending' || filter === 'refunded')
+    ) {
       setFilter('all');
     }
     if (user.role === 'trucker' && filter === 'penalty') {
       setFilter('all');
     }
-  }, [user.role, filter]);
+  }, [user, filter]);
+
+  if (!user) return null;
 
   const userLeads = leads.filter((lead) => lead.userId === user.id);
-  
+
   // Get request information for each lead
   const leadsWithRequestInfo = userLeads.map((lead) => {
     const request = requests.find((req) => req.id === lead.requestId);
@@ -95,32 +100,40 @@ export default function LeadsScreen() {
     };
   });
 
-  const pendingServiceRequests = user.role === 'trucker' 
-    ? requests
-        .filter((request) => request.truckerId === user.id && request.status === 'pending')
-        .map((request) => ({
-          id: request.id,
-          requestId: request.id,
-          userId: request.truckerId,
-          amount: request.estimatedCost || 0,
-          status: 'pending',
-          description: request.description,
-          createdAt: request.createdAt,
-          requestTitle: request.description,
-          requestType: request.serviceType,
-          requestLocation: request.location,
-          requestUrgency: request.urgency,
-        }))
-    : [];
+  const pendingServiceRequests =
+    user.role === 'trucker'
+      ? requests
+          .filter(
+            (request) =>
+              request.truckerId === user.id && request.status === 'pending',
+          )
+          .map((request) => ({
+            id: request.id,
+            requestId: request.id,
+            userId: request.truckerId,
+            amount: request.estimatedCost || 0,
+            status: 'pending',
+            description: request.description,
+            createdAt: request.createdAt,
+            requestTitle: request.description,
+            requestType: request.serviceType,
+            requestLocation: request.location,
+            requestUrgency: request.urgency,
+          }))
+      : [];
 
   const filteredLeads =
     filter === 'all'
       ? leadsWithRequestInfo
       : filter === 'penalty'
-      ? leadsWithRequestInfo.filter((lead) => lead.description.includes('penalty'))
-      : filter === 'refunded'
-      ? leadsWithRequestInfo.filter((lead) => lead.status === 'charged' && lead.amount < 0)
-      : leadsWithRequestInfo.filter((lead) => lead.status === filter);
+        ? leadsWithRequestInfo.filter((lead) =>
+            lead.description.includes('penalty'),
+          )
+        : filter === 'refunded'
+          ? leadsWithRequestInfo.filter(
+              (lead) => lead.status === 'charged' && lead.amount < 0,
+            )
+          : leadsWithRequestInfo.filter((lead) => lead.status === filter);
 
   const stats = {
     totalSpent: userLeads
@@ -129,14 +142,14 @@ export default function LeadsScreen() {
     totalRefunded: Math.abs(
       userLeads
         .filter((l) => l.status === 'charged' && l.amount < 0)
-        .reduce((sum, l) => sum + l.amount, 0)
+        .reduce((sum, l) => sum + l.amount, 0),
     ),
     pendingAmount: userLeads
       .filter((l) => l.status === 'pending')
       .reduce((sum, l) => sum + l.amount, 0),
     totalLeads: userLeads.filter(
       (l) =>
-        !l.description.includes('penalty') && !l.description.includes('refund')
+        !l.description.includes('penalty') && !l.description.includes('refund'),
     ).length,
     penalties: userLeads.filter((l) => l.description.includes('penalty'))
       .length,
@@ -266,13 +279,16 @@ export default function LeadsScreen() {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.filterScroll}
         >
-          {user.role === 'trucker' 
+          {user.role === 'trucker'
             ? ['all', 'charged', 'pending', 'refunded'].map((filterType) => (
                 <TouchableOpacity
                   key={filterType}
                   style={[
                     styles.filterButton,
-                    { backgroundColor: colors.card, borderColor: colors.border },
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                    },
                     filter === filterType && {
                       backgroundColor: colors.primary,
                       borderColor: colors.primary,
@@ -290,7 +306,8 @@ export default function LeadsScreen() {
                     {filterType === 'all'
                       ? 'All'
                       : t(`leads.${filterType}`) ||
-                        filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+                        filterType.charAt(0).toUpperCase() +
+                          filterType.slice(1)}
                   </Text>
                 </TouchableOpacity>
               ))
@@ -299,7 +316,10 @@ export default function LeadsScreen() {
                   key={filterType}
                   style={[
                     styles.filterButton,
-                    { backgroundColor: colors.card, borderColor: colors.border },
+                    {
+                      backgroundColor: colors.card,
+                      borderColor: colors.border,
+                    },
                     filter === filterType && {
                       backgroundColor: colors.primary,
                       borderColor: colors.primary,
@@ -317,11 +337,11 @@ export default function LeadsScreen() {
                     {filterType === 'all'
                       ? 'All'
                       : t(`leads.${filterType}`) ||
-                        filterType.charAt(0).toUpperCase() + filterType.slice(1)}
+                        filterType.charAt(0).toUpperCase() +
+                          filterType.slice(1)}
                   </Text>
                 </TouchableOpacity>
-              ))
-          }
+              ))}
         </ScrollView>
       </View>
 
@@ -351,8 +371,13 @@ export default function LeadsScreen() {
               </View>
             ) : (
               pendingServiceRequests.map((request) => {
-                const urgencyColor = request.requestUrgency === 'high' ? '#ef4444' : request.requestUrgency === 'medium' ? '#f59e0b' : '#10b981';
-                
+                const urgencyColor =
+                  request.requestUrgency === 'high'
+                    ? '#ef4444'
+                    : request.requestUrgency === 'medium'
+                      ? '#f59e0b'
+                      : '#10b981';
+
                 return (
                   <View
                     key={request.id}
@@ -371,21 +396,13 @@ export default function LeadsScreen() {
                           <View style={styles.statusContainer}>
                             <Clock size={14} color="#f59e0b" />
                             <Text
-                              style={[
-                                styles.statusText,
-                                { color: '#f59e0b' },
-                              ]}
+                              style={[styles.statusText, { color: '#f59e0b' }]}
                             >
                               PENDING
                             </Text>
                           </View>
                         </View>
-                        <Text
-                          style={[
-                            styles.leadAmount,
-                            { color: '#1e293b' },
-                          ]}
-                        >
+                        <Text style={[styles.leadAmount, { color: '#1e293b' }]}>
                           ${request.amount.toFixed(2)}
                         </Text>
                       </View>
@@ -408,7 +425,8 @@ export default function LeadsScreen() {
                             { color: colors.textSecondary },
                           ]}
                         >
-                          {request.requestType.charAt(0).toUpperCase() + request.requestType.slice(1)}
+                          {request.requestType.charAt(0).toUpperCase() +
+                            request.requestType.slice(1)}
                         </Text>
                         <Text
                           style={[
@@ -512,8 +530,8 @@ export default function LeadsScreen() {
                             color: isRefund
                               ? '#10b981'
                               : isPenalty
-                              ? '#ef4444'
-                              : '#1e293b',
+                                ? '#ef4444'
+                                : '#1e293b',
                           },
                         ]}
                       >
@@ -539,7 +557,8 @@ export default function LeadsScreen() {
                           { color: colors.textSecondary },
                         ]}
                       >
-                        {lead.requestType.charAt(0).toUpperCase() + lead.requestType.slice(1)}
+                        {lead.requestType.charAt(0).toUpperCase() +
+                          lead.requestType.slice(1)}
                       </Text>
                       <Text
                         style={[
@@ -557,10 +576,10 @@ export default function LeadsScreen() {
                           backgroundColor: isPending
                             ? '#fef3c7'
                             : isRefunded
-                            ? '#dcfce7'
-                            : isPenalty
-                            ? '#fef2f2'
-                            : '#f1f5f9',
+                              ? '#dcfce7'
+                              : isPenalty
+                                ? '#fef2f2'
+                                : '#f1f5f9',
                         },
                       ]}
                     >
@@ -571,22 +590,22 @@ export default function LeadsScreen() {
                             color: isPending
                               ? '#92400e'
                               : isRefunded
-                              ? '#166534'
-                              : isPenalty
-                              ? '#dc2626'
-                              : '#475569',
+                                ? '#166534'
+                                : isPenalty
+                                  ? '#dc2626'
+                                  : '#475569',
                           },
                         ]}
                       >
                         {isPending
                           ? 'Pending'
                           : isRefunded
-                          ? 'Refunded'
-                          : isPenalty
-                          ? 'Penalty'
-                          : lead.userRole === 'trucker'
-                          ? 'Trucker Fee'
-                          : 'Provider Fee'}
+                            ? 'Refunded'
+                            : isPenalty
+                              ? 'Penalty'
+                              : lead.userRole === 'trucker'
+                                ? 'Trucker Fee'
+                                : 'Provider Fee'}
                       </Text>
                     </View>
                   </View>
@@ -649,8 +668,15 @@ export default function LeadsScreen() {
         animationType="slide"
         onRequestClose={() => setShowSpendingBreakdown(false)}
       >
-        <View style={[styles.modalContainer, { backgroundColor: 'rgba(0,0,0,0.5)' }]}>
-          <View style={[styles.modalContent, { backgroundColor: colors.surface }]}>
+        <View
+          style={[
+            styles.modalContainer,
+            { backgroundColor: 'rgba(0,0,0,0.5)' },
+          ]}
+        >
+          <View
+            style={[styles.modalContent, { backgroundColor: colors.surface }]}
+          >
             <View style={styles.modalHeader}>
               <Text style={[styles.modalTitle, { color: colors.text }]}>
                 Spending Breakdown
@@ -669,11 +695,18 @@ export default function LeadsScreen() {
                   <Text style={[styles.breakdownLabel, { color: colors.text }]}>
                     Total Spent:
                   </Text>
-                  <Text style={[styles.breakdownAmount, { color: colors.text }]}>
+                  <Text
+                    style={[styles.breakdownAmount, { color: colors.text }]}
+                  >
                     ${stats.totalSpent}
                   </Text>
                 </View>
-                <Text style={[styles.breakdownDetail, { color: colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.breakdownDetail,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Charged leads (positive amounts)
                 </Text>
               </View>
@@ -687,19 +720,43 @@ export default function LeadsScreen() {
                     -${stats.totalRefunded}
                   </Text>
                 </View>
-                <Text style={[styles.breakdownDetail, { color: colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.breakdownDetail,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Refunds and negative amounts
                 </Text>
               </View>
 
-              <View style={[styles.breakdownDivider, { backgroundColor: colors.border }]} />
+              <View
+                style={[
+                  styles.breakdownDivider,
+                  { backgroundColor: colors.border },
+                ]}
+              />
 
               <View style={styles.breakdownItem}>
                 <View style={styles.breakdownRow}>
-                  <Text style={[styles.breakdownLabel, { color: colors.text, fontWeight: 'bold' }]}>
+                  <Text
+                    style={[
+                      styles.breakdownLabel,
+                      { color: colors.text, fontFamily: 'Poppins_700Bold' },
+                    ]}
+                  >
                     Net Spent:
                   </Text>
-                  <Text style={[styles.breakdownAmount, { color: colors.text, fontWeight: 'bold', fontSize: 18 }]}>
+                  <Text
+                    style={[
+                      styles.breakdownAmount,
+                      {
+                        color: colors.text,
+                        fontFamily: 'Poppins_700Bold',
+                        fontSize: 18,
+                      },
+                    ]}
+                  >
                     ${netSpent}
                   </Text>
                 </View>
@@ -714,7 +771,12 @@ export default function LeadsScreen() {
                     ${stats.pendingAmount}
                   </Text>
                 </View>
-                <Text style={[styles.breakdownDetail, { color: colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.breakdownDetail,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Awaiting processing
                 </Text>
               </View>
@@ -724,11 +786,18 @@ export default function LeadsScreen() {
                   <Text style={[styles.breakdownLabel, { color: colors.text }]}>
                     This Month:
                   </Text>
-                  <Text style={[styles.breakdownAmount, { color: colors.text }]}>
+                  <Text
+                    style={[styles.breakdownAmount, { color: colors.text }]}
+                  >
                     {stats.thisMonth} leads
                   </Text>
                 </View>
-                <Text style={[styles.breakdownDetail, { color: colors.textSecondary }]}>
+                <Text
+                  style={[
+                    styles.breakdownDetail,
+                    { color: colors.textSecondary },
+                  ]}
+                >
                   Leads processed this month
                 </Text>
               </View>
@@ -745,13 +814,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    padding: 24,
-    paddingTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    // paddingTop: 10,
     borderBottomWidth: 1,
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 4,
   },
   subtitle: {
@@ -781,7 +851,7 @@ const styles = StyleSheet.create({
   },
   statAmount: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#1e293b',
   },
   statRow: {
@@ -802,7 +872,7 @@ const styles = StyleSheet.create({
   },
   statNumber: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   statLabel: {
     fontSize: 12,
@@ -826,7 +896,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   content: {
     flex: 1,
@@ -839,7 +909,7 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     marginTop: 16,
     marginBottom: 8,
   },
@@ -854,7 +924,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 16,
   },
   leadCard: {
@@ -891,18 +961,20 @@ const styles = StyleSheet.create({
   },
   statusText: {
     fontSize: 10,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   leadAmount: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   leadDate: {
     fontSize: 12,
+    fontFamily: 'Poppins_500Medium',
     color: '#6b7280',
   },
   leadDescription: {
     fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -913,19 +985,19 @@ const styles = StyleSheet.create({
   },
   requestId: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   requestInfo: {
     flex: 1,
   },
   serviceType: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     marginBottom: 2,
   },
   location: {
     fontSize: 11,
-    fontWeight: '400',
+    fontFamily: 'Poppins_400Regular',
   },
   roleIndicator: {
     paddingHorizontal: 10,
@@ -934,7 +1006,7 @@ const styles = StyleSheet.create({
   },
   roleText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   infoCard: {
     flexDirection: 'row',
@@ -956,7 +1028,7 @@ const styles = StyleSheet.create({
   },
   infoTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 4,
   },
   infoDescription: {
@@ -984,7 +1056,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   closeButton: {
     padding: 4,
@@ -1007,7 +1079,7 @@ const styles = StyleSheet.create({
   },
   breakdownAmount: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   breakdownDetail: {
     fontSize: 12,

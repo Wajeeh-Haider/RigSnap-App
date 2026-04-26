@@ -12,7 +12,7 @@ import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
-import { MessageCircle, Truck, Shield } from 'lucide-react-native';
+import { MessageCircle, Truck, Shield, Search, ChevronRight } from 'lucide-react-native';
 import { Chat } from '@/types';
 
 export default function ChatListScreen() {
@@ -105,27 +105,44 @@ export default function ChatListScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View
-        style={[
-          styles.header,
-          { backgroundColor: colors.surface, borderBottomColor: colors.border },
-        ]}
-      >
-        <Text style={[styles.title, { color: colors.text }]}>
-          {t('chat.title')}
-        </Text>
-        {/* {totalUnreadCount > 0 && (
-          <View style={styles.headerBadge}>
-            <Text style={styles.headerBadgeText}>
-              {totalUnreadCount} unread
+      <View style={styles.headerWrap}>
+        <View
+          style={[
+            styles.headerCard,
+            { backgroundColor: colors.surface, borderColor: colors.border },
+          ]}
+        >
+          <View style={styles.headerTopRow}>
+            <Text style={[styles.title, { color: colors.text }]}>
+              {t('chat.title')}
+            </Text>
+            {totalUnreadCount > 0 && (
+              <View style={styles.headerBadge}>
+                <Text style={styles.headerBadgeText}>
+                  {totalUnreadCount > 99 ? '99+' : totalUnreadCount}
+                </Text>
+              </View>
+            )}
+          </View>
+
+          <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
+            {user.role === 'trucker'
+              ? t('chat.messagesWillAppear')
+              : t('chat.messagesWillAppearProvider')}
+          </Text>
+
+          <View
+            style={[
+              styles.searchHint,
+              { backgroundColor: colors.background, borderColor: colors.border },
+            ]}
+          >
+            <Search size={14} color={colors.textSecondary} />
+            <Text style={[styles.searchHintText, { color: colors.textSecondary }]}>
+              Latest conversations
             </Text>
           </View>
-        )} */}
-        <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
-          {user.role === 'trucker'
-            ? t('chat.messagesWillAppear')
-            : t('chat.messagesWillAppearProvider')}
-        </Text>
+        </View>
       </View>
 
       {isLoading ? (
@@ -148,10 +165,7 @@ export default function ChatListScreen() {
           </Text>
         </View>
       ) : (
-        <ScrollView
-          style={styles.scrollView}
-          showsVerticalScrollIndicator={false}
-        >
+        <ScrollView style={styles.scrollView} showsVerticalScrollIndicator={false}>
           {userChats.map((chat) => {
             const otherParticipant = getOtherParticipant(chat);
             const ParticipantIcon = otherParticipant.icon;
@@ -226,13 +240,6 @@ export default function ChatListScreen() {
                       {otherParticipant.name}
                     </Text>
                     <View style={styles.rightSection}>
-                      {chatUnreadCount > 0 && (
-                        <View style={styles.unreadBadge}>
-                          <Text style={styles.unreadText}>
-                            {chatUnreadCount > 9 ? '9+' : chatUnreadCount}
-                          </Text>
-                        </View>
-                      )}
                       <Text
                         style={[
                           styles.timeText,
@@ -243,6 +250,13 @@ export default function ChatListScreen() {
                           ? formatTime(chat.lastMessageTime)
                           : ''}
                       </Text>
+                      {chatUnreadCount > 0 && (
+                        <View style={styles.unreadBadge}>
+                          <Text style={styles.unreadText}>
+                            {chatUnreadCount > 9 ? '9+' : chatUnreadCount}
+                          </Text>
+                        </View>
+                      )}
                     </View>
                   </View>
 
@@ -250,9 +264,9 @@ export default function ChatListScreen() {
                     style={[
                       styles.lastMessage,
                       { color: colors.textSecondary },
-                      hasUnread && { color: colors.text, fontWeight: '500' },
+                      hasUnread && { color: colors.text, fontFamily: 'Poppins_500Medium' },
                     ]}
-                    numberOfLines={2}
+                    numberOfLines={1}
                   >
                     {chat.lastMessage || 'No messages yet'}
                   </Text>
@@ -272,6 +286,7 @@ export default function ChatListScreen() {
                         {chat.isActive ? t('chat.active') : t('chat.completed')}
                       </Text>
                     </View>
+                    <ChevronRight size={16} color={colors.textSecondary} />
                   </View>
                 </View>
               </TouchableOpacity>
@@ -287,32 +302,57 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  header: {
-    padding: 24,
+  headerWrap: {
+    paddingHorizontal: 16,
     paddingTop: 10,
-    borderBottomWidth: 1,
+    paddingBottom: 12,
+  },
+  headerCard: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 16,
+  },
+  headerTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   title: {
-    fontSize: 28,
-    fontWeight: 'bold',
-    marginBottom: 4,
+    fontSize: 26,
+    fontFamily: 'Poppins_700Bold',
   },
   headerBadge: {
-    position: 'absolute',
-    top: 70,
-    right: 24,
     backgroundColor: '#ef4444',
-    borderRadius: 12,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    borderRadius: 999,
+    minWidth: 24,
+    height: 24,
+    paddingHorizontal: 7,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerBadgeText: {
     color: 'white',
     fontSize: 12,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
+    marginTop: 4,
+  },
+  searchHint: {
+    marginTop: 12,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  searchHintText: {
+    fontSize: 13,
+    fontFamily: 'Poppins_500Medium',
   },
   emptyContainer: {
     flex: 1,
@@ -322,25 +362,27 @@ const styles = StyleSheet.create({
   },
   emptyTitle: {
     fontSize: 18,
+    fontFamily: 'Poppins_700Bold',
     marginTop: 16,
     marginBottom: 8,
   },
   emptySubtitle: {
     fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
     textAlign: 'center',
     maxWidth: 280,
     lineHeight: 20,
   },
   scrollView: {
     flex: 1,
-    padding: 16,
+    paddingHorizontal: 16,
   },
   chatCard: {
-    borderRadius: 16,
-    padding: 16,
-    marginBottom: 12,
+    borderRadius: 14,
+    padding: 10,
+    marginBottom: 8,
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -349,17 +391,17 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   chatCardUnread: {
-    borderLeftWidth: 4,
+    borderLeftWidth: 3,
     borderLeftColor: '#ef4444',
   },
   avatarSection: {
     position: 'relative',
-    marginRight: 16,
+    marginRight: 12,
   },
   logoContainer: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
@@ -386,16 +428,16 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 4,
+    alignItems: 'center',
+    marginBottom: 2,
   },
   participantName: {
-    fontSize: 18,
-    fontWeight: 'bold',
+    fontSize: 15,
+    fontFamily: 'Poppins_700Bold',
     flex: 1,
   },
   participantNameUnread: {
-    fontWeight: '800',
+    fontFamily: 'Poppins_700Bold',
   },
   rightSection: {
     flexDirection: 'row',
@@ -404,39 +446,41 @@ const styles = StyleSheet.create({
   },
   unreadBadge: {
     backgroundColor: '#ef4444',
-    borderRadius: 10,
-    minWidth: 20,
-    height: 20,
+    borderRadius: 999,
+    minWidth: 18,
+    height: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
   },
   unreadText: {
     color: 'white',
-    fontSize: 12,
-    fontWeight: 'bold',
+    fontSize: 10,
+    fontFamily: 'Poppins_700Bold',
   },
   timeText: {
-    fontSize: 12,
+    fontSize: 11,
+    fontFamily: 'Poppins_500Medium',
   },
   lastMessage: {
-    fontSize: 14,
-    lineHeight: 20,
-    marginBottom: 8,
+    fontSize: 13,
+    fontFamily: 'Poppins_500Medium',
+    lineHeight: 17,
+    marginBottom: 6,
   },
   bottomRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     alignItems: 'center',
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   statusText: {
     fontSize: 10,
     color: 'white',
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
 });

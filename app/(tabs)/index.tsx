@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   Share,
-  Alert,
   RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
@@ -17,6 +16,7 @@ import { useLanguage } from '@/context/LanguageContext';
 import { getUserCredits, getUserReferralCode } from '@/utils/creditOperations';
 import { router } from 'expo-router';
 import { locationService } from '@/utils/location';
+import { useToast } from '@/hooks/useToast';
 import {
   Plus,
   Search,
@@ -113,32 +113,30 @@ export default function HomeScreen() {
   } = useApp();
   const { colors } = useTheme();
   const { t } = useLanguage();
+  const { showError, showSuccess, showInfo } = useToast();
   const [refreshing, setRefreshing] = React.useState(false);
   const [availableRequests, setAvailableRequests] = React.useState<any[]>([]);
   const [referralCode, setReferralCode] = React.useState<string | null>(null);
   const [userCredits, setUserCredits] = React.useState<number>(0);
+  const refreshSpinnerColor = colors.primary;
+  const refreshBackgroundColor = colors.surface;
   const locationUpdatedRef = React.useRef(false);
   const lastLocationUpdateRef = React.useRef<number>(0);
-
-  // Refresh data when screen comes into focus
-  useFocusEffect(
-    React.useCallback(() => {
-      // Reset location updated flag when screen comes into focus
-      locationUpdatedRef.current = false;
-      refreshRequests();
-      loadAvailableRequests();
-      loadReferralData();
-    }, [refreshRequests, loadAvailableRequests]),
-  );
+  const loadAvailableRequestsRef = React.useRef<() => Promise<void>>(async () => {});
+  const loadReferralDataRef = React.useRef<() => Promise<void>>(async () => {});
+  const userId = user?.id;
+  const userRole = user?.role;
+  const userLocation = user?.location;
+  const userFirstName = user?.firstName;
 
   // Load referral code and credit balance
   const loadReferralData = React.useCallback(async () => {
-    if (!user) return;
+    if (!userId) return;
 
     try {
       const [code, credits] = await Promise.all([
-        getUserReferralCode(user.id),
-        getUserCredits(user.id),
+        getUserReferralCode(userId),
+        getUserCredits(userId),
       ]);
 
       setReferralCode(code);
@@ -146,15 +144,15 @@ export default function HomeScreen() {
     } catch (error) {
       console.error('Error loading referral data:', error);
       // Generate fallback code if database call fails
-      const fallbackCode = `${user.firstName.toUpperCase().slice(0, 4)}${user.id.slice(-4)}`;
+      const fallbackCode = `${(userFirstName || 'USER').toUpperCase().slice(0, 4)}${userId.slice(-4)}`;
       setReferralCode(fallbackCode);
       setUserCredits(0);
     }
-  }, [user?.id]);
+  }, [userId, userFirstName]);
 
   // Load available requests for providers
   const loadAvailableRequests = React.useCallback(async () => {
-    if (!user || user.role === 'trucker') {
+    if (!userId || userRole === 'trucker') {
       setAvailableRequests([]);
       return;
     }
@@ -170,7 +168,7 @@ export default function HomeScreen() {
 
           // Skip update if location hasn't changed or updated recently (within 5 minutes)
           if (
-            coords !== user.location &&
+            coords !== userLocation &&
             now - lastLocationUpdateRef.current > 5 * 60 * 1000
           ) {
             // Update the provider's location in database
@@ -189,34 +187,56 @@ export default function HomeScreen() {
           locationUpdatedRef.current = true;
         } catch (locationError: any) {
           // Log as warning instead of error as this is common in simulators/certain environments
-          if (locationError?.code === 'ERR_LOCATION_UNAVAILABLE' || locationError?.message?.includes('kCLErrorDomain error 0')) {
-            console.warn('Live location unavailable (Simulator / GPS issue). Using profile location as fallback.');
+          if (
+            locationError?.code === 'ERR_LOCATION_UNAVAILABLE' ||
+            locationError?.message?.includes('kCLErrorDomain error 0')
+          ) {
+            console.warn(
+              'Live location unavailable (Simulator / GPS issue). Using profile location as fallback.',
+            );
           } else {
-            console.warn('Failed to get/update live location:', locationError?.message || locationError);
+            console.warn(
+              'Failed to get/update live location:',
+              locationError?.message || locationError,
+            );
           }
           // Mark as updated even on failure to prevent infinite retry loops in current focus session
           locationUpdatedRef.current = true;
         }
       }
 
-      const requests = await getAvailableRequests(user.id);
+      const requests = await getAvailableRequests(userId);
       setAvailableRequests(requests.slice(0, 2));
     } catch (error) {
       console.error('Error loading available requests:', error);
       setAvailableRequests([]);
     }
-  }, [
-    user?.id,
-    user?.role,
-    user?.location,
-    getAvailableRequests,
-    updateProfile,
-  ]);
+  }, [userId, userRole, userLocation, getAvailableRequests, updateProfile]);
+
+  React.useEffect(() => {
+    loadAvailableRequestsRef.current = loadAvailableRequests;
+  }, [loadAvailableRequests]);
+
+  React.useEffect(() => {
+    loadReferralDataRef.current = loadReferralData;
+  }, [loadReferralData]);
+
+  // Refresh data when screen comes into focus
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!userId) return;
+      // Reset location updated flag when screen comes into focus
+      locationUpdatedRef.current = false;
+      refreshRequests();
+      loadAvailableRequestsRef.current();
+      loadReferralDataRef.current();
+    }, [userId, refreshRequests]),
+  );
 
   // Load available requests on mount and when user changes
   React.useEffect(() => {
-    loadAvailableRequests();
-  }, [loadAvailableRequests]);
+    loadAvailableRequestsRef.current();
+  }, [userId]);
 
   // Handle pull-to-refresh
   const onRefresh = React.useCallback(async () => {
@@ -239,9 +259,7 @@ export default function HomeScreen() {
     ? getUserRequests(user.id)
     : getProviderRequests(user.id);
   const recentRequests = userRequests.slice(0, 3);
-  // availableRequests is now managed by state
-  // We'll assume 0 unread chats since we don't fetch them here anymore
-  const unreadChats: any[] = [];
+  // availableRequests is managed by state
 
   // Calculate notification count for pending/unfinished work
   const getNotificationCount = () => {
@@ -266,7 +284,7 @@ export default function HomeScreen() {
   const notificationCount = getNotificationCount();
   const handleReferFriend = async () => {
     if (!referralCode) {
-      Alert.alert('Error', 'Referral code not available. Please try again.');
+      showError('Referral code not available. Please try again.');
       return;
     }
 
@@ -289,140 +307,28 @@ Download RigSnap today and get $10 credit when you sign up!`;
       });
 
       if (result.action === Share.sharedAction) {
-        Alert.alert(
-          'Thanks for Sharing! 🎉',
-          `Your referral code is ${referralCode}. You'll earn $10 credit for each friend who joins using your code!`,
-          [{ text: 'Awesome!' }],
+        showSuccess(
+          `Shared! Your code is ${referralCode}. You earn $10 per successful referral.`,
         );
       }
     } catch {
-      Alert.alert(
-        'Share RigSnap',
-        `Invite friends to join RigSnap!\n\nYour referral code: ${referralCode}\n\nShare this code with friends and you'll both get $10 credit when they sign up!`,
-        [{ text: 'OK' }],
-      );
+      showInfo(`Share this referral code: ${referralCode}`);
     }
   };
 
   const handleNotifications = () => {
-    if (notificationCount === 0) {
-      Alert.alert(
-        'Notifications',
-        'You have no pending notifications at this time.',
-        [{ text: 'OK' }],
-      );
-      return;
-    }
-
-    if (isTrucker) {
-      const pendingRequests = getUserRequests(user.id).filter(
-        (r) =>
-          r.status === 'pending' ||
-          r.status === 'accepted' ||
-          r.status === 'in_progress',
-      );
-
-      const pendingCount = pendingRequests.filter(
-        (r) => r.status === 'pending',
-      ).length;
-      const activeCount = pendingRequests.filter(
-        (r) => r.status === 'accepted' || r.status === 'in_progress',
-      ).length;
-
-      let message = '';
-      if (pendingCount > 0) {
-        message += `${pendingCount} pending request${
-          pendingCount !== 1 ? 's' : ''
-        } waiting for providers\n`;
-      }
-      if (activeCount > 0) {
-        message += `${activeCount} active request${
-          activeCount !== 1 ? 's' : ''
-        } in progress`;
-      }
-
-      Alert.alert(
-        `${notificationCount} Active Request${
-          notificationCount !== 1 ? 's' : ''
-        }`,
-        message.trim(),
-        [
-          {
-            text: 'View My Requests',
-            onPress: () => {
-              // For now, we'll create a simple alert showing the requests
-              // In a full app, this could navigate to a dedicated requests screen
-              const requestsList = pendingRequests
-                .map(
-                  (r) =>
-                    `• ${getServiceDisplayName(
-                      r.serviceType,
-                    )} - ${r.status.toUpperCase()}`,
-                )
-                .join('\n');
-
-              Alert.alert(
-                'My Active Requests',
-                requestsList || 'No active requests',
-                [
-                  { text: 'OK' },
-                  {
-                    text: 'Create New Request',
-                    onPress: () => router.push('/create-request'),
-                  },
-                ],
-              );
-            },
-          },
-          { text: 'OK', style: 'cancel' },
-        ],
-      );
-    } else {
-      const availableCount = getAvailableRequests().length;
-      const activeJobs = getProviderRequests(user.id).filter(
-        (r) => r.status === 'accepted' || r.status === 'in_progress',
-      );
-
-      let message = '';
-      if (availableCount > 0) {
-        message += `${availableCount} new request${
-          availableCount !== 1 ? 's' : ''
-        } available to accept\n`;
-      }
-      if (activeJobs.length > 0) {
-        message += `${activeJobs.length} active job${
-          activeJobs.length !== 1 ? 's' : ''
-        } in progress`;
-      }
-
-      Alert.alert(
-        `${notificationCount} Notification${
-          notificationCount !== 1 ? 's' : ''
-        }`,
-        message.trim(),
-        [
-          {
-            text: 'Browse Requests',
-            onPress: () => router.push('/browse-requests'),
-          },
-          { text: 'OK', style: 'cancel' },
-        ],
-      );
-    }
+    router.push('/notifications');
   };
 
   const handleCancelRequest = async (requestId: string, reason: string) => {
     try {
       const success = await cancelRequest(requestId, user.id, reason);
       if (success) {
-        Alert.alert('Success', 'Your request has been cancelled successfully.');
+        showSuccess('Request cancelled successfully.');
       }
       // Error alert is already shown in cancelRequest if payment fails
     } catch (error: any) {
-      Alert.alert(
-        'Error',
-        error.message || 'Failed to cancel request. Please try again.',
-      );
+      showError(error.message || 'Failed to cancel request. Please try again.');
     }
   };
 
@@ -433,9 +339,11 @@ Download RigSnap today and get $10 credit when you sign up!`;
         <RefreshControl
           refreshing={refreshing}
           onRefresh={onRefresh}
-          colors={['#2563eb']}
-          tintColor="#2563eb"
+          colors={[refreshSpinnerColor]}
+          tintColor={refreshSpinnerColor}
+          progressBackgroundColor={refreshBackgroundColor}
           title="Pull to refresh"
+          titleColor={colors.textSecondary}
         />
       }
     >
@@ -786,27 +694,7 @@ Download RigSnap today and get $10 credit when you sign up!`;
                         ]}
                         onPress={(e) => {
                           e.stopPropagation();
-                          Alert.prompt(
-                            'Cancel Request',
-                            'Are you sure you want to cancel  this request?',
-                            [
-                              {
-                                text: 'Cancel',
-                                style: 'cancel',
-                              },
-                              {
-                                text: 'Confirm',
-                                style: 'destructive',
-                                onPress: (reason: any) => {
-                                  if (reason) {
-                                    handleCancelRequest(request.id, reason);
-                                  }
-                                },
-                              },
-                            ],
-                            'plain-text',
-                            '',
-                          );
+                          handleCancelRequest(request.id, 'Cancelled by user');
                         }}
                       >
                         <X size={16} color={colors.error} />
@@ -910,10 +798,11 @@ const styles = StyleSheet.create({
   },
   greeting: {
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
   },
   name: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   notificationIconContainer: {
     position: 'relative',
@@ -937,7 +826,7 @@ const styles = StyleSheet.create({
   notificationCount: {
     color: 'white',
     fontSize: 10, // smaller to fit 3 digits
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
 
   section: {
@@ -952,11 +841,11 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   seeAll: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   actionButtonsContainer: {
     flexDirection: 'row',
@@ -1009,22 +898,24 @@ const styles = StyleSheet.create({
   },
   actionButtonTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: 'white',
     marginBottom: 2,
   },
   actionButtonSubtitle: {
     fontSize: 12,
+    fontFamily: 'Poppins_500Medium',
     color: 'rgba(255, 255, 255, 0.8)',
   },
   browseTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: 'white',
     marginBottom: 2,
   },
   browseSubtitle: {
     fontSize: 12,
+    fontFamily: 'Poppins_500Medium',
     color: 'rgba(255, 255, 255, 0.8)',
   },
   requestCard: {
@@ -1051,7 +942,7 @@ const styles = StyleSheet.create({
   },
   serviceType: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   statusBadge: {
     flexDirection: 'row',
@@ -1067,7 +958,7 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: 'white',
     textTransform: 'capitalize',
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
     textAlign: 'center',
     flexShrink: 1,
   },
@@ -1087,13 +978,15 @@ const styles = StyleSheet.create({
   },
   urgencyBadge: {
     fontSize: 10,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   timeAgo: {
     fontSize: 12,
+    fontFamily: 'Poppins_500Medium',
   },
   requestDescription: {
     fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
     lineHeight: 20,
     marginBottom: 12,
   },
@@ -1109,6 +1002,7 @@ const styles = StyleSheet.create({
   },
   detailText: {
     fontSize: 12,
+    fontFamily: 'Poppins_500Medium',
   },
   requestFooter: {
     flexDirection: 'row',
@@ -1128,15 +1022,15 @@ const styles = StyleSheet.create({
   },
   tapToView: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   tapToAccept: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   estimatedCost: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   emptyState: {
     borderRadius: 12,
@@ -1151,12 +1045,13 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 8,
     textAlign: 'center',
   },
   emptyStateSubtext: {
     fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
     marginBottom: 16,
     textAlign: 'center',
   },
@@ -1170,7 +1065,7 @@ const styles = StyleSheet.create({
   },
   emptyStateButtonText: {
     color: 'white',
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     fontSize: 14,
   },
   referSection: {
@@ -1202,11 +1097,12 @@ const styles = StyleSheet.create({
   referTitle: {
     color: 'white',
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   referSubtitle: {
     color: 'rgba(255, 255, 255, 0.8)',
     fontSize: 11,
+    fontFamily: 'Poppins_500Medium',
   },
   giftBadge: {
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
@@ -1237,94 +1133,19 @@ const styles = StyleSheet.create({
   },
   referralMainText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 4,
   },
   referralSubText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   referralCredits: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginTop: 2,
   },
   referralArrow: {
     marginLeft: 12,
-  },
-  emptyState: {
-    borderRadius: 12,
-    padding: 32,
-    alignItems: 'center',
-    borderWidth: 1,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-  },
-  emptyStateText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  emptyStateSubtext: {
-    fontSize: 14,
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  emptyStateButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
-    gap: 8,
-  },
-  emptyStateButtonText: {
-    color: 'white',
-    fontWeight: '600',
-    fontSize: 14,
-  },
-  referSection: {
-    padding: 24,
-    paddingTop: 0,
-    paddingBottom: 32,
-  },
-  referButton: {
-    borderRadius: 12,
-    backgroundColor: '#7c3aed',
-    padding: 16,
-    shadowColor: '#7c3aed',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  referButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  referIconContainer: {
-    marginRight: 12,
-  },
-  referTextContainer: {
-    flex: 1,
-  },
-  referTitle: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
-  referSubtitle: {
-    color: 'rgba(255, 255, 255, 0.8)',
-    fontSize: 11,
-  },
-  giftBadge: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    padding: 6,
-    borderRadius: 8,
   },
 });

@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     borderColor: '#e5e7eb',
   },
   buttonText: {
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   primaryText: {
     color: 'white',
@@ -369,7 +369,7 @@ const styles = StyleSheet.create({
   secondaryActionText: {
     fontSize: 12,
     color: '#6b7280',
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   travelInfo: {
     backgroundColor: '#f0fdf4',
@@ -382,6 +382,6 @@ const styles = StyleSheet.create({
   travelInfoText: {
     fontSize: 12,
     color: '#166534',
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
 });

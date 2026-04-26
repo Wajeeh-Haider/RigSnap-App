@@ -134,6 +134,11 @@ export default function BrowseRequestsScreen() {
   const [isLoadingRequests, setIsLoadingRequests] = useState(false);
   const locationUpdatedRef = useRef(false);
   const lastLocationUpdateRef = useRef<number>(0);
+  const loadAvailableRequestsRef = useRef<() => Promise<void>>(async () => {});
+
+  const userId = user?.id;
+  const userRole = user?.role;
+  const userProfileLocation = user?.location;
 
   const getUserLocation = async () => {
     try {
@@ -150,7 +155,7 @@ export default function BrowseRequestsScreen() {
   };
 
   const loadAvailableRequests = useCallback(async () => {
-    if (!user || user.role === 'trucker') return;
+    if (!userId || userRole === 'trucker') return;
 
     setIsLoadingRequests(true);
     try {
@@ -163,7 +168,7 @@ export default function BrowseRequestsScreen() {
           const now = Date.now();
 
           // Skip update if location hasn't changed or updated recently (within 5 minutes)
-          if (coords !== user.location && (now - lastLocationUpdateRef.current) > 5 * 60 * 1000) {
+          if (coords !== userProfileLocation && (now - lastLocationUpdateRef.current) > 5 * 60 * 1000) {
             // Update the provider's location in database
             await updateProfile({ location: coords });
             lastLocationUpdateRef.current = now;
@@ -179,20 +184,24 @@ export default function BrowseRequestsScreen() {
         }
       }
 
-      const requests = await getAvailableRequests(user.id);
+      const requests = await getAvailableRequests(userId);
       setAvailableRequests(requests);
     } catch (error) {
       console.error('Error loading available requests:', error);
     } finally {
       setIsLoadingRequests(false);
     }
-  }, [getAvailableRequests, updateProfile, user]);
+  }, [getAvailableRequests, updateProfile, userId, userRole, userProfileLocation]);
+
+  useEffect(() => {
+    loadAvailableRequestsRef.current = loadAvailableRequests;
+  }, [loadAvailableRequests]);
 
   // Get user location and load requests on component mount
   useEffect(() => {
     getUserLocation();
-    loadAvailableRequests();
-  }, [loadAvailableRequests, user?.id]);
+    loadAvailableRequestsRef.current();
+  }, [userId]);
 
   // Refresh data when screen comes into focus
   useFocusEffect(
@@ -200,8 +209,8 @@ export default function BrowseRequestsScreen() {
       // Reset location updated flag when screen comes into focus
       locationUpdatedRef.current = false;
       refreshRequests();
-      loadAvailableRequests();
-    }, [loadAvailableRequests, refreshRequests])
+      loadAvailableRequestsRef.current();
+    }, [refreshRequests])
   );
 
   if (!user) return null;
@@ -946,7 +955,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 4,
   },
   subtitle: {
@@ -969,7 +978,7 @@ const styles = StyleSheet.create({
   },
   filterText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   content: {
     flex: 1,
@@ -982,7 +991,7 @@ const styles = StyleSheet.create({
   },
   emptyStateText: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     marginTop: 16,
     marginBottom: 8,
   },
@@ -1015,7 +1024,7 @@ const styles = StyleSheet.create({
   },
   serviceType: {
     fontSize: 12,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#2563eb',
   },
   badgeContainer: {
@@ -1037,7 +1046,7 @@ const styles = StyleSheet.create({
   statusText: {
     fontSize: 10,
     color: 'white',
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
     textTransform: 'capitalize',
     textAlign: 'center',
     flexShrink: 1,
@@ -1053,7 +1062,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     textTransform: 'capitalize',
     color: 'white',
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     textAlign: 'center',
     flexShrink: 1,
   },
@@ -1086,11 +1095,11 @@ const styles = StyleSheet.create({
   },
   tapToAccept: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   estimatedCost: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   modalContainer: {
     flex: 1,
@@ -1105,7 +1114,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   closeButton: {
     padding: 8,
@@ -1136,7 +1145,7 @@ const styles = StyleSheet.create({
   },
   serviceTypeDetail: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 8,
   },
   statusRow: {
@@ -1148,7 +1157,7 @@ const styles = StyleSheet.create({
   },
   detailTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 8,
   },
   locationContainer: {
@@ -1159,12 +1168,12 @@ const styles = StyleSheet.create({
   },
   phoneNumber: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
     marginTop: 4,
   },
   costText: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   feeNotice: {
     flexDirection: 'row',
@@ -1180,12 +1189,13 @@ const styles = StyleSheet.create({
   },
   feeTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#92400e',
     marginBottom: 4,
   },
   feeDescription: {
     fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
     color: '#92400e',
     lineHeight: 20,
   },
@@ -1203,7 +1213,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   acceptButton: {
     flex: 1,
@@ -1216,7 +1226,7 @@ const styles = StyleSheet.create({
   },
   acceptButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     color: 'white',
   },
   cancelRequestButton: {
@@ -1228,7 +1238,7 @@ const styles = StyleSheet.create({
   },
   cancelRequestButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     color: 'white',
   },
   buttonDisabled: {

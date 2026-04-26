@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from './AuthContext';
 
@@ -24,7 +30,7 @@ export const languages: Language[] = [
   { code: 'hi', name: 'Hindi', flag: '🇮🇳', nativeName: 'हिन्दी' },
   { code: 'he', name: 'Hebrew', flag: '🇮🇱', nativeName: 'עברית' },
   { code: 'sv', name: 'Swedish', flag: '🇸🇪', nativeName: 'Svenska' },
-  { code: 'pl', name: 'Polish', flag: '🇵🇱', nativeName: 'Polski' }
+  { code: 'pl', name: 'Polish', flag: '🇵🇱', nativeName: 'Polski' },
 ];
 
 // Translation keys and their values for different languages
@@ -35,7 +41,7 @@ const translations: Record<string, Record<string, string>> = {
     'nav.messages': 'Messages',
     'nav.leads': 'Leads',
     'nav.profile': 'Profile',
-    
+
     // Common
     'common.loading': 'Loading...',
     'common.error': 'Error',
@@ -53,7 +59,7 @@ const translations: Record<string, Record<string, string>> = {
     'common.confirm': 'Confirm',
     'common.yes': 'Yes',
     'common.no': 'No',
-    
+
     // Home Screen
     'home.welcome': 'Welcome back,',
     'home.newRequest': 'New Request',
@@ -71,7 +77,7 @@ const translations: Record<string, Record<string, string>> = {
     'home.tapToView': 'Tap to view details',
     'home.referFriend': 'Refer a Friend & Earn $10',
     'home.shareRigSnap': 'Share RigSnap and get rewarded when they join',
-    
+
     // Profile Screen
     'profile.title': 'Profile',
     'profile.personalInformation': 'Personal Information',
@@ -99,19 +105,21 @@ const translations: Record<string, Record<string, string>> = {
     'profile.editProfile': 'Edit Profile',
     'profile.saveChanges': 'Save Changes',
     'profile.cancel': 'Cancel',
-    
+
     // Messages/Chat
     'chat.title': 'Messages',
     'chat.messages': 'Messages',
     'chat.noMessagesYet': 'No messages yet',
-    'chat.messagesWillAppear': 'Messages will appear here when you start chatting with service providers',
-    'chat.messagesWillAppearProvider': 'Messages will appear here when you accept service requests',
+    'chat.messagesWillAppear':
+      'Messages will appear here when you start chatting with service providers',
+    'chat.messagesWillAppearProvider':
+      'Messages will appear here when you accept service requests',
     'chat.active': 'Active',
     'chat.completed': 'Completed',
     'chat.typeMessage': 'Type a message...',
     'chat.trucker': 'Trucker',
     'chat.serviceProvider': 'Service Provider',
-    
+
     // Leads
     'leads.title': 'Lead Tracking',
     'leads.leadTracking': 'Lead Tracking',
@@ -126,13 +134,15 @@ const translations: Record<string, Record<string, string>> = {
     'leads.charged': 'Charged',
     'leads.transactionHistory': 'Transaction History',
     'leads.noLeadFeesYet': 'No lead fees yet',
-    'leads.leadFeesWillAppear': 'Lead fees will appear here when service providers accept your requests',
-    'leads.leadFeesWillAppearProvider': 'Lead fees will appear here when you accept service requests',
-    
+    'leads.leadFeesWillAppear':
+      'Lead fees will appear here when service providers accept your requests',
+    'leads.leadFeesWillAppearProvider':
+      'Lead fees will appear here when you accept service requests',
+
     // Account Settings
     'settings.title': 'Account Settings',
     'settings.security': 'Security',
-    'settings.changePassword': 'Change Password',
+    'settings.changePassword': 'Change',
     'settings.updatePassword': 'Update your account password',
     'settings.languageRegion': 'Language & Region',
     'settings.language': 'Language',
@@ -151,33 +161,34 @@ const translations: Record<string, Record<string, string>> = {
     'settings.privacyPolicy': 'Privacy Policy',
     'settings.dangerZone': 'Danger Zone',
     'settings.deleteAccount': 'Delete Account',
-    
+
     // Service Types
     'service.towing': 'Towing Service',
-    'service.repair': 'Road Service', 
+    'service.repair': 'Road Service',
     'service.mechanic': 'Mechanic Service',
     'service.tireRepair': 'Mobile Tire Repair',
     'service.truckWash': 'Mobile Truck Wash',
     'service.hoseRepair': 'Hose Repair',
-    
+
     // Status
     'status.pending': 'Pending',
     'status.accepted': 'Accepted',
     'status.inProgress': 'In Progress',
     'status.completed': 'Completed',
     'status.cancelled': 'Cancelled',
-    
+
     // Urgency
     'urgency.low': 'Low',
     'urgency.medium': 'Medium',
     'urgency.high': 'High',
-    
+
     // Create Request Screen
     'create.title': 'Request Service',
     'create.subtitle': 'Get help from trusted service providers',
     'create.serviceType': 'Service Type',
     'create.descriptionPhotos': 'Description & Photos',
-    'create.descriptionPlaceholder': 'Describe the problem in detail. Include truck type, symptoms, and any other relevant information...',
+    'create.descriptionPlaceholder':
+      'Describe the problem in detail. Include truck type, symptoms, and any other relevant information...',
     'create.addPhotos': 'Add Photos (Optional)',
     'create.photosHelp': 'Help providers understand the issue better',
     'create.addSample': 'Add Sample',
@@ -189,33 +200,42 @@ const translations: Record<string, Record<string, string>> = {
     'create.urgencyLevel': 'Urgency Level',
     'create.estimatedCost': 'Estimated Cost (Optional)',
     'create.costPlaceholder': 'Enter estimated cost in USD',
-    'create.costHelp': 'This helps providers understand the scope of work and provide accurate quotes',
+    'create.costHelp':
+      'This helps providers understand the scope of work and provide accurate quotes',
     'create.postRequest': 'Post Request',
     'create.locationNotAvailable': 'Location Not Available',
-    'create.locationNotAvailableDesc': 'Your device or browser does not support location services. You can still enter your location manually.',
+    'create.locationNotAvailableDesc':
+      'Your device or browser does not support location services. You can still enter your location manually.',
     'create.locationFound': 'Location Found! 📍',
     'create.locationSet': 'Your current location has been set to:\n\n',
     'create.locationError': 'Location Error',
     'create.demoLocationSet': 'Demo Location Set',
     'create.demoLocationDesc': 'Using demo location: ',
     'create.cameraNotAvailable': 'Camera Not Available',
-    'create.cameraNotAvailableDesc': 'Camera functionality is not available on web. In a real mobile app, this would open the camera.',
+    'create.cameraNotAvailableDesc':
+      'Camera functionality is not available on web. In a real mobile app, this would open the camera.',
     'create.cameraPermissionRequired': 'Camera Permission Required',
-    'create.cameraPermissionDesc': 'Please grant camera permission to take photos of the issue.',
+    'create.cameraPermissionDesc':
+      'Please grant camera permission to take photos of the issue.',
     'create.photoUploaded': 'Photo Uploaded! 📸',
-    'create.photoUploadedDesc': 'Your photo has been successfully uploaded and will be included with your service request.',
+    'create.photoUploadedDesc':
+      'Your photo has been successfully uploaded and will be included with your service request.',
     'create.uploadWarning': 'Upload Warning ⚠️',
-    'create.uploadWarningDesc': 'Photo was taken but upload to cloud failed. The photo will still be included locally. Please check your internet connection.',
+    'create.uploadWarningDesc':
+      'Photo was taken but upload to cloud failed. The photo will still be included locally. Please check your internet connection.',
     'create.error': 'Error',
     'create.failedTakePicture': 'Failed to take picture. Please try again.',
     'create.fillRequiredFields': 'Please fill in all required fields',
     'create.photosUploading': 'Photos Uploading',
-    'create.photosUploadingDesc': 'Please wait for photos to finish uploading before submitting your request.',
+    'create.photosUploadingDesc':
+      'Please wait for photos to finish uploading before submitting your request.',
     'create.requestCreated': 'Request Created! 🚛💳',
-    'create.requestCreatedDesc': 'Your service request has been posted and the $5 request fee will be charged when any service provider accepts your request. Service providers in your area will be notified and can accept your request.',
+    'create.requestCreatedDesc':
+      'Your service request has been posted and the $5 request fee will be charged when any service provider accepts your request. Service providers in your area will be notified and can accept your request.',
     'create.viewRequest': 'View Request',
     'create.requestFailed': 'Request Failed',
-    'create.requestFailedDesc': 'Failed to create request. Please check your payment method and try again.',
+    'create.requestFailedDesc':
+      'Failed to create request. Please check your payment method and try again.',
     'create.urgencyLow': 'Low',
     'create.urgencyMedium': 'Medium',
     'create.urgencyHigh': 'High',
@@ -231,12 +251,15 @@ const translations: Record<string, Record<string, string>> = {
     'create.serviceTowingDesc': 'Vehicle breakdown or accident towing',
     'create.serviceRepairDesc': 'On-site mechanical repairs',
     'create.serviceMechanicDesc': 'Professional diagnostic and repair',
-    'create.serviceTireRepairDesc': 'Tire replacement and roadside tire services',
+    'create.serviceTireRepairDesc':
+      'Tire replacement and roadside tire services',
     'create.serviceTruckWashDesc': 'Professional mobile truck cleaning',
     'create.serviceHoseRepairDesc': 'Hydraulic and air hose repair',
-    'create.photoTip': ' photos added.  Clear photos help providers give accurate estimates.',
+    'create.photoTip':
+      ' photos added.  Clear photos help providers give accurate estimates.',
     'create.uploadingPhoto': 'Uploading photo to cloud storage...',
-    'create.locationTip': '💡 Tip: Accurate location helps service providers find you quickly. Include mile markers, exit numbers, or nearby landmarks.',
+    'create.locationTip':
+      '💡 Tip: Accurate location helps service providers find you quickly. Include mile markers, exit numbers, or nearby landmarks.',
   },
   es: {
     // Navigation
@@ -244,7 +267,7 @@ const translations: Record<string, Record<string, string>> = {
     'nav.messages': 'Mensajes',
     'nav.leads': 'Clientes',
     'nav.profile': 'Perfil',
-    
+
     // Common
     'common.loading': 'Cargando...',
     'common.error': 'Error',
@@ -262,7 +285,7 @@ const translations: Record<string, Record<string, string>> = {
     'common.confirm': 'Confirmar',
     'common.yes': 'Sí',
     'common.no': 'No',
-    
+
     // Home Screen
     'home.welcome': 'Bienvenido de nuevo,',
     'home.newRequest': 'Nueva Solicitud',
@@ -275,12 +298,13 @@ const translations: Record<string, Record<string, string>> = {
     'home.noRequestsYet': 'Aún no hay solicitudes',
     'home.noJobsYet': 'Aún no hay trabajos',
     'home.createFirstRequest': 'Crea tu primera solicitud para comenzar',
-    'home.browseAvailableRequests': 'Explora las solicitudes disponibles para comenzar',
+    'home.browseAvailableRequests':
+      'Explora las solicitudes disponibles para comenzar',
     'home.createRequest': 'Crear Solicitud',
     'home.tapToView': 'Toca para ver detalles',
     'home.referFriend': 'Refiere un Amigo y Gana $10',
     'home.shareRigSnap': 'Comparte RigSnap y obtén recompensas cuando se unan',
-    
+
     // Profile Screen
     'profile.title': 'Perfil',
     'profile.personalInformation': 'Información Personal',
@@ -292,7 +316,8 @@ const translations: Record<string, Record<string, string>> = {
     'profile.truckerInformation': 'Información del Camionero',
     'profile.truckType': 'Tipo de Camión',
     'profile.licenseNumber': 'Número de Licencia',
-    'profile.serviceProviderInformation': 'Información del Proveedor de Servicios',
+    'profile.serviceProviderInformation':
+      'Información del Proveedor de Servicios',
     'profile.servicesOffered': 'Servicios Ofrecidos',
     'profile.serviceRadius': 'Radio de Servicio',
     'profile.certifications': 'Certificaciones',
@@ -308,23 +333,26 @@ const translations: Record<string, Record<string, string>> = {
     'profile.editProfile': 'Editar Perfil',
     'profile.saveChanges': 'Guardar Cambios',
     'profile.cancel': 'Cancelar',
-    
+
     // Messages/Chat
     'chat.title': 'Mensajes',
     'chat.messages': 'Mensajes',
     'chat.noMessagesYet': 'Aún no hay mensajes',
-    'chat.messagesWillAppear': 'Los mensajes aparecerán aquí cuando comiences a chatear con proveedores de servicios',
-    'chat.messagesWillAppearProvider': 'Los mensajes aparecerán aquí cuando aceptes solicitudes de servicio',
+    'chat.messagesWillAppear':
+      'Los mensajes aparecerán aquí cuando comiences a chatear con proveedores de servicios',
+    'chat.messagesWillAppearProvider':
+      'Los mensajes aparecerán aquí cuando aceptes solicitudes de servicio',
     'chat.active': 'Activo',
     'chat.completed': 'Completado',
     'chat.typeMessage': 'Escribe un mensaje...',
     'chat.trucker': 'Camionero',
     'chat.serviceProvider': 'Proveedor de Servicios',
-    
+
     // Leads
     'leads.title': 'Seguimiento de Clientes',
     'leads.leadTracking': 'Seguimiento de Clientes',
-    'leads.monitorLeadFees': 'Monitorea tus tarifas de clientes y transacciones',
+    'leads.monitorLeadFees':
+      'Monitorea tus tarifas de clientes y transacciones',
     'leads.netSpent': 'Gasto Neto',
     'leads.totalLeads': 'Total de Clientes',
     'leads.refunded': 'Reembolsado',
@@ -334,9 +362,11 @@ const translations: Record<string, Record<string, string>> = {
     'leads.pendingRequests': 'Solicitudes Pendientes',
     'leads.transactionHistory': 'Historial de Transacciones',
     'leads.noLeadFeesYet': 'Aún no hay tarifas de clientes',
-    'leads.leadFeesWillAppear': 'Las tarifas de clientes aparecerán aquí cuando los proveedores de servicios acepten tus solicitudes',
-    'leads.leadFeesWillAppearProvider': 'Las tarifas de clientes aparecerán aquí cuando aceptes solicitudes de servicio',
-    
+    'leads.leadFeesWillAppear':
+      'Las tarifas de clientes aparecerán aquí cuando los proveedores de servicios acepten tus solicitudes',
+    'leads.leadFeesWillAppearProvider':
+      'Las tarifas de clientes aparecerán aquí cuando aceptes solicitudes de servicio',
+
     // Account Settings
     'settings.title': 'Configuración de Cuenta',
     'settings.security': 'Seguridad',
@@ -359,7 +389,7 @@ const translations: Record<string, Record<string, string>> = {
     'settings.privacyPolicy': 'Política de Privacidad',
     'settings.dangerZone': 'Zona de Peligro',
     'settings.deleteAccount': 'Eliminar Cuenta',
-    
+
     // Service Types
     'service.towing': 'Servicio de Remolque',
     'service.repair': 'Servicio en Carretera',
@@ -367,13 +397,14 @@ const translations: Record<string, Record<string, string>> = {
     'service.tireRepair': 'Reparación Móvil de Llantas',
     'service.truckWash': 'Lavado Móvil de Camiones',
     'service.hoseRepair': 'Reparación de Mangueras',
-    
+
     // Create Request Screen
     'create.title': 'Solicitar Servicio',
     'create.subtitle': 'Obtén ayuda de proveedores de servicios confiables',
     'create.serviceType': 'Tipo de Servicio',
     'create.descriptionPhotos': 'Descripción y Fotos',
-    'create.descriptionPlaceholder': 'Describe el problema en detalle. Incluye tipo de camión, síntomas y cualquier otra información relevante...',
+    'create.descriptionPlaceholder':
+      'Describe el problema en detalle. Incluye tipo de camión, síntomas y cualquier otra información relevante...',
     'create.addPhotos': 'Agregar Fotos (Opcional)',
     'create.photosHelp': 'Ayuda a los proveedores a entender mejor el problema',
     'create.addSample': 'Agregar Muestra',
@@ -385,33 +416,43 @@ const translations: Record<string, Record<string, string>> = {
     'create.urgencyLevel': 'Nivel de Urgencia',
     'create.estimatedCost': 'Costo Estimado (Opcional)',
     'create.costPlaceholder': 'Ingresa el costo estimado en USD',
-    'create.costHelp': 'Esto ayuda a los proveedores a entender el alcance del trabajo y proporcionar cotizaciones precisas',
+    'create.costHelp':
+      'Esto ayuda a los proveedores a entender el alcance del trabajo y proporcionar cotizaciones precisas',
     'create.postRequest': 'Publicar Solicitud',
     'create.locationNotAvailable': 'Ubicación No Disponible',
-    'create.locationNotAvailableDesc': 'Tu dispositivo o navegador no soporta servicios de ubicación. Aún puedes ingresar tu ubicación manualmente.',
+    'create.locationNotAvailableDesc':
+      'Tu dispositivo o navegador no soporta servicios de ubicación. Aún puedes ingresar tu ubicación manualmente.',
     'create.locationFound': '¡Ubicación Encontrada! 📍',
     'create.locationSet': 'Tu ubicación actual ha sido configurada en:\n\n',
     'create.locationError': 'Error de Ubicación',
     'create.demoLocationSet': 'Ubicación de Demo Configurada',
     'create.demoLocationDesc': 'Usando ubicación de demo: ',
     'create.cameraNotAvailable': 'Cámara No Disponible',
-    'create.cameraNotAvailableDesc': 'La funcionalidad de cámara no está disponible en web. En una app móvil real, esto abriría la cámara.',
+    'create.cameraNotAvailableDesc':
+      'La funcionalidad de cámara no está disponible en web. En una app móvil real, esto abriría la cámara.',
     'create.cameraPermissionRequired': 'Permiso de Cámara Requerido',
-    'create.cameraPermissionDesc': 'Por favor concede permiso de cámara para tomar fotos del problema.',
+    'create.cameraPermissionDesc':
+      'Por favor concede permiso de cámara para tomar fotos del problema.',
     'create.photoUploaded': '¡Foto Subida! 📸',
-    'create.photoUploadedDesc': 'Tu foto ha sido subida exitosamente y será incluida con tu solicitud de servicio.',
+    'create.photoUploadedDesc':
+      'Tu foto ha sido subida exitosamente y será incluida con tu solicitud de servicio.',
     'create.uploadWarning': 'Advertencia de Subida ⚠️',
-    'create.uploadWarningDesc': 'La foto fue tomada pero la subida a la nube falló. La foto aún será incluida localmente. Por favor verifica tu conexión a internet.',
+    'create.uploadWarningDesc':
+      'La foto fue tomada pero la subida a la nube falló. La foto aún será incluida localmente. Por favor verifica tu conexión a internet.',
     'create.error': 'Error',
-    'create.failedTakePicture': 'Error al tomar foto. Por favor intenta de nuevo.',
+    'create.failedTakePicture':
+      'Error al tomar foto. Por favor intenta de nuevo.',
     'create.fillRequiredFields': 'Por favor llena todos los campos requeridos',
     'create.photosUploading': 'Fotos Subiendo',
-    'create.photosUploadingDesc': 'Por favor espera a que las fotos terminen de subir antes de enviar tu solicitud.',
+    'create.photosUploadingDesc':
+      'Por favor espera a que las fotos terminen de subir antes de enviar tu solicitud.',
     'create.requestCreated': '¡Solicitud Creada! 🚛💳',
-    'create.requestCreatedDesc': 'Tu solicitud de servicio ha sido publicada y la tarifa de $5 será cargada cuando cualquier proveedor de servicios acepte tu solicitud. Los proveedores de servicios en tu área serán notificados y pueden aceptar tu solicitud.',
+    'create.requestCreatedDesc':
+      'Tu solicitud de servicio ha sido publicada y la tarifa de $5 será cargada cuando cualquier proveedor de servicios acepte tu solicitud. Los proveedores de servicios en tu área serán notificados y pueden aceptar tu solicitud.',
     'create.viewRequest': 'Ver Solicitud',
     'create.requestFailed': 'Solicitud Fallida',
-    'create.requestFailedDesc': 'Error al crear solicitud. Por favor verifica tu método de pago e intenta de nuevo.',
+    'create.requestFailedDesc':
+      'Error al crear solicitud. Por favor verifica tu método de pago e intenta de nuevo.',
     'create.urgencyLow': 'Bajo',
     'create.urgencyMedium': 'Medio',
     'create.urgencyHigh': 'Alto',
@@ -427,12 +468,16 @@ const translations: Record<string, Record<string, string>> = {
     'create.serviceTowingDesc': 'Falla del vehículo o remolque por accidente',
     'create.serviceRepairDesc': 'Reparaciones mecánicas en sitio',
     'create.serviceMechanicDesc': 'Diagnóstico y reparación profesional',
-    'create.serviceTireRepairDesc': 'Reemplazo de llantas y servicios de llantas en carretera',
+    'create.serviceTireRepairDesc':
+      'Reemplazo de llantas y servicios de llantas en carretera',
     'create.serviceTruckWashDesc': 'Limpieza profesional móvil de camiones',
-    'create.serviceHoseRepairDesc': 'Reparación de mangueras hidráulicas y de aire',
-    'create.photoTip': ' fotos agregadas.  Fotos claras ayudan a los proveedores a dar estimaciones precisas.',
+    'create.serviceHoseRepairDesc':
+      'Reparación de mangueras hidráulicas y de aire',
+    'create.photoTip':
+      ' fotos agregadas.  Fotos claras ayudan a los proveedores a dar estimaciones precisas.',
     'create.uploadingPhoto': 'Subiendo foto al almacenamiento en la nube...',
-    'create.locationTip': '💡 Consejo: Una ubicación precisa ayuda a los proveedores de servicios a encontrarte rápidamente. Incluye marcadores de millas, números de salida o puntos de referencia cercanos.',
+    'create.locationTip':
+      '💡 Consejo: Una ubicación precisa ayuda a los proveedores de servicios a encontrarte rápidamente. Incluye marcadores de millas, números de salida o puntos de referencia cercanos.',
   },
   fr: {
     // Navigation
@@ -440,7 +485,7 @@ const translations: Record<string, Record<string, string>> = {
     'nav.messages': 'Messages',
     'nav.leads': 'Prospects',
     'nav.profile': 'Profil',
-    
+
     // Common
     'common.loading': 'Chargement...',
     'common.error': 'Erreur',
@@ -458,11 +503,11 @@ const translations: Record<string, Record<string, string>> = {
     'common.confirm': 'Confirmer',
     'common.yes': 'Oui',
     'common.no': 'Non',
-    
+
     // Home Screen
     'home.welcome': 'Bon retour,',
     'home.newRequest': 'Nouvelle Demande',
-    'home.getHelpNow': 'Obtenir de l\'aide maintenant',
+    'home.getHelpNow': "Obtenir de l'aide maintenant",
     'home.browseRequests': 'Parcourir les Demandes',
     'home.findNewJobs': 'Trouver de nouveaux emplois',
     'home.availableRequests': 'Demandes Disponibles',
@@ -471,12 +516,14 @@ const translations: Record<string, Record<string, string>> = {
     'home.noRequestsYet': 'Aucune demande pour le moment',
     'home.noJobsYet': 'Aucun emploi pour le moment',
     'home.createFirstRequest': 'Créez votre première demande pour commencer',
-    'home.browseAvailableRequests': 'Parcourez les demandes disponibles pour commencer',
+    'home.browseAvailableRequests':
+      'Parcourez les demandes disponibles pour commencer',
     'home.createRequest': 'Créer une Demande',
     'home.tapToView': 'Appuyez pour voir les détails',
     'home.referFriend': 'Parrainez un Ami et Gagnez 10$',
-    'home.shareRigSnap': 'Partagez RigSnap et soyez récompensé quand ils rejoignent',
-    
+    'home.shareRigSnap':
+      'Partagez RigSnap et soyez récompensé quand ils rejoignent',
+
     // Profile Screen
     'profile.title': 'Profil',
     'profile.personalInformation': 'Informations Personnelles',
@@ -488,7 +535,8 @@ const translations: Record<string, Record<string, string>> = {
     'profile.truckerInformation': 'Informations du Camionneur',
     'profile.truckType': 'Type de Camion',
     'profile.licenseNumber': 'Numéro de Licence',
-    'profile.serviceProviderInformation': 'Informations du Fournisseur de Services',
+    'profile.serviceProviderInformation':
+      'Informations du Fournisseur de Services',
     'profile.servicesOffered': 'Services Offerts',
     'profile.serviceRadius': 'Rayon de Service',
     'profile.certifications': 'Certifications',
@@ -504,23 +552,26 @@ const translations: Record<string, Record<string, string>> = {
     'profile.editProfile': 'Modifier le Profil',
     'profile.saveChanges': 'Enregistrer les Modifications',
     'profile.cancel': 'Annuler',
-    
+
     // Messages/Chat
     'chat.title': 'Messages',
     'chat.messages': 'Messages',
     'chat.noMessagesYet': 'Aucun message pour le moment',
-    'chat.messagesWillAppear': 'Les messages apparaîtront ici quand vous commencerez à discuter avec les fournisseurs de services',
-    'chat.messagesWillAppearProvider': 'Les messages apparaîtront ici quand vous accepterez des demandes de service',
+    'chat.messagesWillAppear':
+      'Les messages apparaîtront ici quand vous commencerez à discuter avec les fournisseurs de services',
+    'chat.messagesWillAppearProvider':
+      'Les messages apparaîtront ici quand vous accepterez des demandes de service',
     'chat.active': 'Actif',
     'chat.completed': 'Terminé',
     'chat.typeMessage': 'Tapez un message...',
     'chat.trucker': 'Camionneur',
     'chat.serviceProvider': 'Fournisseur de Services',
-    
+
     // Leads
     'leads.title': 'Suivi des Prospects',
     'leads.leadTracking': 'Suivi des Prospects',
-    'leads.monitorLeadFees': 'Surveillez vos frais de prospects et transactions',
+    'leads.monitorLeadFees':
+      'Surveillez vos frais de prospects et transactions',
     'leads.netSpent': 'Dépenses Nettes',
     'leads.totalLeads': 'Total des Prospects',
     'leads.refunded': 'Remboursé',
@@ -528,9 +579,11 @@ const translations: Record<string, Record<string, string>> = {
     'leads.pending': 'En Attente',
     'leads.transactionHistory': 'Historique des Transactions',
     'leads.noLeadFeesYet': 'Aucun frais de prospect pour le moment',
-    'leads.leadFeesWillAppear': 'Les frais de prospects apparaîtront ici quand les fournisseurs de services accepteront vos demandes',
-    'leads.leadFeesWillAppearProvider': 'Les frais de prospects apparaîtront ici quand vous accepterez des demandes de service',
-    
+    'leads.leadFeesWillAppear':
+      'Les frais de prospects apparaîtront ici quand les fournisseurs de services accepteront vos demandes',
+    'leads.leadFeesWillAppearProvider':
+      'Les frais de prospects apparaîtront ici quand vous accepterez des demandes de service',
+
     // Account Settings
     'settings.title': 'Paramètres du Compte',
     'settings.security': 'Sécurité',
@@ -546,14 +599,14 @@ const translations: Record<string, Record<string, string>> = {
     'settings.requestUpdates': 'Mises à Jour des Demandes',
     'settings.securityAlerts': 'Alertes de Sécurité',
     'settings.marketingEmails': 'Emails Marketing',
-    'settings.appPreferences': 'Préférences de l\'App',
+    'settings.appPreferences': "Préférences de l'App",
     'settings.darkMode': 'Mode Sombre',
     'settings.support': 'Support',
-    'settings.helpCenter': 'Centre d\'Aide',
+    'settings.helpCenter': "Centre d'Aide",
     'settings.privacyPolicy': 'Politique de Confidentialité',
     'settings.dangerZone': 'Zone de Danger',
     'settings.deleteAccount': 'Supprimer le Compte',
-    
+
     // Service Types
     'service.towing': 'Service de Remorquage',
     'service.repair': 'Service Routier',
@@ -561,72 +614,91 @@ const translations: Record<string, Record<string, string>> = {
     'service.tireRepair': 'Réparation Mobile de Pneus',
     'service.truckWash': 'Lavage Mobile de Camions',
     'service.hoseRepair': 'Réparation de Tuyaux',
-    
+
     // Create Request Screen
     'create.title': 'Demander un Service',
-    'create.subtitle': 'Obtenez de l\'aide auprès de fournisseurs de services de confiance',
+    'create.subtitle':
+      "Obtenez de l'aide auprès de fournisseurs de services de confiance",
     'create.serviceType': 'Type de Service',
     'create.descriptionPhotos': 'Description et Photos',
-    'create.descriptionPlaceholder': 'Décrivez le problème en détail. Incluez le type de camion, les symptômes et toute autre information pertinente...',
+    'create.descriptionPlaceholder':
+      'Décrivez le problème en détail. Incluez le type de camion, les symptômes et toute autre information pertinente...',
     'create.addPhotos': 'Ajouter des Photos (Optionnel)',
-    'create.photosHelp': 'Aidez les fournisseurs à mieux comprendre le problème',
+    'create.photosHelp':
+      'Aidez les fournisseurs à mieux comprendre le problème',
     'create.addSample': 'Ajouter un Échantillon',
     'create.takePhoto': 'Prendre une Photo',
     'create.location': 'Emplacement',
     'create.locationPlaceholder': 'Entrez votre emplacement actuel ou adresse',
-    'create.useCurrentLocation': 'Utiliser l\'Emplacement Actuel',
-    'create.gettingLocation': 'Obtention de l\'Emplacement...',
-    'create.urgencyLevel': 'Niveau d\'Urgence',
+    'create.useCurrentLocation': "Utiliser l'Emplacement Actuel",
+    'create.gettingLocation': "Obtention de l'Emplacement...",
+    'create.urgencyLevel': "Niveau d'Urgence",
     'create.estimatedCost': 'Coût Estimé (Optionnel)',
     'create.costPlaceholder': 'Entrez le coût estimé en USD',
-    'create.costHelp': 'Cela aide les fournisseurs à comprendre l\'ampleur du travail et à fournir des devis précis',
+    'create.costHelp':
+      "Cela aide les fournisseurs à comprendre l'ampleur du travail et à fournir des devis précis",
     'create.postRequest': 'Publier la Demande',
     'create.locationNotAvailable': 'Emplacement Non Disponible',
-    'create.locationNotAvailableDesc': 'Votre appareil ou navigateur ne prend pas en charge les services de localisation. Vous pouvez toujours entrer votre emplacement manuellement.',
+    'create.locationNotAvailableDesc':
+      'Votre appareil ou navigateur ne prend pas en charge les services de localisation. Vous pouvez toujours entrer votre emplacement manuellement.',
     'create.locationFound': 'Emplacement Trouvé ! 📍',
     'create.locationSet': 'Votre emplacement actuel a été défini sur :\n\n',
-    'create.locationError': 'Erreur d\'Emplacement',
+    'create.locationError': "Erreur d'Emplacement",
     'create.demoLocationSet': 'Emplacement de Démo Défini',
-    'create.demoLocationDesc': 'Utilisation de l\'emplacement de démo : ',
+    'create.demoLocationDesc': "Utilisation de l'emplacement de démo : ",
     'create.cameraNotAvailable': 'Caméra Non Disponible',
-    'create.cameraNotAvailableDesc': 'La fonctionnalité de caméra n\'est pas disponible sur le web. Dans une vraie application mobile, cela ouvrirait la caméra.',
+    'create.cameraNotAvailableDesc':
+      "La fonctionnalité de caméra n'est pas disponible sur le web. Dans une vraie application mobile, cela ouvrirait la caméra.",
     'create.cameraPermissionRequired': 'Autorisation de Caméra Requise',
-    'create.cameraPermissionDesc': 'Veuillez accorder l\'autorisation de caméra pour prendre des photos du problème.',
+    'create.cameraPermissionDesc':
+      "Veuillez accorder l'autorisation de caméra pour prendre des photos du problème.",
     'create.photoUploaded': 'Photo Téléchargée ! 📸',
-    'create.photoUploadedDesc': 'Votre photo a été téléchargée avec succès et sera incluse avec votre demande de service.',
+    'create.photoUploadedDesc':
+      'Votre photo a été téléchargée avec succès et sera incluse avec votre demande de service.',
     'create.uploadWarning': 'Avertissement de Téléchargement ⚠️',
-    'create.uploadWarningDesc': 'La photo a été prise mais le téléchargement vers le cloud a échoué. La photo sera toujours incluse localement. Veuillez vérifier votre connexion internet.',
+    'create.uploadWarningDesc':
+      'La photo a été prise mais le téléchargement vers le cloud a échoué. La photo sera toujours incluse localement. Veuillez vérifier votre connexion internet.',
     'create.error': 'Erreur',
-    'create.failedTakePicture': 'Échec de la prise de photo. Veuillez réessayer.',
+    'create.failedTakePicture':
+      'Échec de la prise de photo. Veuillez réessayer.',
     'create.fillRequiredFields': 'Veuillez remplir tous les champs requis',
     'create.photosUploading': 'Photos en Téléchargement',
-    'create.photosUploadingDesc': 'Veuillez attendre que les photos finissent de se télécharger avant de soumettre votre demande.',
+    'create.photosUploadingDesc':
+      'Veuillez attendre que les photos finissent de se télécharger avant de soumettre votre demande.',
     'create.requestCreated': 'Demande Créée ! 🚛💳',
-    'create.requestCreatedDesc': 'Votre demande de service a été publiée et les 5 $ de frais de demande seront facturés lorsqu\'un fournisseur de services accepte votre demande. Les fournisseurs de services dans votre région seront notifiés et pourront accepter votre demande.',
+    'create.requestCreatedDesc':
+      "Votre demande de service a été publiée et les 5 $ de frais de demande seront facturés lorsqu'un fournisseur de services accepte votre demande. Les fournisseurs de services dans votre région seront notifiés et pourront accepter votre demande.",
     'create.viewRequest': 'Voir la Demande',
     'create.requestFailed': 'Demande Échouée',
-    'create.requestFailedDesc': 'Échec de la création de la demande. Veuillez vérifier votre méthode de paiement et réessayer.',
+    'create.requestFailedDesc':
+      'Échec de la création de la demande. Veuillez vérifier votre méthode de paiement et réessayer.',
     'create.urgencyLow': 'Faible',
     'create.urgencyMedium': 'Moyen',
     'create.urgencyHigh': 'Élevé',
     'create.urgencyLowDesc': 'Peut attendre quelques heures',
-    'create.urgencyMediumDesc': 'Besoin d\'aide dans 1-2 heures',
-    'create.urgencyHighDesc': 'Urgence - besoin d\'aide immédiate',
+    'create.urgencyMediumDesc': "Besoin d'aide dans 1-2 heures",
+    'create.urgencyHighDesc': "Urgence - besoin d'aide immédiate",
     'create.serviceTowing': 'Service de Remorquage',
     'create.serviceRepair': 'Service Routier',
     'create.serviceMechanic': 'Service Mécanique',
     'create.serviceTireRepair': 'Réparation Mobile de Pneus',
     'create.serviceTruckWash': 'Lavage Mobile de Camions',
     'create.serviceHoseRepair': 'Réparation de Tuyaux',
-    'create.serviceTowingDesc': 'Remorquage en cas de panne ou d\'accident de véhicule',
+    'create.serviceTowingDesc':
+      "Remorquage en cas de panne ou d'accident de véhicule",
     'create.serviceRepairDesc': 'Réparations mécaniques sur site',
     'create.serviceMechanicDesc': 'Diagnostic et réparation professionnelle',
-    'create.serviceTireRepairDesc': 'Remplacement de pneus et services de pneus sur route',
+    'create.serviceTireRepairDesc':
+      'Remplacement de pneus et services de pneus sur route',
     'create.serviceTruckWashDesc': 'Nettoyage professionnel mobile de camions',
-    'create.serviceHoseRepairDesc': 'Réparation de tuyaux hydrauliques et d\'air',
-    'create.photoTip': ' photos ajoutées. Les photos claires aident les fournisseurs à donner des estimations précises.',
-    'create.uploadingPhoto': 'Téléchargement de la photo vers le stockage cloud...',
-    'create.locationTip': '💡 Conseil : Un emplacement précis aide les fournisseurs de services à vous trouver rapidement. Incluez les bornes kilométriques, les numéros de sortie ou les points de repère proches.',
+    'create.serviceHoseRepairDesc':
+      "Réparation de tuyaux hydrauliques et d'air",
+    'create.photoTip':
+      ' photos ajoutées. Les photos claires aident les fournisseurs à donner des estimations précises.',
+    'create.uploadingPhoto':
+      'Téléchargement de la photo vers le stockage cloud...',
+    'create.locationTip':
+      '💡 Conseil : Un emplacement précis aide les fournisseurs de services à vous trouver rapidement. Incluez les bornes kilométriques, les numéros de sortie ou les points de repère proches.',
   },
   de: {
     // Navigation
@@ -634,7 +706,7 @@ const translations: Record<string, Record<string, string>> = {
     'nav.messages': 'Nachrichten',
     'nav.leads': 'Leads',
     'nav.profile': 'Profil',
-    
+
     // Common
     'common.loading': 'Laden...',
     'common.error': 'Fehler',
@@ -652,7 +724,7 @@ const translations: Record<string, Record<string, string>> = {
     'common.confirm': 'Bestätigen',
     'common.yes': 'Ja',
     'common.no': 'Nein',
-    
+
     // Home Screen
     'home.welcome': 'Willkommen zurück,',
     'home.newRequest': 'Neue Anfrage',
@@ -664,13 +736,16 @@ const translations: Record<string, Record<string, string>> = {
     'home.recentJobs': 'Aktuelle Jobs',
     'home.noRequestsYet': 'Noch keine Anfragen',
     'home.noJobsYet': 'Noch keine Jobs',
-    'home.createFirstRequest': 'Erstellen Sie Ihre erste Anfrage, um zu beginnen',
-    'home.browseAvailableRequests': 'Durchsuchen Sie verfügbare Anfragen, um zu beginnen',
+    'home.createFirstRequest':
+      'Erstellen Sie Ihre erste Anfrage, um zu beginnen',
+    'home.browseAvailableRequests':
+      'Durchsuchen Sie verfügbare Anfragen, um zu beginnen',
     'home.createRequest': 'Anfrage erstellen',
     'home.tapToView': 'Tippen Sie, um Details zu sehen',
     'home.referFriend': 'Freund empfehlen & 10$ verdienen',
-    'home.shareRigSnap': 'Teilen Sie RigSnap und werden Sie belohnt, wenn sie beitreten',
-    
+    'home.shareRigSnap':
+      'Teilen Sie RigSnap und werden Sie belohnt, wenn sie beitreten',
+
     // Profile Screen
     'profile.title': 'Profil',
     'profile.personalInformation': 'Persönliche Informationen',
@@ -698,23 +773,26 @@ const translations: Record<string, Record<string, string>> = {
     'profile.editProfile': 'Profil Bearbeiten',
     'profile.saveChanges': 'Änderungen Speichern',
     'profile.cancel': 'Abbrechen',
-    
+
     // Messages/Chat
     'chat.title': 'Nachrichten',
     'chat.messages': 'Nachrichten',
     'chat.noMessagesYet': 'Noch keine Nachrichten',
-    'chat.messagesWillAppear': 'Nachrichten erscheinen hier, wenn Sie mit Dienstleistern chatten',
-    'chat.messagesWillAppearProvider': 'Nachrichten erscheinen hier, wenn Sie Serviceanfragen annehmen',
+    'chat.messagesWillAppear':
+      'Nachrichten erscheinen hier, wenn Sie mit Dienstleistern chatten',
+    'chat.messagesWillAppearProvider':
+      'Nachrichten erscheinen hier, wenn Sie Serviceanfragen annehmen',
     'chat.active': 'Aktiv',
     'chat.completed': 'Abgeschlossen',
     'chat.typeMessage': 'Nachricht eingeben...',
     'chat.trucker': 'LKW-Fahrer',
     'chat.serviceProvider': 'Dienstleister',
-    
+
     // Leads
     'leads.title': 'Lead-Verfolgung',
     'leads.leadTracking': 'Lead-Verfolgung',
-    'leads.monitorLeadFees': 'Überwachen Sie Ihre Lead-Gebühren und Transaktionen',
+    'leads.monitorLeadFees':
+      'Überwachen Sie Ihre Lead-Gebühren und Transaktionen',
     'leads.netSpent': 'Netto Ausgegeben',
     'leads.totalLeads': 'Gesamt Leads',
     'leads.refunded': 'Erstattet',
@@ -722,9 +800,11 @@ const translations: Record<string, Record<string, string>> = {
     'leads.pending': 'Ausstehend',
     'leads.transactionHistory': 'Transaktionshistorie',
     'leads.noLeadFeesYet': 'Noch keine Lead-Gebühren',
-    'leads.leadFeesWillAppear': 'Lead-Gebühren erscheinen hier, wenn Dienstleister Ihre Anfragen annehmen',
-    'leads.leadFeesWillAppearProvider': 'Lead-Gebühren erscheinen hier, wenn Sie Serviceanfragen annehmen',
-    
+    'leads.leadFeesWillAppear':
+      'Lead-Gebühren erscheinen hier, wenn Dienstleister Ihre Anfragen annehmen',
+    'leads.leadFeesWillAppearProvider':
+      'Lead-Gebühren erscheinen hier, wenn Sie Serviceanfragen annehmen',
+
     // Account Settings
     'settings.title': 'Kontoeinstellungen',
     'settings.security': 'Sicherheit',
@@ -747,7 +827,7 @@ const translations: Record<string, Record<string, string>> = {
     'settings.privacyPolicy': 'Datenschutzrichtlinie',
     'settings.dangerZone': 'Gefahrenzone',
     'settings.deleteAccount': 'Konto Löschen',
-    
+
     // Service Types
     'service.towing': 'Abschleppdienst',
     'service.repair': 'Straßendienst',
@@ -755,51 +835,66 @@ const translations: Record<string, Record<string, string>> = {
     'service.tireRepair': 'Mobile Reifenreparatur',
     'service.truckWash': 'Mobile LKW-Wäsche',
     'service.hoseRepair': 'Schlauch-Reparatur',
-    
+
     // Create Request Screen
     'create.title': 'Service Anfordern',
-    'create.subtitle': 'Holen Sie sich Hilfe von vertrauenswürdigen Dienstleistern',
+    'create.subtitle':
+      'Holen Sie sich Hilfe von vertrauenswürdigen Dienstleistern',
     'create.serviceType': 'Serviceart',
     'create.descriptionPhotos': 'Beschreibung und Fotos',
-    'create.descriptionPlaceholder': 'Beschreiben Sie das Problem im Detail. Fügen Sie LKW-Typ, Symptome und andere relevante Informationen hinzu...',
+    'create.descriptionPlaceholder':
+      'Beschreiben Sie das Problem im Detail. Fügen Sie LKW-Typ, Symptome und andere relevante Informationen hinzu...',
     'create.addPhotos': 'Fotos Hinzufügen (Optional)',
-    'create.photosHelp': 'Helfen Sie Anbietern, das Problem besser zu verstehen',
+    'create.photosHelp':
+      'Helfen Sie Anbietern, das Problem besser zu verstehen',
     'create.addSample': 'Probe Hinzufügen',
     'create.takePhoto': 'Foto Aufnehmen',
     'create.location': 'Standort',
-    'create.locationPlaceholder': 'Geben Sie Ihren aktuellen Standort oder Adresse ein',
+    'create.locationPlaceholder':
+      'Geben Sie Ihren aktuellen Standort oder Adresse ein',
     'create.useCurrentLocation': 'Aktuellen Standort Verwenden',
     'create.gettingLocation': 'Standort Ermitteln...',
     'create.urgencyLevel': 'Dringlichkeitsstufe',
     'create.estimatedCost': 'Geschätzte Kosten (Optional)',
     'create.costPlaceholder': 'Geben Sie die geschätzten Kosten in USD ein',
-    'create.costHelp': 'Dies hilft Anbietern, den Arbeitsumfang zu verstehen und genaue Angebote zu geben',
+    'create.costHelp':
+      'Dies hilft Anbietern, den Arbeitsumfang zu verstehen und genaue Angebote zu geben',
     'create.postRequest': 'Anfrage Veröffentlichen',
     'create.locationNotAvailable': 'Standort Nicht Verfügbar',
-    'create.locationNotAvailableDesc': 'Ihr Gerät oder Browser unterstützt keine Standortdienste. Sie können Ihren Standort trotzdem manuell eingeben.',
+    'create.locationNotAvailableDesc':
+      'Ihr Gerät oder Browser unterstützt keine Standortdienste. Sie können Ihren Standort trotzdem manuell eingeben.',
     'create.locationFound': 'Standort Gefunden! 📍',
     'create.locationSet': 'Ihr aktueller Standort wurde gesetzt auf:\n\n',
     'create.locationError': 'Standortfehler',
     'create.demoLocationSet': 'Demo-Standort Gesetzt',
     'create.demoLocationDesc': 'Verwendung von Demo-Standort: ',
     'create.cameraNotAvailable': 'Kamera Nicht Verfügbar',
-    'create.cameraNotAvailableDesc': 'Kamera-Funktionalität ist im Web nicht verfügbar. In einer echten mobilen App würde dies die Kamera öffnen.',
+    'create.cameraNotAvailableDesc':
+      'Kamera-Funktionalität ist im Web nicht verfügbar. In einer echten mobilen App würde dies die Kamera öffnen.',
     'create.cameraPermissionRequired': 'Kamera-Berechtigung Erforderlich',
-    'create.cameraPermissionDesc': 'Bitte erteilen Sie Kamera-Berechtigung, um Fotos des Problems aufzunehmen.',
+    'create.cameraPermissionDesc':
+      'Bitte erteilen Sie Kamera-Berechtigung, um Fotos des Problems aufzunehmen.',
     'create.photoUploaded': 'Foto Hochgeladen! 📸',
-    'create.photoUploadedDesc': 'Ihr Foto wurde erfolgreich hochgeladen und wird in Ihre Serviceanfrage eingeschlossen.',
+    'create.photoUploadedDesc':
+      'Ihr Foto wurde erfolgreich hochgeladen und wird in Ihre Serviceanfrage eingeschlossen.',
     'create.uploadWarning': 'Upload-Warnung ⚠️',
-    'create.uploadWarningDesc': 'Foto wurde aufgenommen, aber Upload in die Cloud fehlgeschlagen. Das Foto wird trotzdem lokal eingeschlossen. Bitte überprüfen Sie Ihre Internetverbindung.',
+    'create.uploadWarningDesc':
+      'Foto wurde aufgenommen, aber Upload in die Cloud fehlgeschlagen. Das Foto wird trotzdem lokal eingeschlossen. Bitte überprüfen Sie Ihre Internetverbindung.',
     'create.error': 'Fehler',
-    'create.failedTakePicture': 'Fotoaufnahme fehlgeschlagen. Bitte versuchen Sie es erneut.',
-    'create.fillRequiredFields': 'Bitte füllen Sie alle erforderlichen Felder aus',
+    'create.failedTakePicture':
+      'Fotoaufnahme fehlgeschlagen. Bitte versuchen Sie es erneut.',
+    'create.fillRequiredFields':
+      'Bitte füllen Sie alle erforderlichen Felder aus',
     'create.photosUploading': 'Fotos Hochladen',
-    'create.photosUploadingDesc': 'Bitte warten Sie, bis die Fotos hochgeladen sind, bevor Sie Ihre Anfrage einreichen.',
+    'create.photosUploadingDesc':
+      'Bitte warten Sie, bis die Fotos hochgeladen sind, bevor Sie Ihre Anfrage einreichen.',
     'create.requestCreated': 'Anfrage Erstellt! 🚛💳',
-    'create.requestCreatedDesc': 'Ihre Serviceanfrage wurde veröffentlicht und die 5 $ Anfragegebühr wird berechnet, wenn ein Dienstleister Ihre Anfrage annimmt. Dienstleister in Ihrer Region werden benachrichtigt und können Ihre Anfrage annehmen.',
+    'create.requestCreatedDesc':
+      'Ihre Serviceanfrage wurde veröffentlicht und die 5 $ Anfragegebühr wird berechnet, wenn ein Dienstleister Ihre Anfrage annimmt. Dienstleister in Ihrer Region werden benachrichtigt und können Ihre Anfrage annehmen.',
     'create.viewRequest': 'Anfrage Anzeigen',
     'create.requestFailed': 'Anfrage Fehlgeschlagen',
-    'create.requestFailedDesc': 'Anfrage konnte nicht erstellt werden. Bitte überprüfen Sie Ihre Zahlungsmethode und versuchen Sie es erneut.',
+    'create.requestFailedDesc':
+      'Anfrage konnte nicht erstellt werden. Bitte überprüfen Sie Ihre Zahlungsmethode und versuchen Sie es erneut.',
     'create.urgencyLow': 'Niedrig',
     'create.urgencyMedium': 'Mittel',
     'create.urgencyHigh': 'Hoch',
@@ -818,9 +913,11 @@ const translations: Record<string, Record<string, string>> = {
     'create.serviceTireRepairDesc': 'Reifenwechsel und Pannenhilfe',
     'create.serviceTruckWashDesc': 'Professionelle mobile LKW-Reinigung',
     'create.serviceHoseRepairDesc': 'Hydraulik- und Luftschlauchreparatur',
-    'create.photoTip': ' Fotos hinzugefügt. Klare Fotos helfen Anbietern, genaue Schätzungen zu geben.',
+    'create.photoTip':
+      ' Fotos hinzugefügt. Klare Fotos helfen Anbietern, genaue Schätzungen zu geben.',
     'create.uploadingPhoto': 'Foto wird in Cloud-Speicher hochgeladen...',
-    'create.locationTip': '💡 Tipp: Ein genauer Standort hilft Dienstleistern, Sie schnell zu finden. Fügen Sie Meilenmarkierungen, Ausfahrtsnummern oder nahegelegene Orientierungspunkte hinzu.',
+    'create.locationTip':
+      '💡 Tipp: Ein genauer Standort hilft Dienstleistern, Sie schnell zu finden. Fügen Sie Meilenmarkierungen, Ausfahrtsnummern oder nahegelegene Orientierungspunkte hinzu.',
   },
   ru: {
     // Navigation
@@ -828,7 +925,7 @@ const translations: Record<string, Record<string, string>> = {
     'nav.messages': 'Сообщения',
     'nav.leads': 'Лиды',
     'nav.profile': 'Профиль',
-    
+
     // Common
     'common.loading': 'Загрузка...',
     'common.error': 'Ошибка',
@@ -846,7 +943,7 @@ const translations: Record<string, Record<string, string>> = {
     'common.confirm': 'Подтвердить',
     'common.yes': 'Да',
     'common.no': 'Нет',
-    
+
     // Home Screen
     'home.welcome': 'Добро пожаловать,',
     'home.newRequest': 'Новый Запрос',
@@ -859,12 +956,14 @@ const translations: Record<string, Record<string, string>> = {
     'home.noRequestsYet': 'Пока нет запросов',
     'home.noJobsYet': 'Пока нет работ',
     'home.createFirstRequest': 'Создайте свой первый запрос, чтобы начать',
-    'home.browseAvailableRequests': 'Просмотрите доступные запросы, чтобы начать',
+    'home.browseAvailableRequests':
+      'Просмотрите доступные запросы, чтобы начать',
     'home.createRequest': 'Создать Запрос',
     'home.tapToView': 'Нажмите, чтобы посмотреть детали',
     'home.referFriend': 'Пригласите друга и заработайте $10',
-    'home.shareRigSnap': 'Поделитесь RigSnap и получите вознаграждение, когда они присоединятся',
-    
+    'home.shareRigSnap':
+      'Поделитесь RigSnap и получите вознаграждение, когда они присоединятся',
+
     // Profile Screen
     'profile.title': 'Профиль',
     'profile.personalInformation': 'Личная Информация',
@@ -892,19 +991,21 @@ const translations: Record<string, Record<string, string>> = {
     'profile.editProfile': 'Редактировать Профиль',
     'profile.saveChanges': 'Сохранить Изменения',
     'profile.cancel': 'Отмена',
-    
+
     // Messages/Chat
     'chat.title': 'Сообщения',
     'chat.messages': 'Сообщения',
     'chat.noMessagesYet': 'Пока нет сообщений',
-    'chat.messagesWillAppear': 'Сообщения появятся здесь, когда вы начнете общаться с поставщиками услуг',
-    'chat.messagesWillAppearProvider': 'Сообщения появятся здесь, когда вы примете запросы на обслуживание',
+    'chat.messagesWillAppear':
+      'Сообщения появятся здесь, когда вы начнете общаться с поставщиками услуг',
+    'chat.messagesWillAppearProvider':
+      'Сообщения появятся здесь, когда вы примете запросы на обслуживание',
     'chat.active': 'Активный',
     'chat.completed': 'Завершено',
     'chat.typeMessage': 'Введите сообщение...',
     'chat.trucker': 'Водитель',
     'chat.serviceProvider': 'Поставщик Услуг',
-    
+
     // Leads
     'leads.title': 'Отслеживание Лидов',
     'leads.leadTracking': 'Отслеживание Лидов',
@@ -916,9 +1017,11 @@ const translations: Record<string, Record<string, string>> = {
     'leads.pending': 'В Ожидании',
     'leads.transactionHistory': 'История Транзакций',
     'leads.noLeadFeesYet': 'Пока нет комиссий за лиды',
-    'leads.leadFeesWillAppear': 'Комиссии за лиды появятся здесь, когда поставщики услуг примут ваши запросы',
-    'leads.leadFeesWillAppearProvider': 'Комиссии за лиды появятся здесь, когда вы примете запросы на обслуживание',
-    
+    'leads.leadFeesWillAppear':
+      'Комиссии за лиды появятся здесь, когда поставщики услуг примут ваши запросы',
+    'leads.leadFeesWillAppearProvider':
+      'Комиссии за лиды появятся здесь, когда вы примете запросы на обслуживание',
+
     // Account Settings
     'settings.title': 'Настройки Аккаунта',
     'settings.security': 'Безопасность',
@@ -941,7 +1044,7 @@ const translations: Record<string, Record<string, string>> = {
     'settings.privacyPolicy': 'Политика Конфиденциальности',
     'settings.dangerZone': 'Опасная Зона',
     'settings.deleteAccount': 'Удалить Аккаунт',
-    
+
     // Service Types
     'service.towing': 'Служба Эвакуации',
     'service.repair': 'Дорожная Служба',
@@ -949,57 +1052,70 @@ const translations: Record<string, Record<string, string>> = {
     'service.tireRepair': 'Мобильный Ремонт Шин',
     'service.truckWash': 'Мобильная Мойка Грузовиков',
     'service.hoseRepair': 'Ремонт Шлангов',
-    
+
     // Create Request Screen
     'create.title': 'Запросить Услугу',
     'create.subtitle': 'Получите помощь от надежных поставщиков услуг',
     'create.serviceType': 'Тип Услуги',
     'create.descriptionPhotos': 'Описание и Фото',
-    'create.descriptionPlaceholder': 'Опишите проблему подробно. Включите тип грузовика, симптомы и любую другую релевантную информацию...',
+    'create.descriptionPlaceholder':
+      'Опишите проблему подробно. Включите тип грузовика, симптомы и любую другую релевантную информацию...',
     'create.addPhotos': 'Добавить Фото (Необязательно)',
     'create.photosHelp': 'Помогите поставщикам лучше понять проблему',
     'create.addSample': 'Добавить Образец',
     'create.takePhoto': 'Сделать Фото',
     'create.location': 'Местоположение',
-    'create.locationPlaceholder': 'Введите ваше текущее местоположение или адрес',
+    'create.locationPlaceholder':
+      'Введите ваше текущее местоположение или адрес',
     'create.useCurrentLocation': 'Использовать Текущее Местоположение',
     'create.gettingLocation': 'Получение Местоположения...',
     'create.urgencyLevel': 'Уровень Срочности',
     'create.estimatedCost': 'Ориентировочная Стоимость (Необязательно)',
     'create.costPlaceholder': 'Введите ориентировочную стоимость в USD',
-    'create.costHelp': 'Это помогает поставщикам понять объем работы и предоставить точные предложения',
+    'create.costHelp':
+      'Это помогает поставщикам понять объем работы и предоставить точные предложения',
     'create.postRequest': 'Опубликовать Запрос',
     'create.locationNotAvailable': 'Местоположение Недоступно',
-    'create.locationNotAvailableDesc': 'Ваше устройство или браузер не поддерживает службы местоположения. Вы все равно можете ввести местоположение вручную.',
+    'create.locationNotAvailableDesc':
+      'Ваше устройство или браузер не поддерживает службы местоположения. Вы все равно можете ввести местоположение вручную.',
     'create.locationFound': 'Местоположение Найдено! 📍',
     'create.locationSet': 'Ваше текущее местоположение установлено на:\n\n',
     'create.locationError': 'Ошибка Местоположения',
     'create.demoLocationSet': 'Демо-Местоположение Установлено',
     'create.demoLocationDesc': 'Использование демо-местоположения: ',
     'create.cameraNotAvailable': 'Камера Недоступна',
-    'create.cameraNotAvailableDesc': 'Функциональность камеры недоступна в веб. В реальном мобильном приложении это откроет камеру.',
+    'create.cameraNotAvailableDesc':
+      'Функциональность камеры недоступна в веб. В реальном мобильном приложении это откроет камеру.',
     'create.cameraPermissionRequired': 'Требуется Разрешение Камеры',
-    'create.cameraPermissionDesc': 'Пожалуйста, предоставьте разрешение камеры для съемки фото проблемы.',
+    'create.cameraPermissionDesc':
+      'Пожалуйста, предоставьте разрешение камеры для съемки фото проблемы.',
     'create.photoUploaded': 'Фото Загружено! 📸',
-    'create.photoUploadedDesc': 'Ваше фото было успешно загружено и будет включено в ваш запрос на услугу.',
+    'create.photoUploadedDesc':
+      'Ваше фото было успешно загружено и будет включено в ваш запрос на услугу.',
     'create.uploadWarning': 'Предупреждение о Загрузке ⚠️',
-    'create.uploadWarningDesc': 'Фото было снято, но загрузка в облако не удалась. Фото все равно будет включено локально. Пожалуйста, проверьте ваше интернет-соединение.',
+    'create.uploadWarningDesc':
+      'Фото было снято, но загрузка в облако не удалась. Фото все равно будет включено локально. Пожалуйста, проверьте ваше интернет-соединение.',
     'create.error': 'Ошибка',
-    'create.failedTakePicture': 'Не удалось снять фото. Пожалуйста, попробуйте снова.',
+    'create.failedTakePicture':
+      'Не удалось снять фото. Пожалуйста, попробуйте снова.',
     'create.fillRequiredFields': 'Пожалуйста, заполните все обязательные поля',
     'create.photosUploading': 'Фото Загружаются',
-    'create.photosUploadingDesc': 'Пожалуйста, подождите, пока фото закончат загружаться, прежде чем отправлять ваш запрос.',
+    'create.photosUploadingDesc':
+      'Пожалуйста, подождите, пока фото закончат загружаться, прежде чем отправлять ваш запрос.',
     'create.requestCreated': 'Запрос Создан! 🚛💳',
-    'create.requestCreatedDesc': 'Ваш запрос на услугу был опубликован, и плата за запрос в 5 $ будет взиматься, когда любой поставщик услуг примет ваш запрос. Поставщики услуг в вашем районе будут уведомлены и смогут принять ваш запрос.',
+    'create.requestCreatedDesc':
+      'Ваш запрос на услугу был опубликован, и плата за запрос в 5 $ будет взиматься, когда любой поставщик услуг примет ваш запрос. Поставщики услуг в вашем районе будут уведомлены и смогут принять ваш запрос.',
     'create.viewRequest': 'Просмотреть Запрос',
     'create.requestFailed': 'Запрос Не Удался',
-    'create.requestFailedDesc': 'Не удалось создать запрос. Пожалуйста, проверьте ваш метод оплаты и попробуйте снова.',
+    'create.requestFailedDesc':
+      'Не удалось создать запрос. Пожалуйста, проверьте ваш метод оплаты и попробуйте снова.',
     'create.urgencyLow': 'Низкий',
     'create.urgencyMedium': 'Средний',
     'create.urgencyHigh': 'Высокий',
     'create.urgencyLowDesc': 'Может подождать несколько часов',
     'create.urgencyMediumDesc': 'Нужна помощь в течение 1-2 часов',
-    'create.urgencyHighDesc': 'Чрезвычайная ситуация - нужна немедленная помощь',
+    'create.urgencyHighDesc':
+      'Чрезвычайная ситуация - нужна немедленная помощь',
     'create.serviceTowing': 'Услуга Эвакуации',
     'create.serviceRepair': 'Дорожная Услуга',
     'create.serviceMechanic': 'Услуга Механика',
@@ -1009,12 +1125,16 @@ const translations: Record<string, Record<string, string>> = {
     'create.serviceTowingDesc': 'Эвакуация при поломке или аварии автомобиля',
     'create.serviceRepairDesc': 'Механические ремонты на месте',
     'create.serviceMechanicDesc': 'Профессиональная диагностика и ремонт',
-    'create.serviceTireRepairDesc': 'Замена шин и услуги по ремонту шин на дороге',
-    'create.serviceTruckWashDesc': 'Профессиональная мобильная мойка грузовиков',
+    'create.serviceTireRepairDesc':
+      'Замена шин и услуги по ремонту шин на дороге',
+    'create.serviceTruckWashDesc':
+      'Профессиональная мобильная мойка грузовиков',
     'create.serviceHoseRepairDesc': 'Ремонт гидравлических и воздушных шлангов',
-    'create.photoTip': ' фото добавлено. Четкие фото помогают поставщикам дать точные оценки.',
+    'create.photoTip':
+      ' фото добавлено. Четкие фото помогают поставщикам дать точные оценки.',
     'create.uploadingPhoto': 'Загрузка фото в облачное хранилище...',
-    'create.locationTip': '💡 Совет: Точное местоположение помогает поставщикам услуг найти вас быстро. Включите километровые маркеры, номера выездов или близлежащие ориентиры.',
+    'create.locationTip':
+      '💡 Совет: Точное местоположение помогает поставщикам услуг найти вас быстро. Включите километровые маркеры, номера выездов или близлежащие ориентиры.',
   },
   it: {
     // Navigation
@@ -1022,7 +1142,7 @@ const translations: Record<string, Record<string, string>> = {
     'nav.messages': 'Messaggi',
     'nav.leads': 'Lead',
     'nav.profile': 'Profilo',
-    
+
     // Common
     'common.loading': 'Caricamento...',
     'common.error': 'Errore',
@@ -1040,7 +1160,7 @@ const translations: Record<string, Record<string, string>> = {
     'common.confirm': 'Conferma',
     'common.yes': 'Sì',
     'common.no': 'No',
-    
+
     // Home Screen
     'home.welcome': 'Bentornato,',
     'home.newRequest': 'Nuova Richiesta',
@@ -1053,12 +1173,14 @@ const translations: Record<string, Record<string, string>> = {
     'home.noRequestsYet': 'Nessuna richiesta ancora',
     'home.noJobsYet': 'Nessun lavoro ancora',
     'home.createFirstRequest': 'Crea la tua prima richiesta per iniziare',
-    'home.browseAvailableRequests': 'Sfoglia le richieste disponibili per iniziare',
+    'home.browseAvailableRequests':
+      'Sfoglia le richieste disponibili per iniziare',
     'home.createRequest': 'Crea Richiesta',
     'home.tapToView': 'Tocca per vedere i dettagli',
     'home.referFriend': 'Invita un Amico e Guadagna $10',
-    'home.shareRigSnap': 'Condividi RigSnap e ottieni ricompense quando si uniscono',
-    
+    'home.shareRigSnap':
+      'Condividi RigSnap e ottieni ricompense quando si uniscono',
+
     // Profile Screen
     'profile.title': 'Profilo',
     'profile.personalInformation': 'Informazioni Personali',
@@ -1086,19 +1208,21 @@ const translations: Record<string, Record<string, string>> = {
     'profile.editProfile': 'Modifica Profilo',
     'profile.saveChanges': 'Salva Modifiche',
     'profile.cancel': 'Annulla',
-    
+
     // Messages/Chat
     'chat.title': 'Messaggi',
     'chat.messages': 'Messaggi',
     'chat.noMessagesYet': 'Nessun messaggio ancora',
-    'chat.messagesWillAppear': 'I messaggi appariranno qui quando inizierai a chattare con i fornitori di servizi',
-    'chat.messagesWillAppearProvider': 'I messaggi appariranno qui quando accetterai richieste di servizio',
+    'chat.messagesWillAppear':
+      'I messaggi appariranno qui quando inizierai a chattare con i fornitori di servizi',
+    'chat.messagesWillAppearProvider':
+      'I messaggi appariranno qui quando accetterai richieste di servizio',
     'chat.active': 'Attivo',
     'chat.completed': 'Completato',
     'chat.typeMessage': 'Scrivi un messaggio...',
     'chat.trucker': 'Camionista',
     'chat.serviceProvider': 'Fornitore di Servizi',
-    
+
     // Leads
     'leads.title': 'Tracciamento Lead',
     'leads.leadTracking': 'Tracciamento Lead',
@@ -1110,9 +1234,11 @@ const translations: Record<string, Record<string, string>> = {
     'leads.pending': 'In Attesa',
     'leads.transactionHistory': 'Cronologia Transazioni',
     'leads.noLeadFeesYet': 'Nessuna commissione lead ancora',
-    'leads.leadFeesWillAppear': 'Le commissioni lead appariranno qui quando i fornitori di servizi accetteranno le tue richieste',
-    'leads.leadFeesWillAppearProvider': 'Le commissioni lead appariranno qui quando accetterai richieste di servizio',
-    
+    'leads.leadFeesWillAppear':
+      'Le commissioni lead appariranno qui quando i fornitori di servizi accetteranno le tue richieste',
+    'leads.leadFeesWillAppearProvider':
+      'Le commissioni lead appariranno qui quando accetterai richieste di servizio',
+
     // Account Settings
     'settings.title': 'Impostazioni Account',
     'settings.security': 'Sicurezza',
@@ -1135,7 +1261,7 @@ const translations: Record<string, Record<string, string>> = {
     'settings.privacyPolicy': 'Informativa Privacy',
     'settings.dangerZone': 'Zona Pericolosa',
     'settings.deleteAccount': 'Elimina Account',
-    
+
     // Service Types
     'service.towing': 'Servizio di Traino',
     'service.repair': 'Servizio Stradale',
@@ -1143,51 +1269,63 @@ const translations: Record<string, Record<string, string>> = {
     'service.tireRepair': 'Riparazione Mobile Pneumatici',
     'service.truckWash': 'Lavaggio Mobile Camion',
     'service.hoseRepair': 'Riparazione Tubi',
-    
+
     // Create Request Screen
     'create.title': 'Richiedi Servizio',
     'create.subtitle': 'Ottieni aiuto da fornitori di servizi affidabili',
     'create.serviceType': 'Tipo di Servizio',
     'create.descriptionPhotos': 'Descrizione e Foto',
-    'create.descriptionPlaceholder': 'Descrivi il problema in dettaglio. Includi il tipo di camion, i sintomi e qualsiasi altra informazione rilevante...',
+    'create.descriptionPlaceholder':
+      'Descrivi il problema in dettaglio. Includi il tipo di camion, i sintomi e qualsiasi altra informazione rilevante...',
     'create.addPhotos': 'Aggiungi Foto (Opzionale)',
     'create.photosHelp': 'Aiuta i fornitori a capire meglio il problema',
     'create.addSample': 'Aggiungi Campione',
     'create.takePhoto': 'Scatta Foto',
     'create.location': 'Posizione',
-    'create.locationPlaceholder': 'Inserisci la tua posizione attuale o indirizzo',
+    'create.locationPlaceholder':
+      'Inserisci la tua posizione attuale o indirizzo',
     'create.useCurrentLocation': 'Usa Posizione Attuale',
     'create.gettingLocation': 'Ottenendo Posizione...',
     'create.urgencyLevel': 'Livello di Urgenza',
     'create.estimatedCost': 'Costo Stimato (Opzionale)',
     'create.costPlaceholder': 'Inserisci il costo stimato in USD',
-    'create.costHelp': 'Questo aiuta i fornitori a capire l\'ambito del lavoro e fornire preventivi accurati',
+    'create.costHelp':
+      "Questo aiuta i fornitori a capire l'ambito del lavoro e fornire preventivi accurati",
     'create.postRequest': 'Pubblica Richiesta',
     'create.locationNotAvailable': 'Posizione Non Disponibile',
-    'create.locationNotAvailableDesc': 'Il tuo dispositivo o browser non supporta i servizi di localizzazione. Puoi ancora inserire la tua posizione manualmente.',
+    'create.locationNotAvailableDesc':
+      'Il tuo dispositivo o browser non supporta i servizi di localizzazione. Puoi ancora inserire la tua posizione manualmente.',
     'create.locationFound': 'Posizione Trovata! 📍',
     'create.locationSet': 'La tua posizione attuale è stata impostata su:\n\n',
     'create.locationError': 'Errore di Posizione',
     'create.demoLocationSet': 'Posizione Demo Impostata',
     'create.demoLocationDesc': 'Utilizzo posizione demo: ',
     'create.cameraNotAvailable': 'Fotocamera Non Disponibile',
-    'create.cameraNotAvailableDesc': 'La funzionalità della fotocamera non è disponibile sul web. In una vera app mobile, questo aprirebbe la fotocamera.',
+    'create.cameraNotAvailableDesc':
+      'La funzionalità della fotocamera non è disponibile sul web. In una vera app mobile, questo aprirebbe la fotocamera.',
     'create.cameraPermissionRequired': 'Autorizzazione Fotocamera Richiesta',
-    'create.cameraPermissionDesc': 'Per favore, concedi l\'autorizzazione alla fotocamera per scattare foto del problema.',
+    'create.cameraPermissionDesc':
+      "Per favore, concedi l'autorizzazione alla fotocamera per scattare foto del problema.",
     'create.photoUploaded': 'Foto Caricata! 📸',
-    'create.photoUploadedDesc': 'La tua foto è stata caricata con successo e sarà inclusa nella tua richiesta di servizio.',
+    'create.photoUploadedDesc':
+      'La tua foto è stata caricata con successo e sarà inclusa nella tua richiesta di servizio.',
     'create.uploadWarning': 'Avviso di Caricamento ⚠️',
-    'create.uploadWarningDesc': 'La foto è stata scattata ma il caricamento nel cloud è fallito. La foto sarà comunque inclusa localmente. Per favore, controlla la tua connessione internet.',
+    'create.uploadWarningDesc':
+      'La foto è stata scattata ma il caricamento nel cloud è fallito. La foto sarà comunque inclusa localmente. Per favore, controlla la tua connessione internet.',
     'create.error': 'Errore',
-    'create.failedTakePicture': 'Impossibile scattare la foto. Per favore, riprova.',
+    'create.failedTakePicture':
+      'Impossibile scattare la foto. Per favore, riprova.',
     'create.fillRequiredFields': 'Per favore, compila tutti i campi richiesti',
     'create.photosUploading': 'Foto in Caricamento',
-    'create.photosUploadingDesc': 'Per favore, aspetta che le foto finiscano di caricarsi prima di inviare la tua richiesta.',
+    'create.photosUploadingDesc':
+      'Per favore, aspetta che le foto finiscano di caricarsi prima di inviare la tua richiesta.',
     'create.requestCreated': 'Richiesta Creata! 🚛💳',
-    'create.requestCreatedDesc': 'La tua richiesta di servizio è stata pubblicata e la tariffa di richiesta di 5 $ sarà addebitata quando qualsiasi fornitore di servizi accetta la tua richiesta. I fornitori di servizi nella tua area saranno notificati e possono accettare la tua richiesta.',
+    'create.requestCreatedDesc':
+      'La tua richiesta di servizio è stata pubblicata e la tariffa di richiesta di 5 $ sarà addebitata quando qualsiasi fornitore di servizi accetta la tua richiesta. I fornitori di servizi nella tua area saranno notificati e possono accettare la tua richiesta.',
     'create.viewRequest': 'Visualizza Richiesta',
     'create.requestFailed': 'Richiesta Fallita',
-    'create.requestFailedDesc': 'Impossibile creare la richiesta. Per favore, controlla il tuo metodo di pagamento e riprova.',
+    'create.requestFailedDesc':
+      'Impossibile creare la richiesta. Per favore, controlla il tuo metodo di pagamento e riprova.',
     'create.urgencyLow': 'Bassa',
     'create.urgencyMedium': 'Media',
     'create.urgencyHigh': 'Alta',
@@ -1203,12 +1341,15 @@ const translations: Record<string, Record<string, string>> = {
     'create.serviceTowingDesc': 'Rimorchio per guasto o incidente del veicolo',
     'create.serviceRepairDesc': 'Riparazioni meccaniche sul posto',
     'create.serviceMechanicDesc': 'Diagnosi e riparazione professionale',
-    'create.serviceTireRepairDesc': 'Sostituzione pneumatici e servizi pneumatici stradali',
+    'create.serviceTireRepairDesc':
+      'Sostituzione pneumatici e servizi pneumatici stradali',
     'create.serviceTruckWashDesc': 'Pulizia professionale mobile di camion',
-    'create.serviceHoseRepairDesc': 'Riparazione tubi idraulici e d\'aria',
-    'create.photoTip': ' foto aggiunte. Foto chiare aiutano i fornitori a dare stime accurate.',
-    'create.uploadingPhoto': 'Caricamento foto nell\'archiviazione cloud...',
-    'create.locationTip': '💡 Suggerimento: Una posizione accurata aiuta i fornitori di servizi a trovarti velocemente. Includi marcatori di miglia, numeri di uscita o punti di riferimento vicini.',
+    'create.serviceHoseRepairDesc': "Riparazione tubi idraulici e d'aria",
+    'create.photoTip':
+      ' foto aggiunte. Foto chiare aiutano i fornitori a dare stime accurate.',
+    'create.uploadingPhoto': "Caricamento foto nell'archiviazione cloud...",
+    'create.locationTip':
+      '💡 Suggerimento: Una posizione accurata aiuta i fornitori di servizi a trovarti velocemente. Includi marcatori di miglia, numeri di uscita o punti di riferimento vicini.',
   },
   pt: {
     // Navigation
@@ -1216,7 +1357,7 @@ const translations: Record<string, Record<string, string>> = {
     'nav.messages': 'Mensagens',
     'nav.leads': 'Leads',
     'nav.profile': 'Perfil',
-    
+
     // Common
     'common.loading': 'Carregando...',
     'common.error': 'Erro',
@@ -1234,7 +1375,7 @@ const translations: Record<string, Record<string, string>> = {
     'common.confirm': 'Confirmar',
     'common.yes': 'Sim',
     'common.no': 'Não',
-    
+
     // Home Screen
     'home.welcome': 'Bem-vindo de volta,',
     'home.newRequest': 'Nova Solicitação',
@@ -1247,12 +1388,14 @@ const translations: Record<string, Record<string, string>> = {
     'home.noRequestsYet': 'Nenhuma solicitação ainda',
     'home.noJobsYet': 'Nenhum trabalho ainda',
     'home.createFirstRequest': 'Crie sua primeira solicitação para começar',
-    'home.browseAvailableRequests': 'Navegue pelas solicitações disponíveis para começar',
+    'home.browseAvailableRequests':
+      'Navegue pelas solicitações disponíveis para começar',
     'home.createRequest': 'Criar Solicitação',
     'home.tapToView': 'Toque para ver detalhes',
     'home.referFriend': 'Indique um Amigo e Ganhe $10',
-    'home.shareRigSnap': 'Compartilhe RigSnap e seja recompensado quando eles se juntarem',
-    
+    'home.shareRigSnap':
+      'Compartilhe RigSnap e seja recompensado quando eles se juntarem',
+
     // Profile Screen
     'profile.title': 'Perfil',
     'profile.personalInformation': 'Informações Pessoais',
@@ -1280,19 +1423,21 @@ const translations: Record<string, Record<string, string>> = {
     'profile.editProfile': 'Editar Perfil',
     'profile.saveChanges': 'Salvar Alterações',
     'profile.cancel': 'Cancelar',
-    
+
     // Messages/Chat
     'chat.title': 'Mensagens',
     'chat.messages': 'Mensagens',
     'chat.noMessagesYet': 'Nenhuma mensagem ainda',
-    'chat.messagesWillAppear': 'As mensagens aparecerão aqui quando você começar a conversar com provedores de serviços',
-    'chat.messagesWillAppearProvider': 'As mensagens aparecerão aqui quando você aceitar solicitações de serviço',
+    'chat.messagesWillAppear':
+      'As mensagens aparecerão aqui quando você começar a conversar com provedores de serviços',
+    'chat.messagesWillAppearProvider':
+      'As mensagens aparecerão aqui quando você aceitar solicitações de serviço',
     'chat.active': 'Ativo',
     'chat.completed': 'Concluído',
     'chat.typeMessage': 'Digite uma mensagem...',
     'chat.trucker': 'Caminhoneiro',
     'chat.serviceProvider': 'Provedor de Serviços',
-    
+
     // Leads
     'leads.title': 'Rastreamento de Leads',
     'leads.leadTracking': 'Rastreamento de Leads',
@@ -1304,9 +1449,11 @@ const translations: Record<string, Record<string, string>> = {
     'leads.pending': 'Pendente',
     'leads.transactionHistory': 'Histórico de Transações',
     'leads.noLeadFeesYet': 'Nenhuma taxa de lead ainda',
-    'leads.leadFeesWillAppear': 'As taxas de leads aparecerão aqui quando os provedores de serviços aceitarem suas solicitações',
-    'leads.leadFeesWillAppearProvider': 'As taxas de leads aparecerão aqui quando você aceitar solicitações de serviço',
-    
+    'leads.leadFeesWillAppear':
+      'As taxas de leads aparecerão aqui quando os provedores de serviços aceitarem suas solicitações',
+    'leads.leadFeesWillAppearProvider':
+      'As taxas de leads aparecerão aqui quando você aceitar solicitações de serviço',
+
     // Account Settings
     'settings.title': 'Configurações da Conta',
     'settings.security': 'Segurança',
@@ -1329,7 +1476,7 @@ const translations: Record<string, Record<string, string>> = {
     'settings.privacyPolicy': 'Política de Privacidade',
     'settings.dangerZone': 'Zona de Perigo',
     'settings.deleteAccount': 'Excluir Conta',
-    
+
     // Service Types
     'service.towing': 'Serviço de Reboque',
     'service.repair': 'Serviço Rodoviário',
@@ -1337,13 +1484,14 @@ const translations: Record<string, Record<string, string>> = {
     'service.tireRepair': 'Reparo Móvel de Pneus',
     'service.truckWash': 'Lavagem Móvel de Caminhões',
     'service.hoseRepair': 'Reparo de Mangueiras',
-    
+
     // Create Request Screen
     'create.title': 'Solicitar Serviço',
     'create.subtitle': 'Obtenha ajuda de provedores de serviços confiáveis',
     'create.serviceType': 'Tipo de Serviço',
     'create.descriptionPhotos': 'Descrição e Fotos',
-    'create.descriptionPlaceholder': 'Descreva o problema em detalhes. Inclua o tipo de caminhão, sintomas e qualquer outra informação relevante...',
+    'create.descriptionPlaceholder':
+      'Descreva o problema em detalhes. Inclua o tipo de caminhão, sintomas e qualquer outra informação relevante...',
     'create.addPhotos': 'Adicionar Fotos (Opcional)',
     'create.photosHelp': 'Ajude os provedores a entender melhor o problema',
     'create.addSample': 'Adicionar Amostra',
@@ -1355,33 +1503,44 @@ const translations: Record<string, Record<string, string>> = {
     'create.urgencyLevel': 'Nível de Urgência',
     'create.estimatedCost': 'Custo Estimado (Opcional)',
     'create.costPlaceholder': 'Digite o custo estimado em USD',
-    'create.costHelp': 'Isso ajuda os provedores a entender o escopo do trabalho e fornecer cotações precisas',
+    'create.costHelp':
+      'Isso ajuda os provedores a entender o escopo do trabalho e fornecer cotações precisas',
     'create.postRequest': 'Publicar Solicitação',
     'create.locationNotAvailable': 'Localização Não Disponível',
-    'create.locationNotAvailableDesc': 'Seu dispositivo ou navegador não suporta serviços de localização. Você ainda pode inserir sua localização manualmente.',
+    'create.locationNotAvailableDesc':
+      'Seu dispositivo ou navegador não suporta serviços de localização. Você ainda pode inserir sua localização manualmente.',
     'create.locationFound': 'Localização Encontrada! 📍',
     'create.locationSet': 'Sua localização atual foi definida para:\n\n',
     'create.locationError': 'Erro de Localização',
     'create.demoLocationSet': 'Localização de Demo Definida',
     'create.demoLocationDesc': 'Usando localização de demo: ',
     'create.cameraNotAvailable': 'Câmera Não Disponível',
-    'create.cameraNotAvailableDesc': 'A funcionalidade da câmera não está disponível na web. Em um aplicativo móvel real, isso abriria a câmera.',
+    'create.cameraNotAvailableDesc':
+      'A funcionalidade da câmera não está disponível na web. Em um aplicativo móvel real, isso abriria a câmera.',
     'create.cameraPermissionRequired': 'Permissão de Câmera Necessária',
-    'create.cameraPermissionDesc': 'Por favor, conceda permissão de câmera para tirar fotos do problema.',
+    'create.cameraPermissionDesc':
+      'Por favor, conceda permissão de câmera para tirar fotos do problema.',
     'create.photoUploaded': 'Foto Carregada! 📸',
-    'create.photoUploadedDesc': 'Sua foto foi carregada com sucesso e será incluída com sua solicitação de serviço.',
+    'create.photoUploadedDesc':
+      'Sua foto foi carregada com sucesso e será incluída com sua solicitação de serviço.',
     'create.uploadWarning': 'Aviso de Carregamento ⚠️',
-    'create.uploadWarningDesc': 'A foto foi tirada, mas o carregamento para a nuvem falhou. A foto ainda será incluída localmente. Por favor, verifique sua conexão com a internet.',
+    'create.uploadWarningDesc':
+      'A foto foi tirada, mas o carregamento para a nuvem falhou. A foto ainda será incluída localmente. Por favor, verifique sua conexão com a internet.',
     'create.error': 'Erro',
-    'create.failedTakePicture': 'Falhou ao tirar a foto. Por favor, tente novamente.',
-    'create.fillRequiredFields': 'Por favor, preencha todos os campos obrigatórios',
+    'create.failedTakePicture':
+      'Falhou ao tirar a foto. Por favor, tente novamente.',
+    'create.fillRequiredFields':
+      'Por favor, preencha todos os campos obrigatórios',
     'create.photosUploading': 'Fotos Carregando',
-    'create.photosUploadingDesc': 'Por favor, aguarde as fotos terminarem de carregar antes de enviar sua solicitação.',
+    'create.photosUploadingDesc':
+      'Por favor, aguarde as fotos terminarem de carregar antes de enviar sua solicitação.',
     'create.requestCreated': 'Solicitação Criada! 🚛💳',
-    'create.requestCreatedDesc': 'Sua solicitação de serviço foi publicada e a taxa de solicitação de $5 será cobrada quando qualquer provedor de serviços aceitar sua solicitação. Provedores de serviços em sua área serão notificados e podem aceitar sua solicitação.',
+    'create.requestCreatedDesc':
+      'Sua solicitação de serviço foi publicada e a taxa de solicitação de $5 será cobrada quando qualquer provedor de serviços aceitar sua solicitação. Provedores de serviços em sua área serão notificados e podem aceitar sua solicitação.',
     'create.viewRequest': 'Ver Solicitação',
     'create.requestFailed': 'Solicitação Falhou',
-    'create.requestFailedDesc': 'Falhou ao criar a solicitação. Por favor, verifique seu método de pagamento e tente novamente.',
+    'create.requestFailedDesc':
+      'Falhou ao criar a solicitação. Por favor, verifique seu método de pagamento e tente novamente.',
     'create.urgencyLow': 'Baixa',
     'create.urgencyMedium': 'Média',
     'create.urgencyHigh': 'Alta',
@@ -1397,12 +1556,15 @@ const translations: Record<string, Record<string, string>> = {
     'create.serviceTowingDesc': 'Reboque por quebra ou acidente de veículo',
     'create.serviceRepairDesc': 'Reparos mecânicos no local',
     'create.serviceMechanicDesc': 'Diagnóstico e reparo profissional',
-    'create.serviceTireRepairDesc': 'Substituição de pneus e serviços de pneus na estrada',
+    'create.serviceTireRepairDesc':
+      'Substituição de pneus e serviços de pneus na estrada',
     'create.serviceTruckWashDesc': 'Limpeza profissional móvel de caminhões',
     'create.serviceHoseRepairDesc': 'Reparo de mangueiras hidráulicas e de ar',
-    'create.photoTip': ' fotos adicionadas. Fotos claras ajudam os provedores a dar estimativas precisas.',
+    'create.photoTip':
+      ' fotos adicionadas. Fotos claras ajudam os provedores a dar estimativas precisas.',
     'create.uploadingPhoto': 'Carregando foto para armazenamento em nuvem...',
-    'create.locationTip': '💡 Dica: Uma localização precisa ajuda os provedores de serviços a te encontrar rapidamente. Inclua marcadores de milhas, números de saída ou pontos de referência próximos.',
+    'create.locationTip':
+      '💡 Dica: Uma localização precisa ajuda os provedores de serviços a te encontrar rapidamente. Inclua marcadores de milhas, números de saída ou pontos de referência próximos.',
   },
   zh: {
     // Navigation
@@ -1410,7 +1572,7 @@ const translations: Record<string, Record<string, string>> = {
     'nav.messages': '消息',
     'nav.leads': '客户',
     'nav.profile': '个人资料',
-    
+
     // Common
     'common.loading': '加载中...',
     'common.error': '错误',
@@ -1428,7 +1590,7 @@ const translations: Record<string, Record<string, string>> = {
     'common.confirm': '确认',
     'common.yes': '是',
     'common.no': '否',
-    
+
     // Home Screen
     'home.welcome': '欢迎回来，',
     'home.newRequest': '新请求',
@@ -1446,7 +1608,7 @@ const translations: Record<string, Record<string, string>> = {
     'home.tapToView': '点击查看详情',
     'home.referFriend': '推荐朋友并赚取10美元',
     'home.shareRigSnap': '分享RigSnap并在他们加入时获得奖励',
-    
+
     // Profile Screen
     'profile.title': '个人资料',
     'profile.personalInformation': '个人信息',
@@ -1474,7 +1636,7 @@ const translations: Record<string, Record<string, string>> = {
     'profile.editProfile': '编辑个人资料',
     'profile.saveChanges': '保存更改',
     'profile.cancel': '取消',
-    
+
     // Messages/Chat
     'chat.title': '消息',
     'chat.messages': '消息',
@@ -1486,7 +1648,7 @@ const translations: Record<string, Record<string, string>> = {
     'chat.typeMessage': '输入消息...',
     'chat.trucker': '卡车司机',
     'chat.serviceProvider': '服务提供商',
-    
+
     // Leads
     'leads.title': '客户跟踪',
     'leads.leadTracking': '客户跟踪',
@@ -1498,9 +1660,11 @@ const translations: Record<string, Record<string, string>> = {
     'leads.pending': '待处理',
     'leads.transactionHistory': '交易历史',
     'leads.noLeadFeesYet': '还没有客户费用',
-    'leads.leadFeesWillAppear': '当服务提供商接受您的请求时，客户费用将出现在这里',
-    'leads.leadFeesWillAppearProvider': '当您接受服务请求时，客户费用将出现在这里',
-    
+    'leads.leadFeesWillAppear':
+      '当服务提供商接受您的请求时，客户费用将出现在这里',
+    'leads.leadFeesWillAppearProvider':
+      '当您接受服务请求时，客户费用将出现在这里',
+
     // Account Settings
     'settings.title': '账户设置',
     'settings.security': '安全',
@@ -1523,7 +1687,7 @@ const translations: Record<string, Record<string, string>> = {
     'settings.privacyPolicy': '隐私政策',
     'settings.dangerZone': '危险区域',
     'settings.deleteAccount': '删除账户',
-    
+
     // Service Types
     'service.towing': '拖车服务',
     'service.repair': '道路服务',
@@ -1531,13 +1695,14 @@ const translations: Record<string, Record<string, string>> = {
     'service.tireRepair': '移动轮胎维修',
     'service.truckWash': '移动卡车清洗',
     'service.hoseRepair': '软管维修',
-    
+
     // Create Request Screen
     'create.title': '请求服务',
     'create.subtitle': '从可信赖的服务提供商获取帮助',
     'create.serviceType': '服务类型',
     'create.descriptionPhotos': '描述和照片',
-    'create.descriptionPlaceholder': '详细描述问题。包括卡车类型、症状以及任何其他相关信息...',
+    'create.descriptionPlaceholder':
+      '详细描述问题。包括卡车类型、症状以及任何其他相关信息...',
     'create.addPhotos': '添加照片（可选）',
     'create.photosHelp': '帮助提供商更好地理解问题',
     'create.addSample': '添加样本',
@@ -1552,27 +1717,32 @@ const translations: Record<string, Record<string, string>> = {
     'create.costHelp': '这有助于提供商了解工作范围并提供准确报价',
     'create.postRequest': '发布请求',
     'create.locationNotAvailable': '位置不可用',
-    'create.locationNotAvailableDesc': '您的设备或浏览器不支持位置服务。您仍然可以手动输入位置。',
+    'create.locationNotAvailableDesc':
+      '您的设备或浏览器不支持位置服务。您仍然可以手动输入位置。',
     'create.locationFound': '找到位置！📍',
     'create.locationSet': '您的当前位置已设置为：\n\n',
     'create.locationError': '位置错误',
     'create.demoLocationSet': '演示位置已设置',
     'create.demoLocationDesc': '使用演示位置：',
     'create.cameraNotAvailable': '相机不可用',
-    'create.cameraNotAvailableDesc': '相机功能在网络上不可用。在真正的移动应用程序中，这将打开相机。',
+    'create.cameraNotAvailableDesc':
+      '相机功能在网络上不可用。在真正的移动应用程序中，这将打开相机。',
     'create.cameraPermissionRequired': '需要相机权限',
     'create.cameraPermissionDesc': '请授予相机权限以拍摄问题的照片。',
     'create.photoUploaded': '照片已上传！📸',
-    'create.photoUploadedDesc': '您的照片已成功上传，并将包含在您的服务请求中。',
+    'create.photoUploadedDesc':
+      '您的照片已成功上传，并将包含在您的服务请求中。',
     'create.uploadWarning': '上传警告 ⚠️',
-    'create.uploadWarningDesc': '照片已拍摄，但上传到云端失败。照片仍将本地包含。请检查您的互联网连接。',
+    'create.uploadWarningDesc':
+      '照片已拍摄，但上传到云端失败。照片仍将本地包含。请检查您的互联网连接。',
     'create.error': '错误',
     'create.failedTakePicture': '拍照失败。请重试。',
     'create.fillRequiredFields': '请填写所有必填字段',
     'create.photosUploading': '照片上传中',
     'create.photosUploadingDesc': '请等待照片完成上传后再提交您的请求。',
     'create.requestCreated': '请求已创建！🚛💳',
-    'create.requestCreatedDesc': '您的服务请求已发布，当任何服务提供商接受您的请求时，将收取5美元的请求费用。您所在地区的服务提供商将被通知，并可以接受您的请求。',
+    'create.requestCreatedDesc':
+      '您的服务请求已发布，当任何服务提供商接受您的请求时，将收取5美元的请求费用。您所在地区的服务提供商将被通知，并可以接受您的请求。',
     'create.viewRequest': '查看请求',
     'create.requestFailed': '请求失败',
     'create.requestFailedDesc': '创建请求失败。请检查您的付款方式并重试。',
@@ -1596,7 +1766,8 @@ const translations: Record<string, Record<string, string>> = {
     'create.serviceHoseRepairDesc': '液压和空气软管维修',
     'create.photoTip': ' 张照片已添加。清晰的照片有助于提供商提供准确的估计。',
     'create.uploadingPhoto': '正在将照片上传到云存储...',
-    'create.locationTip': '💡 提示：准确的位置有助于服务提供商快速找到您。包括里程标记、出口编号或附近的标志性建筑。',
+    'create.locationTip':
+      '💡 提示：准确的位置有助于服务提供商快速找到您。包括里程标记、出口编号或附近的标志性建筑。',
   },
   ja: {
     // Navigation
@@ -1604,7 +1775,7 @@ const translations: Record<string, Record<string, string>> = {
     'nav.messages': 'メッセージ',
     'nav.leads': 'リード',
     'nav.profile': 'プロフィール',
-    
+
     // Common
     'common.loading': '読み込み中...',
     'common.error': 'エラー',
@@ -1622,7 +1793,7 @@ const translations: Record<string, Record<string, string>> = {
     'common.confirm': '確認',
     'common.yes': 'はい',
     'common.no': 'いいえ',
-    
+
     // Home Screen
     'home.welcome': 'おかえりなさい、',
     'home.newRequest': '新規リクエスト',
@@ -1640,7 +1811,7 @@ const translations: Record<string, Record<string, string>> = {
     'home.tapToView': 'タップして詳細を表示',
     'home.referFriend': '友達を紹介して10ドルを獲得',
     'home.shareRigSnap': 'RigSnapをシェアして彼らが参加したら報酬を得る',
-    
+
     // Profile Screen
     'profile.title': 'プロフィール',
     'profile.personalInformation': '個人情報',
@@ -1668,19 +1839,21 @@ const translations: Record<string, Record<string, string>> = {
     'profile.editProfile': 'プロフィールを編集',
     'profile.saveChanges': '変更を保存',
     'profile.cancel': 'キャンセル',
-    
+
     // Messages/Chat
     'chat.title': 'メッセージ',
     'chat.messages': 'メッセージ',
     'chat.noMessagesYet': 'まだメッセージがありません',
-    'chat.messagesWillAppear': 'サービスプロバイダーとチャットを開始するとメッセージがここに表示されます',
-    'chat.messagesWillAppearProvider': 'サービスリクエストを受け入れるとメッセージがここに表示されます',
+    'chat.messagesWillAppear':
+      'サービスプロバイダーとチャットを開始するとメッセージがここに表示されます',
+    'chat.messagesWillAppearProvider':
+      'サービスリクエストを受け入れるとメッセージがここに表示されます',
     'chat.active': 'アクティブ',
     'chat.completed': '完了',
     'chat.typeMessage': 'メッセージを入力...',
     'chat.trucker': 'トラッカー',
     'chat.serviceProvider': 'サービスプロバイダー',
-    
+
     // Leads
     'leads.title': 'リード追跡',
     'leads.leadTracking': 'リード追跡',
@@ -1692,9 +1865,11 @@ const translations: Record<string, Record<string, string>> = {
     'leads.pending': '保留中',
     'leads.transactionHistory': '取引履歴',
     'leads.noLeadFeesYet': 'まだリード料金がありません',
-    'leads.leadFeesWillAppear': 'サービスプロバイダーがリクエストを受け入れるとリード料金がここに表示されます',
-    'leads.leadFeesWillAppearProvider': 'サービスリクエストを受け入れるとリード料金がここに表示されます',
-    
+    'leads.leadFeesWillAppear':
+      'サービスプロバイダーがリクエストを受け入れるとリード料金がここに表示されます',
+    'leads.leadFeesWillAppearProvider':
+      'サービスリクエストを受け入れるとリード料金がここに表示されます',
+
     // Account Settings
     'settings.title': 'アカウント設定',
     'settings.security': 'セキュリティ',
@@ -1717,7 +1892,7 @@ const translations: Record<string, Record<string, string>> = {
     'settings.privacyPolicy': 'プライバシーポリシー',
     'settings.dangerZone': '危険ゾーン',
     'settings.deleteAccount': 'アカウントを削除',
-    
+
     // Service Types
     'service.towing': '牽引サービス',
     'service.repair': '道路サービス',
@@ -1725,13 +1900,14 @@ const translations: Record<string, Record<string, string>> = {
     'service.tireRepair': 'モバイルタイヤ修理',
     'service.truckWash': 'モバイルトラック洗浄',
     'service.hoseRepair': 'ホース修理',
-    
+
     // Create Request Screen
     'create.title': 'サービスをリクエスト',
     'create.subtitle': '信頼できるサービスプロバイダーからヘルプを得る',
     'create.serviceType': 'サービスタイプ',
     'create.descriptionPhotos': '説明と写真',
-    'create.descriptionPlaceholder': '問題を詳細に説明してください。トラックの種類、症状、その他の関連情報を含めてください...',
+    'create.descriptionPlaceholder':
+      '問題を詳細に説明してください。トラックの種類、症状、その他の関連情報を含めてください...',
     'create.addPhotos': '写真を追加（オプション）',
     'create.photosHelp': 'プロバイダーが問題をよりよく理解するのに役立つ',
     'create.addSample': 'サンプルを追加',
@@ -1743,33 +1919,43 @@ const translations: Record<string, Record<string, string>> = {
     'create.urgencyLevel': '緊急度',
     'create.estimatedCost': '見積もりコスト（オプション）',
     'create.costPlaceholder': 'USDで見積もりコストを入力',
-    'create.costHelp': 'これによりプロバイダーは作業範囲を理解し、正確な見積もりを提供できます',
+    'create.costHelp':
+      'これによりプロバイダーは作業範囲を理解し、正確な見積もりを提供できます',
     'create.postRequest': 'リクエストを投稿',
     'create.locationNotAvailable': '場所が利用できません',
-    'create.locationNotAvailableDesc': 'デバイスまたはブラウザが位置サービスをサポートしていません。手動で場所を入力できます。',
+    'create.locationNotAvailableDesc':
+      'デバイスまたはブラウザが位置サービスをサポートしていません。手動で場所を入力できます。',
     'create.locationFound': '場所が見つかりました！📍',
     'create.locationSet': '現在の場所が設定されました：\n\n',
     'create.locationError': '場所エラー',
     'create.demoLocationSet': 'デモ場所が設定されました',
     'create.demoLocationDesc': 'デモ場所を使用：',
     'create.cameraNotAvailable': 'カメラが利用できません',
-    'create.cameraNotAvailableDesc': 'カメラ機能はウェブで利用できません。本物のモバイルアプリではカメラが開きます。',
+    'create.cameraNotAvailableDesc':
+      'カメラ機能はウェブで利用できません。本物のモバイルアプリではカメラが開きます。',
     'create.cameraPermissionRequired': 'カメラ許可が必要です',
-    'create.cameraPermissionDesc': '問題の写真を撮るためにカメラ許可を付与してください。',
+    'create.cameraPermissionDesc':
+      '問題の写真を撮るためにカメラ許可を付与してください。',
     'create.photoUploaded': '写真がアップロードされました！📸',
-    'create.photoUploadedDesc': '写真が正常にアップロードされ、サービスリクエストに含まれます。',
+    'create.photoUploadedDesc':
+      '写真が正常にアップロードされ、サービスリクエストに含まれます。',
     'create.uploadWarning': 'アップロード警告 ⚠️',
-    'create.uploadWarningDesc': '写真は撮られましたがクラウドへのアップロードに失敗しました。写真はローカルに含まれます。インターネット接続を確認してください。',
+    'create.uploadWarningDesc':
+      '写真は撮られましたがクラウドへのアップロードに失敗しました。写真はローカルに含まれます。インターネット接続を確認してください。',
     'create.error': 'エラー',
-    'create.failedTakePicture': '写真の撮影に失敗しました。もう一度お試しください。',
+    'create.failedTakePicture':
+      '写真の撮影に失敗しました。もう一度お試しください。',
     'create.fillRequiredFields': 'すべての必須フィールドを入力してください',
     'create.photosUploading': '写真をアップロード中',
-    'create.photosUploadingDesc': 'リクエストを送信する前に写真のアップロードが完了するまでお待ちください。',
+    'create.photosUploadingDesc':
+      'リクエストを送信する前に写真のアップロードが完了するまでお待ちください。',
     'create.requestCreated': 'リクエストが作成されました！🚛💳',
-    'create.requestCreatedDesc': 'サービスリクエストが投稿され、サービスプロバイダーがリクエストを受け入れると5ドルのリクエスト料金が請求されます。エリア内のサービスプロバイダーに通知され、リクエストを受け入れることができます。',
+    'create.requestCreatedDesc':
+      'サービスリクエストが投稿され、サービスプロバイダーがリクエストを受け入れると5ドルのリクエスト料金が請求されます。エリア内のサービスプロバイダーに通知され、リクエストを受け入れることができます。',
     'create.viewRequest': 'リクエストを表示',
     'create.requestFailed': 'リクエスト失敗',
-    'create.requestFailedDesc': 'リクエストの作成に失敗しました。支払い方法を確認してもう一度お試しください。',
+    'create.requestFailedDesc':
+      'リクエストの作成に失敗しました。支払い方法を確認してもう一度お試しください。',
     'create.urgencyLow': '低',
     'create.urgencyMedium': '中',
     'create.urgencyHigh': '高',
@@ -1788,9 +1974,11 @@ const translations: Record<string, Record<string, string>> = {
     'create.serviceTireRepairDesc': 'タイヤ交換と道路タイヤサービス',
     'create.serviceTruckWashDesc': '専門モバイルトラッククリーニング',
     'create.serviceHoseRepairDesc': '油圧および空気ホース修理',
-    'create.photoTip': ' 枚の写真が追加されました。明確な写真はプロバイダーが正確な見積もりを提供するのに役立ちます。',
+    'create.photoTip':
+      ' 枚の写真が追加されました。明確な写真はプロバイダーが正確な見積もりを提供するのに役立ちます。',
     'create.uploadingPhoto': '写真をクラウドストレージにアップロード中...',
-    'create.locationTip': '💡 ヒント：正確な場所はサービスプロバイダーがあなたを素早く見つけるのに役立ちます。マイルマーカー、出口番号、または近くのランドマークを含めてください。',
+    'create.locationTip':
+      '💡 ヒント：正確な場所はサービスプロバイダーがあなたを素早く見つけるのに役立ちます。マイルマーカー、出口番号、または近くのランドマークを含めてください。',
   },
   ko: {
     // Navigation
@@ -1798,7 +1986,7 @@ const translations: Record<string, Record<string, string>> = {
     'nav.messages': '메시지',
     'nav.leads': '리드',
     'nav.profile': '프로필',
-    
+
     // Common
     'common.loading': '로딩 중...',
     'common.error': '오류',
@@ -1816,7 +2004,7 @@ const translations: Record<string, Record<string, string>> = {
     'common.confirm': '확인',
     'common.yes': '예',
     'common.no': '아니오',
-    
+
     // Home Screen
     'home.welcome': '돌아오신 것을 환영합니다,',
     'home.newRequest': '새 요청',
@@ -1834,7 +2022,7 @@ const translations: Record<string, Record<string, string>> = {
     'home.tapToView': '탭하여 세부 정보 보기',
     'home.referFriend': '친구 추천하고 10달러 벌기',
     'home.shareRigSnap': 'RigSnap 공유하고 그들이 참여할 때 보상 받기',
-    
+
     // Profile Screen
     'profile.title': '프로필',
     'profile.personalInformation': '개인 정보',
@@ -1862,19 +2050,21 @@ const translations: Record<string, Record<string, string>> = {
     'profile.editProfile': '프로필 편집',
     'profile.saveChanges': '변경 사항 저장',
     'profile.cancel': '취소',
-    
+
     // Messages/Chat
     'chat.title': '메시지',
     'chat.messages': '메시지',
     'chat.noMessagesYet': '아직 메시지가 없습니다',
-    'chat.messagesWillAppear': '서비스 제공자와 채팅을 시작하면 메시지가 여기에 나타납니다',
-    'chat.messagesWillAppearProvider': '서비스 요청을 수락하면 메시지가 여기에 나타납니다',
+    'chat.messagesWillAppear':
+      '서비스 제공자와 채팅을 시작하면 메시지가 여기에 나타납니다',
+    'chat.messagesWillAppearProvider':
+      '서비스 요청을 수락하면 메시지가 여기에 나타납니다',
     'chat.active': '활성',
     'chat.completed': '완료',
     'chat.typeMessage': '메시지 입력...',
     'chat.trucker': '트럭 운전자',
     'chat.serviceProvider': '서비스 제공자',
-    
+
     // Leads
     'leads.title': '리드 추적',
     'leads.leadTracking': '리드 추적',
@@ -1886,9 +2076,11 @@ const translations: Record<string, Record<string, string>> = {
     'leads.pending': '대기 중',
     'leads.transactionHistory': '거래 내역',
     'leads.noLeadFeesYet': '아직 리드 수수료가 없습니다',
-    'leads.leadFeesWillAppear': '서비스 제공자가 요청을 수락하면 리드 수수료가 여기에 나타납니다',
-    'leads.leadFeesWillAppearProvider': '서비스 요청을 수락하면 리드 수수료가 여기에 나타납니다',
-    
+    'leads.leadFeesWillAppear':
+      '서비스 제공자가 요청을 수락하면 리드 수수료가 여기에 나타납니다',
+    'leads.leadFeesWillAppearProvider':
+      '서비스 요청을 수락하면 리드 수수료가 여기에 나타납니다',
+
     // Account Settings
     'settings.title': '계정 설정',
     'settings.security': '보안',
@@ -1911,7 +2103,7 @@ const translations: Record<string, Record<string, string>> = {
     'settings.privacyPolicy': '개인정보 보호정책',
     'settings.dangerZone': '위험 구역',
     'settings.deleteAccount': '계정 삭제',
-    
+
     // Service Types
     'service.towing': '견인 서비스',
     'service.repair': '도로 서비스',
@@ -1919,13 +2111,14 @@ const translations: Record<string, Record<string, string>> = {
     'service.tireRepair': '모바일 타이어 수리',
     'service.truckWash': '모바일 트럭 세차',
     'service.hoseRepair': '호스 수리',
-    
+
     // Create Request Screen
     'create.title': '서비스 요청',
     'create.subtitle': '신뢰할 수 있는 서비스 제공자로부터 도움 받기',
     'create.serviceType': '서비스 유형',
     'create.descriptionPhotos': '설명 및 사진',
-    'create.descriptionPlaceholder': '문제를 자세히 설명하세요. 트럭 유형, 증상 및 기타 관련 정보를 포함하세요...',
+    'create.descriptionPlaceholder':
+      '문제를 자세히 설명하세요. 트럭 유형, 증상 및 기타 관련 정보를 포함하세요...',
     'create.addPhotos': '사진 추가 (선택 사항)',
     'create.photosHelp': '제공자가 문제를 더 잘 이해하도록 도와줍니다',
     'create.addSample': '샘플 추가',
@@ -1937,33 +2130,42 @@ const translations: Record<string, Record<string, string>> = {
     'create.urgencyLevel': '긴급도 수준',
     'create.estimatedCost': '예상 비용 (선택 사항)',
     'create.costPlaceholder': 'USD로 예상 비용 입력',
-    'create.costHelp': '이것은 제공자가 작업 범위를 이해하고 정확한 견적을 제공하는 데 도움이 됩니다',
+    'create.costHelp':
+      '이것은 제공자가 작업 범위를 이해하고 정확한 견적을 제공하는 데 도움이 됩니다',
     'create.postRequest': '요청 게시',
     'create.locationNotAvailable': '위치 사용 불가',
-    'create.locationNotAvailableDesc': '장치 또는 브라우저가 위치 서비스를 지원하지 않습니다. 수동으로 위치를 입력할 수 있습니다.',
+    'create.locationNotAvailableDesc':
+      '장치 또는 브라우저가 위치 서비스를 지원하지 않습니다. 수동으로 위치를 입력할 수 있습니다.',
     'create.locationFound': '위치 찾음! 📍',
     'create.locationSet': '현재 위치가 다음으로 설정되었습니다:\n\n',
     'create.locationError': '위치 오류',
     'create.demoLocationSet': '데모 위치 설정됨',
     'create.demoLocationDesc': '데모 위치 사용: ',
     'create.cameraNotAvailable': '카메라 사용 불가',
-    'create.cameraNotAvailableDesc': '웹에서 카메라 기능이 사용할 수 없습니다. 실제 모바일 앱에서는 카메라가 열립니다.',
+    'create.cameraNotAvailableDesc':
+      '웹에서 카메라 기능이 사용할 수 없습니다. 실제 모바일 앱에서는 카메라가 열립니다.',
     'create.cameraPermissionRequired': '카메라 권한 필요',
-    'create.cameraPermissionDesc': '문제 사진을 촬영하기 위해 카메라 권한을 부여하세요.',
+    'create.cameraPermissionDesc':
+      '문제 사진을 촬영하기 위해 카메라 권한을 부여하세요.',
     'create.photoUploaded': '사진 업로드됨! 📸',
-    'create.photoUploadedDesc': '사진이 성공적으로 업로드되었으며 서비스 요청에 포함됩니다.',
+    'create.photoUploadedDesc':
+      '사진이 성공적으로 업로드되었으며 서비스 요청에 포함됩니다.',
     'create.uploadWarning': '업로드 경고 ⚠️',
-    'create.uploadWarningDesc': '사진이 촬영되었지만 클라우드 업로드에 실패했습니다. 사진은 로컬로 포함됩니다. 인터넷 연결을 확인하세요.',
+    'create.uploadWarningDesc':
+      '사진이 촬영되었지만 클라우드 업로드에 실패했습니다. 사진은 로컬로 포함됩니다. 인터넷 연결을 확인하세요.',
     'create.error': '오류',
     'create.failedTakePicture': '사진 촬영 실패. 다시 시도하세요.',
     'create.fillRequiredFields': '모든 필수 필드를 입력하세요',
     'create.photosUploading': '사진 업로드 중',
-    'create.photosUploadingDesc': '요청을 제출하기 전에 사진 업로드가 완료될 때까지 기다려주세요.',
+    'create.photosUploadingDesc':
+      '요청을 제출하기 전에 사진 업로드가 완료될 때까지 기다려주세요.',
     'create.requestCreated': '요청 생성됨! 🚛💳',
-    'create.requestCreatedDesc': '서비스 요청이 게시되었으며 서비스 제공자가 요청을 수락하면 5달러 요청 수수료가 청구됩니다. 귀하 지역의 서비스 제공자에게 알림이 전송되며 요청을 수락할 수 있습니다.',
+    'create.requestCreatedDesc':
+      '서비스 요청이 게시되었으며 서비스 제공자가 요청을 수락하면 5달러 요청 수수료가 청구됩니다. 귀하 지역의 서비스 제공자에게 알림이 전송되며 요청을 수락할 수 있습니다.',
     'create.viewRequest': '요청 보기',
     'create.requestFailed': '요청 실패',
-    'create.requestFailedDesc': '요청 생성 실패. 결제 방법을 확인하고 다시 시도하세요.',
+    'create.requestFailedDesc':
+      '요청 생성 실패. 결제 방법을 확인하고 다시 시도하세요.',
     'create.urgencyLow': '낮음',
     'create.urgencyMedium': '중간',
     'create.urgencyHigh': '높음',
@@ -1982,9 +2184,11 @@ const translations: Record<string, Record<string, string>> = {
     'create.serviceTireRepairDesc': '타이어 교체 및 도로 타이어 서비스',
     'create.serviceTruckWashDesc': '전문 모바일 트럭 세차',
     'create.serviceHoseRepairDesc': '유압 및 공기 호스 수리',
-    'create.photoTip': ' 장의 사진이 추가되었습니다. 선명한 사진은 제공자가 정확한 견적을 제공하는 데 도움이 됩니다.',
+    'create.photoTip':
+      ' 장의 사진이 추가되었습니다. 선명한 사진은 제공자가 정확한 견적을 제공하는 데 도움이 됩니다.',
     'create.uploadingPhoto': '사진을 클라우드 스토리지에 업로드 중...',
-    'create.locationTip': '💡 팁: 정확한 위치는 서비스 제공자가 빠르게 찾는 데 도움이 됩니다. 마일 마커, 출구 번호 또는 근처 랜드마크를 포함하세요.',
+    'create.locationTip':
+      '💡 팁: 정확한 위치는 서비스 제공자가 빠르게 찾는 데 도움이 됩니다. 마일 마커, 출구 번호 또는 근처 랜드마크를 포함하세요.',
   },
   ar: {
     // Navigation
@@ -1992,7 +2196,7 @@ const translations: Record<string, Record<string, string>> = {
     'nav.messages': 'الرسائل',
     'nav.leads': 'العملاء',
     'nav.profile': 'الملف الشخصي',
-    
+
     // Common
     'common.loading': 'جاري التحميل...',
     'common.error': 'خطأ',
@@ -2010,7 +2214,7 @@ const translations: Record<string, Record<string, string>> = {
     'common.confirm': 'تأكيد',
     'common.yes': 'نعم',
     'common.no': 'لا',
-    
+
     // Home Screen
     'home.welcome': 'مرحبا بعودتك،',
     'home.newRequest': 'طلب جديد',
@@ -2028,7 +2232,7 @@ const translations: Record<string, Record<string, string>> = {
     'home.tapToView': 'اضغط لعرض التفاصيل',
     'home.referFriend': 'أوصِ صديقًا واكسب 10 دولارات',
     'home.shareRigSnap': 'شارك RigSnap واحصل على مكافأة عند انضمامهم',
-    
+
     // Profile Screen
     'profile.title': 'الملف الشخصي',
     'profile.personalInformation': 'المعلومات الشخصية',
@@ -2056,19 +2260,21 @@ const translations: Record<string, Record<string, string>> = {
     'profile.editProfile': 'تحرير الملف الشخصي',
     'profile.saveChanges': 'حفظ التغييرات',
     'profile.cancel': 'إلغاء',
-    
+
     // Messages/Chat
     'chat.title': 'الرسائل',
     'chat.messages': 'الرسائل',
     'chat.noMessagesYet': 'لا توجد رسائل بعد',
-    'chat.messagesWillAppear': 'ستظهر الرسائل هنا عندما تبدأ في الدردشة مع مزودي الخدمات',
-    'chat.messagesWillAppearProvider': 'ستظهر الرسائل هنا عندما تقبل طلبات الخدمة',
+    'chat.messagesWillAppear':
+      'ستظهر الرسائل هنا عندما تبدأ في الدردشة مع مزودي الخدمات',
+    'chat.messagesWillAppearProvider':
+      'ستظهر الرسائل هنا عندما تقبل طلبات الخدمة',
     'chat.active': 'نشط',
     'chat.completed': 'مكتمل',
     'chat.typeMessage': 'اكتب رسالة...',
     'chat.trucker': 'سائق الشاحنة',
     'chat.serviceProvider': 'مزود الخدمة',
-    
+
     // Leads
     'leads.title': 'تتبع العملاء',
     'leads.leadTracking': 'تتبع العملاء',
@@ -2080,9 +2286,11 @@ const translations: Record<string, Record<string, string>> = {
     'leads.pending': 'معلق',
     'leads.transactionHistory': 'تاريخ المعاملات',
     'leads.noLeadFeesYet': 'لا توجد رسوم عملاء بعد',
-    'leads.leadFeesWillAppear': 'ستظهر رسوم العملاء هنا عندما يقبل مزودو الخدمات طلباتك',
-    'leads.leadFeesWillAppearProvider': 'ستظهر رسوم العملاء هنا عندما تقبل طلبات الخدمة',
-    
+    'leads.leadFeesWillAppear':
+      'ستظهر رسوم العملاء هنا عندما يقبل مزودو الخدمات طلباتك',
+    'leads.leadFeesWillAppearProvider':
+      'ستظهر رسوم العملاء هنا عندما تقبل طلبات الخدمة',
+
     // Account Settings
     'settings.title': 'إعدادات الحساب',
     'settings.security': 'الأمان',
@@ -2105,7 +2313,7 @@ const translations: Record<string, Record<string, string>> = {
     'settings.privacyPolicy': 'سياسة الخصوصية',
     'settings.dangerZone': 'المنطقة الخطرة',
     'settings.deleteAccount': 'حذف الحساب',
-    
+
     // Service Types
     'service.towing': 'خدمة السحب',
     'service.repair': 'خدمة الطريق',
@@ -2113,13 +2321,14 @@ const translations: Record<string, Record<string, string>> = {
     'service.tireRepair': 'إصلاح الإطارات المتنقل',
     'service.truckWash': 'غسيل الشاحنات المتنقل',
     'service.hoseRepair': 'إصلاح الخراطيم',
-    
+
     // Create Request Screen
     'create.title': 'طلب خدمة',
     'create.subtitle': 'احصل على مساعدة من مزودي الخدمات الموثوقين',
     'create.serviceType': 'نوع الخدمة',
     'create.descriptionPhotos': 'الوصف والصور',
-    'create.descriptionPlaceholder': 'وصف المشكلة بالتفصيل. قم بتضمين نوع الشاحنة، الأعراض، وأي معلومات أخرى ذات صلة...',
+    'create.descriptionPlaceholder':
+      'وصف المشكلة بالتفصيل. قم بتضمين نوع الشاحنة، الأعراض، وأي معلومات أخرى ذات صلة...',
     'create.addPhotos': 'إضافة صور (اختياري)',
     'create.photosHelp': 'يساعد المزودين على فهم المشكلة بشكل أفضل',
     'create.addSample': 'إضافة عينة',
@@ -2131,33 +2340,41 @@ const translations: Record<string, Record<string, string>> = {
     'create.urgencyLevel': 'مستوى الإلحاح',
     'create.estimatedCost': 'التكلفة المقدرة (اختياري)',
     'create.costPlaceholder': 'أدخل التكلفة المقدرة بالدولار الأمريكي',
-    'create.costHelp': 'يساعد هذا المزودين على فهم نطاق العمل وتقديم عروض أسعار دقيقة',
+    'create.costHelp':
+      'يساعد هذا المزودين على فهم نطاق العمل وتقديم عروض أسعار دقيقة',
     'create.postRequest': 'نشر الطلب',
     'create.locationNotAvailable': 'الموقع غير متاح',
-    'create.locationNotAvailableDesc': 'جهازك أو متصفحك لا يدعم خدمات الموقع. لا يزال بإمكانك إدخال موقعك يدويًا.',
+    'create.locationNotAvailableDesc':
+      'جهازك أو متصفحك لا يدعم خدمات الموقع. لا يزال بإمكانك إدخال موقعك يدويًا.',
     'create.locationFound': 'تم العثور على الموقع! 📍',
     'create.locationSet': 'تم تعيين موقعك الحالي إلى:\n\n',
     'create.locationError': 'خطأ في الموقع',
     'create.demoLocationSet': 'تم تعيين موقع العرض التوضيحي',
     'create.demoLocationDesc': 'استخدام موقع العرض التوضيحي: ',
     'create.cameraNotAvailable': 'الكاميرا غير متاحة',
-    'create.cameraNotAvailableDesc': 'وظيفة الكاميرا غير متاحة في الويب. في تطبيق محمول حقيقي، سيفتح هذا الكاميرا.',
+    'create.cameraNotAvailableDesc':
+      'وظيفة الكاميرا غير متاحة في الويب. في تطبيق محمول حقيقي، سيفتح هذا الكاميرا.',
     'create.cameraPermissionRequired': 'إذن الكاميرا مطلوب',
     'create.cameraPermissionDesc': 'يرجى منح إذن الكاميرا لالتقاط صور للمشكلة.',
     'create.photoUploaded': 'تم تحميل الصورة! 📸',
-    'create.photoUploadedDesc': 'تم تحميل صورتك بنجاح وسيتم تضمينها في طلب الخدمة الخاص بك.',
+    'create.photoUploadedDesc':
+      'تم تحميل صورتك بنجاح وسيتم تضمينها في طلب الخدمة الخاص بك.',
     'create.uploadWarning': 'تحذير التحميل ⚠️',
-    'create.uploadWarningDesc': 'تم التقاط الصورة لكن التحميل إلى السحابة فشل. سيتم تضمين الصورة محليًا. يرجى التحقق من اتصال الإنترنت الخاص بك.',
+    'create.uploadWarningDesc':
+      'تم التقاط الصورة لكن التحميل إلى السحابة فشل. سيتم تضمين الصورة محليًا. يرجى التحقق من اتصال الإنترنت الخاص بك.',
     'create.error': 'خطأ',
     'create.failedTakePicture': 'فشل في التقاط الصورة. يرجى المحاولة مرة أخرى.',
     'create.fillRequiredFields': 'يرجى ملء جميع الحقول المطلوبة',
     'create.photosUploading': 'تحميل الصور',
-    'create.photosUploadingDesc': 'يرجى الانتظار حتى تنتهي الصور من التحميل قبل إرسال طلبك.',
+    'create.photosUploadingDesc':
+      'يرجى الانتظار حتى تنتهي الصور من التحميل قبل إرسال طلبك.',
     'create.requestCreated': 'تم إنشاء الطلب! 🚛💳',
-    'create.requestCreatedDesc': 'تم نشر طلب الخدمة الخاص بك وسيتم تحصيل رسوم الطلب البالغة 5 دولارات عندما يقبل أي مزود خدمات طلبك. سيتم إخطار مزودي الخدمات في منطقتك ويمكنهم قبول طلبك.',
+    'create.requestCreatedDesc':
+      'تم نشر طلب الخدمة الخاص بك وسيتم تحصيل رسوم الطلب البالغة 5 دولارات عندما يقبل أي مزود خدمات طلبك. سيتم إخطار مزودي الخدمات في منطقتك ويمكنهم قبول طلبك.',
     'create.viewRequest': 'عرض الطلب',
     'create.requestFailed': 'فشل الطلب',
-    'create.requestFailedDesc': 'فشل في إنشاء الطلب. يرجى التحقق من طريقة الدفع الخاصة بك وحاول مرة أخرى.',
+    'create.requestFailedDesc':
+      'فشل في إنشاء الطلب. يرجى التحقق من طريقة الدفع الخاصة بك وحاول مرة أخرى.',
     'create.urgencyLow': 'منخفض',
     'create.urgencyMedium': 'متوسط',
     'create.urgencyHigh': 'عالي',
@@ -2173,12 +2390,15 @@ const translations: Record<string, Record<string, string>> = {
     'create.serviceTowingDesc': 'سحب عطل أو حادث السيارة',
     'create.serviceRepairDesc': 'إصلاحات ميكانيكية في الموقع',
     'create.serviceMechanicDesc': 'تشخيص وإصلاح احترافي',
-    'create.serviceTireRepairDesc': 'استبدال الإطارات وخدمات الإطارات على الطريق',
+    'create.serviceTireRepairDesc':
+      'استبدال الإطارات وخدمات الإطارات على الطريق',
     'create.serviceTruckWashDesc': 'تنظيف شاحنات متنقل احترافي',
     'create.serviceHoseRepairDesc': 'إصلاح خراطيم الهيدروليك والأير',
-    'create.photoTip': ' صورة مضافة. الصور الواضحة تساعد المزودين على تقديم تقديرات دقيقة.',
+    'create.photoTip':
+      ' صورة مضافة. الصور الواضحة تساعد المزودين على تقديم تقديرات دقيقة.',
     'create.uploadingPhoto': 'تحميل الصورة إلى التخزين السحابي...',
-    'create.locationTip': '💡 نصيحة: الموقع الدقيق يساعد مزودي الخدمات على العثور عليك بسرعة. قم بتضمين علامات الأميال، أرقام الخروج، أو المعالم القريبة.',
+    'create.locationTip':
+      '💡 نصيحة: الموقع الدقيق يساعد مزودي الخدمات على العثور عليك بسرعة. قم بتضمين علامات الأميال، أرقام الخروج، أو المعالم القريبة.',
   },
   hi: {
     // Navigation
@@ -2186,7 +2406,7 @@ const translations: Record<string, Record<string, string>> = {
     'nav.messages': 'संदेश',
     'nav.leads': 'लीड',
     'nav.profile': 'प्रोफाइल',
-    
+
     // Common
     'common.loading': 'लोड हो रहा है...',
     'common.error': 'त्रुटि',
@@ -2204,7 +2424,7 @@ const translations: Record<string, Record<string, string>> = {
     'common.confirm': 'पुष्टि करें',
     'common.yes': 'हाँ',
     'common.no': 'नहीं',
-    
+
     // Home Screen
     'home.welcome': 'वापसी पर स्वागत है,',
     'home.newRequest': 'नया अनुरोध',
@@ -2217,12 +2437,14 @@ const translations: Record<string, Record<string, string>> = {
     'home.noRequestsYet': 'अभी तक कोई अनुरोध नहीं',
     'home.noJobsYet': 'अभी तक कोई नौकरी नहीं',
     'home.createFirstRequest': 'शुरू करने के लिए अपना पहला अनुरोध बनाएं',
-    'home.browseAvailableRequests': 'शुरू करने के लिए उपलब्ध अनुरोध ब्राउज़ करें',
+    'home.browseAvailableRequests':
+      'शुरू करने के लिए उपलब्ध अनुरोध ब्राउज़ करें',
     'home.createRequest': 'अनुरोध बनाएं',
     'home.tapToView': 'विवरण देखने के लिए टैप करें',
     'home.referFriend': 'दोस्त को रेफर करें और 10 डॉलर कमाएं',
-    'home.shareRigSnap': 'RigSnap शेयर करें और जब वे शामिल हों तो इनाम प्राप्त करें',
-    
+    'home.shareRigSnap':
+      'RigSnap शेयर करें और जब वे शामिल हों तो इनाम प्राप्त करें',
+
     // Profile Screen
     'profile.title': 'प्रोफाइल',
     'profile.personalInformation': 'व्यक्तिगत जानकारी',
@@ -2250,19 +2472,21 @@ const translations: Record<string, Record<string, string>> = {
     'profile.editProfile': 'प्रोफाइल संपादित करें',
     'profile.saveChanges': 'परिवर्तन सेव करें',
     'profile.cancel': 'रद्द करें',
-    
+
     // Messages/Chat
     'chat.title': 'संदेश',
     'chat.messages': 'संदेश',
     'chat.noMessagesYet': 'अभी तक कोई संदेश नहीं',
-    'chat.messagesWillAppear': 'जब आप सेवा प्रदाताओं के साथ चैट करना शुरू करेंगे तो संदेश यहां दिखाई देंगे',
-    'chat.messagesWillAppearProvider': 'जब आप सेवा अनुरोध स्वीकार करेंगे तो संदेश यहां दिखाई देंगे',
+    'chat.messagesWillAppear':
+      'जब आप सेवा प्रदाताओं के साथ चैट करना शुरू करेंगे तो संदेश यहां दिखाई देंगे',
+    'chat.messagesWillAppearProvider':
+      'जब आप सेवा अनुरोध स्वीकार करेंगे तो संदेश यहां दिखाई देंगे',
     'chat.active': 'सक्रिय',
     'chat.completed': 'पूर्ण',
     'chat.typeMessage': 'संदेश टाइप करें...',
     'chat.trucker': 'ट्रकर',
     'chat.serviceProvider': 'सेवा प्रदाता',
-    
+
     // Leads
     'leads.title': 'लीड ट्रैकिंग',
     'leads.leadTracking': 'लीड ट्रैकिंग',
@@ -2274,9 +2498,11 @@ const translations: Record<string, Record<string, string>> = {
     'leads.pending': 'लंबित',
     'leads.transactionHistory': 'लेनदेन इतिहास',
     'leads.noLeadFeesYet': 'अभी तक कोई लीड फीस नहीं',
-    'leads.leadFeesWillAppear': 'जब सेवा प्रदाता आपके अनुरोध स्वीकार करेंगे तो लीड फीस यहां दिखाई देंगी',
-    'leads.leadFeesWillAppearProvider': 'जब आप सेवा अनुरोध स्वीकार करेंगे तो लीड फीस यहां दिखाई देंगी',
-    
+    'leads.leadFeesWillAppear':
+      'जब सेवा प्रदाता आपके अनुरोध स्वीकार करेंगे तो लीड फीस यहां दिखाई देंगी',
+    'leads.leadFeesWillAppearProvider':
+      'जब आप सेवा अनुरोध स्वीकार करेंगे तो लीड फीस यहां दिखाई देंगी',
+
     // Account Settings
     'settings.title': 'खाता सेटिंग्स',
     'settings.security': 'सुरक्षा',
@@ -2299,7 +2525,7 @@ const translations: Record<string, Record<string, string>> = {
     'settings.privacyPolicy': 'गोपनीयता नीति',
     'settings.dangerZone': 'खतरनाक क्षेत्र',
     'settings.deleteAccount': 'खाता मिटाएं',
-    
+
     // Service Types
     'service.towing': 'टोइंग सेवा',
     'service.repair': 'रोड सेवा',
@@ -2307,15 +2533,17 @@ const translations: Record<string, Record<string, string>> = {
     'service.tireRepair': 'मोबाइल टायर रिपेयर',
     'service.truckWash': 'मोबाइल ट्रक वॉश',
     'service.hoseRepair': 'होज रिपेयर',
-    
+
     // Create Request Screen
     'create.title': 'सेवा का अनुरोध करें',
     'create.subtitle': 'विश्वसनीय सेवा प्रदाताओं से मदद प्राप्त करें',
     'create.serviceType': 'सेवा प्रकार',
     'create.descriptionPhotos': 'विवरण और फोटो',
-    'create.descriptionPlaceholder': 'समस्या का विस्तार से वर्णन करें। ट्रक प्रकार, लक्षण और कोई अन्य प्रासंगिक जानकारी शामिल करें...',
+    'create.descriptionPlaceholder':
+      'समस्या का विस्तार से वर्णन करें। ट्रक प्रकार, लक्षण और कोई अन्य प्रासंगिक जानकारी शामिल करें...',
     'create.addPhotos': 'फोटो जोड़ें (वैकल्पिक)',
-    'create.photosHelp': 'प्रदाताओं को समस्या को बेहतर ढंग से समझने में मदद करता है',
+    'create.photosHelp':
+      'प्रदाताओं को समस्या को बेहतर ढंग से समझने में मदद करता है',
     'create.addSample': 'नमूना जोड़ें',
     'create.takePhoto': 'फोटो लें',
     'create.location': 'स्थान',
@@ -2325,33 +2553,42 @@ const translations: Record<string, Record<string, string>> = {
     'create.urgencyLevel': 'तात्कालिकता स्तर',
     'create.estimatedCost': 'अनुमानित लागत (वैकल्पिक)',
     'create.costPlaceholder': 'USD में अनुमानित लागत दर्ज करें',
-    'create.costHelp': 'यह प्रदाताओं को कार्य के दायरे को समझने और सटीक कोटेशन प्रदान करने में मदद करता है',
+    'create.costHelp':
+      'यह प्रदाताओं को कार्य के दायरे को समझने और सटीक कोटेशन प्रदान करने में मदद करता है',
     'create.postRequest': 'अनुरोध पोस्ट करें',
     'create.locationNotAvailable': 'स्थान उपलब्ध नहीं',
-    'create.locationNotAvailableDesc': 'आपका डिवाइस या ब्राउज़र स्थान सेवाओं का समर्थन नहीं करता। आप अभी भी अपना स्थान मैन्युअल रूप से दर्ज कर सकते हैं।',
+    'create.locationNotAvailableDesc':
+      'आपका डिवाइस या ब्राउज़र स्थान सेवाओं का समर्थन नहीं करता। आप अभी भी अपना स्थान मैन्युअल रूप से दर्ज कर सकते हैं।',
     'create.locationFound': 'स्थान मिला! 📍',
     'create.locationSet': 'आपका वर्तमान स्थान सेट किया गया है:\n\n',
     'create.locationError': 'स्थान त्रुटि',
     'create.demoLocationSet': 'डेमो स्थान सेट किया गया',
     'create.demoLocationDesc': 'डेमो स्थान का उपयोग: ',
     'create.cameraNotAvailable': 'कैमरा उपलब्ध नहीं',
-    'create.cameraNotAvailableDesc': 'वेब पर कैमरा कार्यक्षमता उपलब्ध नहीं है। एक वास्तविक मोबाइल ऐप में, यह कैमरा खोलेगा।',
+    'create.cameraNotAvailableDesc':
+      'वेब पर कैमरा कार्यक्षमता उपलब्ध नहीं है। एक वास्तविक मोबाइल ऐप में, यह कैमरा खोलेगा।',
     'create.cameraPermissionRequired': 'कैमरा अनुमति आवश्यक',
-    'create.cameraPermissionDesc': 'कृपया समस्या की फोटो लेने के लिए कैमरा अनुमति प्रदान करें।',
+    'create.cameraPermissionDesc':
+      'कृपया समस्या की फोटो लेने के लिए कैमरा अनुमति प्रदान करें।',
     'create.photoUploaded': 'फोटो अपलोड हुई! 📸',
-    'create.photoUploadedDesc': 'आपकी फोटो सफलतापूर्वक अपलोड हुई है और इसे आपकी सेवा अनुरोध में शामिल किया जाएगा।',
+    'create.photoUploadedDesc':
+      'आपकी फोटो सफलतापूर्वक अपलोड हुई है और इसे आपकी सेवा अनुरोध में शामिल किया जाएगा।',
     'create.uploadWarning': 'अपलोड चेतावनी ⚠️',
-    'create.uploadWarningDesc': 'फोटो ली गई थी लेकिन क्लाउड में अपलोड विफल हुआ। फोटो अभी भी स्थानीय रूप से शामिल की जाएगी। कृपया अपना इंटरनेट कनेक्शन जांचें।',
+    'create.uploadWarningDesc':
+      'फोटो ली गई थी लेकिन क्लाउड में अपलोड विफल हुआ। फोटो अभी भी स्थानीय रूप से शामिल की जाएगी। कृपया अपना इंटरनेट कनेक्शन जांचें।',
     'create.error': 'त्रुटि',
     'create.failedTakePicture': 'फोटो लेने में विफल। कृपया पुनः प्रयास करें।',
     'create.fillRequiredFields': 'कृपया सभी आवश्यक फ़ील्ड भरें',
     'create.photosUploading': 'फोटो अपलोड हो रही हैं',
-    'create.photosUploadingDesc': 'अपना अनुरोध सबमिट करने से पहले फोटो अपलोड होने तक कृपया प्रतीक्षा करें।',
+    'create.photosUploadingDesc':
+      'अपना अनुरोध सबमिट करने से पहले फोटो अपलोड होने तक कृपया प्रतीक्षा करें।',
     'create.requestCreated': 'अनुरोध बनाया गया! 🚛💳',
-    'create.requestCreatedDesc': 'आपका सेवा अनुरोध पोस्ट किया गया है और जब कोई भी सेवा प्रदाता आपके अनुरोध को स्वीकार करता है तो 5 डॉलर का अनुरोध शुल्क लिया जाएगा। आपके क्षेत्र के सेवा प्रदाताओं को सूचित किया जाएगा और वे आपके अनुरोध को स्वीकार कर सकते हैं।',
+    'create.requestCreatedDesc':
+      'आपका सेवा अनुरोध पोस्ट किया गया है और जब कोई भी सेवा प्रदाता आपके अनुरोध को स्वीकार करता है तो 5 डॉलर का अनुरोध शुल्क लिया जाएगा। आपके क्षेत्र के सेवा प्रदाताओं को सूचित किया जाएगा और वे आपके अनुरोध को स्वीकार कर सकते हैं।',
     'create.viewRequest': 'अनुरोध देखें',
     'create.requestFailed': 'अनुरोध विफल',
-    'create.requestFailedDesc': 'अनुरोध बनाने में विफल। कृपया अपनी भुगतान विधि जांचें और पुनः प्रयास करें।',
+    'create.requestFailedDesc':
+      'अनुरोध बनाने में विफल। कृपया अपनी भुगतान विधि जांचें और पुनः प्रयास करें।',
     'create.urgencyLow': 'कम',
     'create.urgencyMedium': 'मध्यम',
     'create.urgencyHigh': 'उच्च',
@@ -2370,9 +2607,11 @@ const translations: Record<string, Record<string, string>> = {
     'create.serviceTireRepairDesc': 'टायर रिप्लेसमेंट और रोडसाइड टायर सेवाएं',
     'create.serviceTruckWashDesc': 'पेशेवर मोबाइल ट्रक क्लीनिंग',
     'create.serviceHoseRepairDesc': 'हाइड्रोलिक और एयर होज रिपेयर',
-    'create.photoTip': ' फोटो जोड़ी गईं। स्पष्ट फोटो प्रदाताओं को सटीक अनुमान देने में मदद करती हैं।',
+    'create.photoTip':
+      ' फोटो जोड़ी गईं। स्पष्ट फोटो प्रदाताओं को सटीक अनुमान देने में मदद करती हैं।',
     'create.uploadingPhoto': 'फोटो को क्लाउड स्टोरेज में अपलोड कर रहा है...',
-    'create.locationTip': '💡 टिप: सटीक स्थान सेवा प्रदाताओं को आपको जल्दी ढूंढने में मदद करता है। माइल मार्कर, एग्जिट नंबर या निकटवर्ती लैंडमार्क शामिल करें।',
+    'create.locationTip':
+      '💡 टिप: सटीक स्थान सेवा प्रदाताओं को आपको जल्दी ढूंढने में मदद करता है। माइल मार्कर, एग्जिट नंबर या निकटवर्ती लैंडमार्क शामिल करें।',
   },
   he: {
     // Navigation
@@ -2380,7 +2619,7 @@ const translations: Record<string, Record<string, string>> = {
     'nav.messages': 'הודעות',
     'nav.leads': 'לידים',
     'nav.profile': 'פרופיל',
-    
+
     // Common
     'common.loading': 'טוען...',
     'common.error': 'שגיאה',
@@ -2398,7 +2637,7 @@ const translations: Record<string, Record<string, string>> = {
     'common.confirm': 'אישור',
     'common.yes': 'כן',
     'common.no': 'לא',
-    
+
     // Home Screen
     'home.welcome': 'ברוך שובך,',
     'home.newRequest': 'בקשה חדשה',
@@ -2416,7 +2655,7 @@ const translations: Record<string, Record<string, string>> = {
     'home.tapToView': 'הקש לצפייה בפרטים',
     'home.referFriend': 'הפנה חבר וקבל 10 דולר',
     'home.shareRigSnap': 'שתף את RigSnap וקבל תגמול כשהם מצטרפים',
-    
+
     // Profile Screen
     'profile.title': 'פרופיל',
     'profile.personalInformation': 'מידע אישי',
@@ -2444,19 +2683,21 @@ const translations: Record<string, Record<string, string>> = {
     'profile.editProfile': 'ערוך פרופיל',
     'profile.saveChanges': 'שמור שינויים',
     'profile.cancel': 'ביטול',
-    
+
     // Messages/Chat
     'chat.title': 'הודעות',
     'chat.messages': 'הודעות',
     'chat.noMessagesYet': 'אין הודעות עדיין',
-    'chat.messagesWillAppear': 'הודעות יופיעו כאן כאשר תתחיל לשוחח עם ספקי שירות',
-    'chat.messagesWillAppearProvider': 'הודעות יופיעו כאן כאשר תקבל בקשות שירות',
+    'chat.messagesWillAppear':
+      'הודעות יופיעו כאן כאשר תתחיל לשוחח עם ספקי שירות',
+    'chat.messagesWillAppearProvider':
+      'הודעות יופיעו כאן כאשר תקבל בקשות שירות',
     'chat.active': 'פעיל',
     'chat.completed': 'הושלם',
     'chat.typeMessage': 'הקלד הודעה...',
     'chat.trucker': 'נהג משאית',
     'chat.serviceProvider': 'ספק שירות',
-    
+
     // Leads
     'leads.title': 'מעקב לידים',
     'leads.leadTracking': 'מעקב לידים',
@@ -2468,9 +2709,11 @@ const translations: Record<string, Record<string, string>> = {
     'leads.pending': 'ממתין',
     'leads.transactionHistory': 'היסטוריית עסקאות',
     'leads.noLeadFeesYet': 'אין עמלות לידים עדיין',
-    'leads.leadFeesWillAppear': 'עמלות לידים יופיעו כאן כאשר ספקי שירות יקבלו את הבקשות שלך',
-    'leads.leadFeesWillAppearProvider': 'עמלות לידים יופיעו כאן כאשר תקבל בקשות שירות',
-    
+    'leads.leadFeesWillAppear':
+      'עמלות לידים יופיעו כאן כאשר ספקי שירות יקבלו את הבקשות שלך',
+    'leads.leadFeesWillAppearProvider':
+      'עמלות לידים יופיעו כאן כאשר תקבל בקשות שירות',
+
     // Account Settings
     'settings.title': 'הגדרות חשבון',
     'settings.security': 'אבטחה',
@@ -2493,7 +2736,7 @@ const translations: Record<string, Record<string, string>> = {
     'settings.privacyPolicy': 'מדיניות פרטיות',
     'settings.dangerZone': 'אזור סכנה',
     'settings.deleteAccount': 'מחק חשבון',
-    
+
     // Service Types
     'service.towing': 'שירות גרירה',
     'service.repair': 'שירות כביש',
@@ -2501,13 +2744,14 @@ const translations: Record<string, Record<string, string>> = {
     'service.tireRepair': 'תיקון צמיגים נייד',
     'service.truckWash': 'שטיפת משאיות ניידת',
     'service.hoseRepair': 'תיקון צינורות',
-    
+
     // Create Request Screen
     'create.title': 'בקש שירות',
     'create.subtitle': 'קבל עזרה מספקי שירותים מהימנים',
     'create.serviceType': 'סוג שירות',
     'create.descriptionPhotos': 'תיאור ותמונות',
-    'create.descriptionPlaceholder': 'תאר את הבעיה בפירוט. כלול סוג משאית, תסמינים וכל מידע רלוונטי אחר...',
+    'create.descriptionPlaceholder':
+      'תאר את הבעיה בפירוט. כלול סוג משאית, תסמינים וכל מידע רלוונטי אחר...',
     'create.addPhotos': 'הוסף תמונות (אופציונלי)',
     'create.photosHelp': 'עוזר לספקים להבין את הבעיה טוב יותר',
     'create.addSample': 'הוסף דגימה',
@@ -2519,33 +2763,42 @@ const translations: Record<string, Record<string, string>> = {
     'create.urgencyLevel': 'רמת דחיפות',
     'create.estimatedCost': 'עלות משוערת (אופציונלי)',
     'create.costPlaceholder': 'הזן עלות משוערת ב-USD',
-    'create.costHelp': 'זה עוזר לספקים להבין את היקף העבודה ולספק הצעות מחיר מדויקות',
+    'create.costHelp':
+      'זה עוזר לספקים להבין את היקף העבודה ולספק הצעות מחיר מדויקות',
     'create.postRequest': 'פרסם בקשה',
     'create.locationNotAvailable': 'מיקום לא זמין',
-    'create.locationNotAvailableDesc': 'המכשיר או הדפדפן שלך לא תומך בשירותי מיקום. עדיין תוכל להזין את המיקום שלך ידנית.',
+    'create.locationNotAvailableDesc':
+      'המכשיר או הדפדפן שלך לא תומך בשירותי מיקום. עדיין תוכל להזין את המיקום שלך ידנית.',
     'create.locationFound': 'מיקום נמצא! 📍',
     'create.locationSet': 'המיקום הנוכחי שלך הוגדר ל:\n\n',
     'create.locationError': 'שגיאת מיקום',
     'create.demoLocationSet': 'מיקום הדגמה הוגדר',
     'create.demoLocationDesc': 'משתמש במיקום הדגמה: ',
     'create.cameraNotAvailable': 'מצלמה לא זמינה',
-    'create.cameraNotAvailableDesc': 'פונקציונליות המצלמה לא זמינה באינטרנט. באפליקציה ניידת אמיתית, זה יפתח את המצלמה.',
+    'create.cameraNotAvailableDesc':
+      'פונקציונליות המצלמה לא זמינה באינטרנט. באפליקציה ניידת אמיתית, זה יפתח את המצלמה.',
     'create.cameraPermissionRequired': 'נדרשת הרשאת מצלמה',
-    'create.cameraPermissionDesc': 'אנא הענק הרשאת מצלמה לצילום תמונות של הבעיה.',
+    'create.cameraPermissionDesc':
+      'אנא הענק הרשאת מצלמה לצילום תמונות של הבעיה.',
     'create.photoUploaded': 'תמונה הועלתה! 📸',
-    'create.photoUploadedDesc': 'התמונה שלך הועלתה בהצלחה ותיכלל בבקשת השירות שלך.',
+    'create.photoUploadedDesc':
+      'התמונה שלך הועלתה בהצלחה ותיכלל בבקשת השירות שלך.',
     'create.uploadWarning': 'אזהרת העלאה ⚠️',
-    'create.uploadWarningDesc': 'התמונה צולמה אך ההעלאה לענן נכשלה. התמונה עדיין תיכלל מקומית. אנא בדוק את חיבור האינטרנט שלך.',
+    'create.uploadWarningDesc':
+      'התמונה צולמה אך ההעלאה לענן נכשלה. התמונה עדיין תיכלל מקומית. אנא בדוק את חיבור האינטרנט שלך.',
     'create.error': 'שגיאה',
     'create.failedTakePicture': 'נכשל בצילום התמונה. אנא נסה שוב.',
     'create.fillRequiredFields': 'אנא מלא את כל השדות הנדרשים',
     'create.photosUploading': 'תמונות מועלות',
-    'create.photosUploadingDesc': 'אנא המתן עד שהתמונות יסיימו להעלות לפני שליחת הבקשה שלך.',
+    'create.photosUploadingDesc':
+      'אנא המתן עד שהתמונות יסיימו להעלות לפני שליחת הבקשה שלך.',
     'create.requestCreated': 'בקשה נוצרה! 🚛💳',
-    'create.requestCreatedDesc': 'בקשת השירות שלך פורסמה ודמי הבקשה של 5 דולר יחויבו כאשר כל ספק שירות יקבל את הבקשה שלך. ספקי שירות באזור שלך יקבלו התראה ויוכלו לקבל את הבקשה שלך.',
+    'create.requestCreatedDesc':
+      'בקשת השירות שלך פורסמה ודמי הבקשה של 5 דולר יחויבו כאשר כל ספק שירות יקבל את הבקשה שלך. ספקי שירות באזור שלך יקבלו התראה ויוכלו לקבל את הבקשה שלך.',
     'create.viewRequest': 'הצג בקשה',
     'create.requestFailed': 'בקשה נכשלה',
-    'create.requestFailedDesc': 'נכשל ביצירת הבקשה. אנא בדוק את אמצעי התשלום שלך ונסה שוב.',
+    'create.requestFailedDesc':
+      'נכשל ביצירת הבקשה. אנא בדוק את אמצעי התשלום שלך ונסה שוב.',
     'create.urgencyLow': 'נמוך',
     'create.urgencyMedium': 'בינוני',
     'create.urgencyHigh': 'גבוה',
@@ -2564,9 +2817,11 @@ const translations: Record<string, Record<string, string>> = {
     'create.serviceTireRepairDesc': 'החלפת צמיגים ושירותי צמיגים בצד הדרך',
     'create.serviceTruckWashDesc': 'ניקוי משאיות נייד מקצועי',
     'create.serviceHoseRepairDesc': 'תיקון צינורות הידראוליים ואוויר',
-    'create.photoTip': ' תמונות נוספו. תמונות ברורות עוזרות לספקים לתת הערכות מדויקות.',
+    'create.photoTip':
+      ' תמונות נוספו. תמונות ברורות עוזרות לספקים לתת הערכות מדויקות.',
     'create.uploadingPhoto': 'מעלה תמונה לאחסון ענן...',
-    'create.locationTip': '💡 טיפ: מיקום מדויק עוזר לספקי שירות למצוא אותך במהירות. כלול סמני מייל, מספרי יציאה או נקודות ציון קרובות.',
+    'create.locationTip':
+      '💡 טיפ: מיקום מדויק עוזר לספקי שירות למצוא אותך במהירות. כלול סמני מייל, מספרי יציאה או נקודות ציון קרובות.',
   },
   sv: {
     // Navigation
@@ -2574,7 +2829,7 @@ const translations: Record<string, Record<string, string>> = {
     'nav.messages': 'Meddelanden',
     'nav.leads': 'Leads',
     'nav.profile': 'Profil',
-    
+
     // Common
     'common.loading': 'Laddar...',
     'common.error': 'Fel',
@@ -2592,7 +2847,7 @@ const translations: Record<string, Record<string, string>> = {
     'common.confirm': 'Bekräfta',
     'common.yes': 'Ja',
     'common.no': 'Nej',
-    
+
     // Home Screen
     'home.welcome': 'Välkommen tillbaka,',
     'home.newRequest': 'Ny förfrågan',
@@ -2605,12 +2860,13 @@ const translations: Record<string, Record<string, string>> = {
     'home.noRequestsYet': 'Inga förfrågningar än',
     'home.noJobsYet': 'Inga jobb än',
     'home.createFirstRequest': 'Skapa din första förfrågan för att komma igång',
-    'home.browseAvailableRequests': 'Bläddra bland tillgängliga förfrågningar för att komma igång',
+    'home.browseAvailableRequests':
+      'Bläddra bland tillgängliga förfrågningar för att komma igång',
     'home.createRequest': 'Skapa förfrågan',
     'home.tapToView': 'Tryck för att visa detaljer',
     'home.referFriend': 'Rekommendera en vän och tjäna 10 dollar',
     'home.shareRigSnap': 'Dela RigSnap och få belöning när de går med',
-    
+
     // Profile Screen
     'profile.title': 'Profil',
     'profile.personalInformation': 'Personlig information',
@@ -2638,19 +2894,21 @@ const translations: Record<string, Record<string, string>> = {
     'profile.editProfile': 'Redigera profil',
     'profile.saveChanges': 'Spara ändringar',
     'profile.cancel': 'Avbryt',
-    
+
     // Messages/Chat
     'chat.title': 'Meddelanden',
     'chat.messages': 'Meddelanden',
     'chat.noMessagesYet': 'Inga meddelanden än',
-    'chat.messagesWillAppear': 'Meddelanden kommer att visas här när du börjar chatta med tjänsteleverantörer',
-    'chat.messagesWillAppearProvider': 'Meddelanden kommer att visas här när du accepterar tjänstförfrågningar',
+    'chat.messagesWillAppear':
+      'Meddelanden kommer att visas här när du börjar chatta med tjänsteleverantörer',
+    'chat.messagesWillAppearProvider':
+      'Meddelanden kommer att visas här när du accepterar tjänstförfrågningar',
     'chat.active': 'Aktiv',
     'chat.completed': 'Slutförd',
     'chat.typeMessage': 'Skriv ett meddelande...',
     'chat.trucker': 'Lastbilschaufför',
     'chat.serviceProvider': 'Tjänsteleverantör',
-    
+
     // Leads
     'leads.title': 'Lead-spårning',
     'leads.leadTracking': 'Lead-spårning',
@@ -2662,9 +2920,11 @@ const translations: Record<string, Record<string, string>> = {
     'leads.pending': 'Väntande',
     'leads.transactionHistory': 'Transaktionshistorik',
     'leads.noLeadFeesYet': 'Inga lead-avgifter än',
-    'leads.leadFeesWillAppear': 'Lead-avgifter kommer att visas här när tjänsteleverantörer accepterar dina förfrågningar',
-    'leads.leadFeesWillAppearProvider': 'Lead-avgifter kommer att visas här när du accepterar tjänstförfrågningar',
-    
+    'leads.leadFeesWillAppear':
+      'Lead-avgifter kommer att visas här när tjänsteleverantörer accepterar dina förfrågningar',
+    'leads.leadFeesWillAppearProvider':
+      'Lead-avgifter kommer att visas här när du accepterar tjänstförfrågningar',
+
     // Account Settings
     'settings.title': 'Kontoinställningar',
     'settings.security': 'Säkerhet',
@@ -2687,7 +2947,7 @@ const translations: Record<string, Record<string, string>> = {
     'settings.privacyPolicy': 'Sekretesspolicy',
     'settings.dangerZone': 'Farozon',
     'settings.deleteAccount': 'Ta bort konto',
-    
+
     // Service Types
     'service.towing': 'Bogseringstjänst',
     'service.repair': 'Vägtjänst',
@@ -2695,13 +2955,14 @@ const translations: Record<string, Record<string, string>> = {
     'service.tireRepair': 'Mobil däckreparation',
     'service.truckWash': 'Mobil lastbilstvätt',
     'service.hoseRepair': 'Slangreparation',
-    
+
     // Create Request Screen
     'create.title': 'Begär tjänst',
     'create.subtitle': 'Få hjälp från pålitliga tjänsteleverantörer',
     'create.serviceType': 'Tjänsttyp',
     'create.descriptionPhotos': 'Beskrivning och foton',
-    'create.descriptionPlaceholder': 'Beskriv problemet i detalj. Inkludera lastbilstyp, symtom och annan relevant information...',
+    'create.descriptionPlaceholder':
+      'Beskriv problemet i detalj. Inkludera lastbilstyp, symtom och annan relevant information...',
     'create.addPhotos': 'Lägg till foton (valfritt)',
     'create.photosHelp': 'Hjälper leverantörer att förstå problemet bättre',
     'create.addSample': 'Lägg till prov',
@@ -2713,33 +2974,42 @@ const translations: Record<string, Record<string, string>> = {
     'create.urgencyLevel': 'Brådskanivå',
     'create.estimatedCost': 'Uppskattad kostnad (valfritt)',
     'create.costPlaceholder': 'Ange uppskattad kostnad i USD',
-    'create.costHelp': 'Detta hjälper leverantörer att förstå arbetsomfånget och ge exakta offerter',
+    'create.costHelp':
+      'Detta hjälper leverantörer att förstå arbetsomfånget och ge exakta offerter',
     'create.postRequest': 'Publicera förfrågan',
     'create.locationNotAvailable': 'Plats inte tillgänglig',
-    'create.locationNotAvailableDesc': 'Din enhet eller webbläsare stöder inte platstjänster. Du kan fortfarande ange din plats manuellt.',
+    'create.locationNotAvailableDesc':
+      'Din enhet eller webbläsare stöder inte platstjänster. Du kan fortfarande ange din plats manuellt.',
     'create.locationFound': 'Plats hittad! 📍',
     'create.locationSet': 'Din nuvarande plats har ställts in till:\n\n',
     'create.locationError': 'Platsfel',
     'create.demoLocationSet': 'Demoplats inställd',
     'create.demoLocationDesc': 'Använder demoplats: ',
     'create.cameraNotAvailable': 'Kamera inte tillgänglig',
-    'create.cameraNotAvailableDesc': 'Kamerafunktionalitet är inte tillgänglig på webben. I en riktig mobilapp skulle detta öppna kameran.',
+    'create.cameraNotAvailableDesc':
+      'Kamerafunktionalitet är inte tillgänglig på webben. I en riktig mobilapp skulle detta öppna kameran.',
     'create.cameraPermissionRequired': 'Kamerabehörighet krävs',
-    'create.cameraPermissionDesc': 'Vänligen ge kamerabehörighet för att ta foton av problemet.',
+    'create.cameraPermissionDesc':
+      'Vänligen ge kamerabehörighet för att ta foton av problemet.',
     'create.photoUploaded': 'Foto uppladdat! 📸',
-    'create.photoUploadedDesc': 'Ditt foto har laddats upp framgångsrikt och kommer att inkluderas i din tjänstförfrågan.',
+    'create.photoUploadedDesc':
+      'Ditt foto har laddats upp framgångsrikt och kommer att inkluderas i din tjänstförfrågan.',
     'create.uploadWarning': 'Uppladdningsvarning ⚠️',
-    'create.uploadWarningDesc': 'Foto togs men uppladdning till molnet misslyckades. Fotot kommer fortfarande att inkluderas lokalt. Vänligen kontrollera din internetanslutning.',
+    'create.uploadWarningDesc':
+      'Foto togs men uppladdning till molnet misslyckades. Fotot kommer fortfarande att inkluderas lokalt. Vänligen kontrollera din internetanslutning.',
     'create.error': 'Fel',
     'create.failedTakePicture': 'Misslyckades med att ta foto. Försök igen.',
     'create.fillRequiredFields': 'Vänligen fyll i alla obligatoriska fält',
     'create.photosUploading': 'Foton laddas upp',
-    'create.photosUploadingDesc': 'Vänligen vänta tills foton har laddats upp innan du skickar din förfrågan.',
+    'create.photosUploadingDesc':
+      'Vänligen vänta tills foton har laddats upp innan du skickar din förfrågan.',
     'create.requestCreated': 'Förfrågan skapad! 🚛💳',
-    'create.requestCreatedDesc': 'Din tjänstförfrågan har publicerats och 5 $ förfrågningsavgift kommer att debiteras när någon tjänsteleverantör accepterar din förfrågan. Tjänsteleverantörer i ditt område kommer att meddelas och kan acceptera din förfrågan.',
+    'create.requestCreatedDesc':
+      'Din tjänstförfrågan har publicerats och 5 $ förfrågningsavgift kommer att debiteras när någon tjänsteleverantör accepterar din förfrågan. Tjänsteleverantörer i ditt område kommer att meddelas och kan acceptera din förfrågan.',
     'create.viewRequest': 'Visa förfrågan',
     'create.requestFailed': 'Förfrågan misslyckades',
-    'create.requestFailedDesc': 'Misslyckades med att skapa förfrågan. Vänligen kontrollera din betalningsmetod och försök igen.',
+    'create.requestFailedDesc':
+      'Misslyckades med att skapa förfrågan. Vänligen kontrollera din betalningsmetod och försök igen.',
     'create.urgencyLow': 'Låg',
     'create.urgencyMedium': 'Medel',
     'create.urgencyHigh': 'Hög',
@@ -2758,9 +3028,11 @@ const translations: Record<string, Record<string, string>> = {
     'create.serviceTireRepairDesc': 'Däckbyte och vägdäcktjänster',
     'create.serviceTruckWashDesc': 'Professionell mobil lastbilstvätt',
     'create.serviceHoseRepairDesc': 'Hydrauliska och luftslangreparationer',
-    'create.photoTip': ' foton tillagda. Klara foton hjälper leverantörer att ge exakta uppskattningar.',
+    'create.photoTip':
+      ' foton tillagda. Klara foton hjälper leverantörer att ge exakta uppskattningar.',
     'create.uploadingPhoto': 'Laddar upp foto till molnlagring...',
-    'create.locationTip': '💡 Tips: Exakt plats hjälper tjänsteleverantörer att hitta dig snabbt. Inkludera milmarkörer, avfartsnummer eller närliggande landmärken.',
+    'create.locationTip':
+      '💡 Tips: Exakt plats hjälper tjänsteleverantörer att hitta dig snabbt. Inkludera milmarkörer, avfartsnummer eller närliggande landmärken.',
   },
   pl: {
     // Navigation
@@ -2768,7 +3040,7 @@ const translations: Record<string, Record<string, string>> = {
     'nav.messages': 'Wiadomości',
     'nav.leads': 'Leady',
     'nav.profile': 'Profil',
-    
+
     // Common
     'common.loading': 'Ładowanie...',
     'common.error': 'Błąd',
@@ -2786,7 +3058,7 @@ const translations: Record<string, Record<string, string>> = {
     'common.confirm': 'Potwierdź',
     'common.yes': 'Tak',
     'common.no': 'Nie',
-    
+
     // Home Screen
     'home.welcome': 'Witaj ponownie,',
     'home.newRequest': 'Nowe żądanie',
@@ -2803,8 +3075,9 @@ const translations: Record<string, Record<string, string>> = {
     'home.createRequest': 'Utwórz żądanie',
     'home.tapToView': 'Dotknij, aby zobaczyć szczegóły',
     'home.referFriend': 'Poleć przyjaciela i zarabiaj 10 dolarów',
-    'home.shareRigSnap': 'Udostępnij RigSnap i otrzymaj nagrodę, gdy się przyłączą',
-    
+    'home.shareRigSnap':
+      'Udostępnij RigSnap i otrzymaj nagrodę, gdy się przyłączą',
+
     // Profile Screen
     'profile.title': 'Profil',
     'profile.personalInformation': 'Informacje osobiste',
@@ -2832,19 +3105,21 @@ const translations: Record<string, Record<string, string>> = {
     'profile.editProfile': 'Edytuj profil',
     'profile.saveChanges': 'Zapisz zmiany',
     'profile.cancel': 'Anuluj',
-    
+
     // Messages/Chat
     'chat.title': 'Wiadomości',
     'chat.messages': 'Wiadomości',
     'chat.noMessagesYet': 'Brak wiadomości jeszcze',
-    'chat.messagesWillAppear': 'Wiadomości pojawią się tutaj, gdy zaczniesz czatować z dostawcami usług',
-    'chat.messagesWillAppearProvider': 'Wiadomości pojawią się tutaj, gdy zaakceptujesz żądania usług',
+    'chat.messagesWillAppear':
+      'Wiadomości pojawią się tutaj, gdy zaczniesz czatować z dostawcami usług',
+    'chat.messagesWillAppearProvider':
+      'Wiadomości pojawią się tutaj, gdy zaakceptujesz żądania usług',
     'chat.active': 'Aktywny',
     'chat.completed': 'Ukończony',
     'chat.typeMessage': 'Wpisz wiadomość...',
     'chat.trucker': 'Kierowca ciężarówki',
     'chat.serviceProvider': 'Dostawca usług',
-    
+
     // Leads
     'leads.title': 'Śledzenie leadów',
     'leads.leadTracking': 'Śledzenie leadów',
@@ -2856,9 +3131,11 @@ const translations: Record<string, Record<string, string>> = {
     'leads.pending': 'Oczekujące',
     'leads.transactionHistory': 'Historia transakcji',
     'leads.noLeadFeesYet': 'Brak opłat za leady jeszcze',
-    'leads.leadFeesWillAppear': 'Opłaty za leady pojawią się tutaj, gdy dostawcy usług zaakceptują Twoje żądania',
-    'leads.leadFeesWillAppearProvider': 'Opłaty za leady pojawią się tutaj, gdy zaakceptujesz żądania usług',
-    
+    'leads.leadFeesWillAppear':
+      'Opłaty za leady pojawią się tutaj, gdy dostawcy usług zaakceptują Twoje żądania',
+    'leads.leadFeesWillAppearProvider':
+      'Opłaty za leady pojawią się tutaj, gdy zaakceptujesz żądania usług',
+
     // Account Settings
     'settings.title': 'Ustawienia konta',
     'settings.security': 'Bezpieczeństwo',
@@ -2881,7 +3158,7 @@ const translations: Record<string, Record<string, string>> = {
     'settings.privacyPolicy': 'Polityka prywatności',
     'settings.dangerZone': 'Strefa zagrożenia',
     'settings.deleteAccount': 'Usuń konto',
-    
+
     // Service Types
     'service.towing': 'Usługa holowania',
     'service.repair': 'Usługa drogowa',
@@ -2889,13 +3166,14 @@ const translations: Record<string, Record<string, string>> = {
     'service.tireRepair': 'Mobilna naprawa opon',
     'service.truckWash': 'Mobilne mycie ciężarówek',
     'service.hoseRepair': 'Naprawa węży',
-    
+
     // Create Request Screen
     'create.title': 'Poproś o usługę',
     'create.subtitle': 'Uzyskaj pomoc od zaufanych dostawców usług',
     'create.serviceType': 'Typ usługi',
     'create.descriptionPhotos': 'Opis i zdjęcia',
-    'create.descriptionPlaceholder': 'Opisz problem szczegółowo. Dołącz typ ciężarówki, objawy i inne istotne informacje...',
+    'create.descriptionPlaceholder':
+      'Opisz problem szczegółowo. Dołącz typ ciężarówki, objawy i inne istotne informacje...',
     'create.addPhotos': 'Dodaj zdjęcia (opcjonalnie)',
     'create.photosHelp': 'Pomaga dostawcom lepiej zrozumieć problem',
     'create.addSample': 'Dodaj próbkę',
@@ -2907,39 +3185,50 @@ const translations: Record<string, Record<string, string>> = {
     'create.urgencyLevel': 'Poziom pilności',
     'create.estimatedCost': 'Szacowany koszt (opcjonalnie)',
     'create.costPlaceholder': 'Wprowadź szacowany koszt w USD',
-    'create.costHelp': 'Pomaga to dostawcom zrozumieć zakres pracy i podać dokładne oferty',
+    'create.costHelp':
+      'Pomaga to dostawcom zrozumieć zakres pracy i podać dokładne oferty',
     'create.postRequest': 'Opublikuj prośbę',
     'create.locationNotAvailable': 'Lokalizacja niedostępna',
-    'create.locationNotAvailableDesc': 'Twoje urządzenie lub przeglądarka nie obsługuje usług lokalizacyjnych. Nadal możesz wprowadzić swoją lokalizację ręcznie.',
+    'create.locationNotAvailableDesc':
+      'Twoje urządzenie lub przeglądarka nie obsługuje usług lokalizacyjnych. Nadal możesz wprowadzić swoją lokalizację ręcznie.',
     'create.locationFound': 'Lokalizacja znaleziona! 📍',
     'create.locationSet': 'Twoja obecna lokalizacja została ustawiona na:\n\n',
     'create.locationError': 'Błąd lokalizacji',
     'create.demoLocationSet': 'Lokalizacja demonstracyjna ustawiona',
     'create.demoLocationDesc': 'Używanie lokalizacji demonstracyjnej: ',
     'create.cameraNotAvailable': 'Kamera niedostępna',
-    'create.cameraNotAvailableDesc': 'Funkcjonalność kamery nie jest dostępna w sieci. W prawdziwej aplikacji mobilnej otworzyłoby to kamerę.',
+    'create.cameraNotAvailableDesc':
+      'Funkcjonalność kamery nie jest dostępna w sieci. W prawdziwej aplikacji mobilnej otworzyłoby to kamerę.',
     'create.cameraPermissionRequired': 'Wymagane uprawnienie kamery',
-    'create.cameraPermissionDesc': 'Proszę przyznać uprawnienie kamery, aby robić zdjęcia problemu.',
+    'create.cameraPermissionDesc':
+      'Proszę przyznać uprawnienie kamery, aby robić zdjęcia problemu.',
     'create.photoUploaded': 'Zdjęcie przesłane! 📸',
-    'create.photoUploadedDesc': 'Twoje zdjęcie zostało pomyślnie przesłane i zostanie włączone do Twojej prośby o usługę.',
+    'create.photoUploadedDesc':
+      'Twoje zdjęcie zostało pomyślnie przesłane i zostanie włączone do Twojej prośby o usługę.',
     'create.uploadWarning': 'Ostrzeżenie o przesłaniu ⚠️',
-    'create.uploadWarningDesc': 'Zdjęcie zostało zrobione, ale przesłanie do chmury nie powiodło się. Zdjęcie zostanie nadal włączone lokalnie. Proszę sprawdzić swoje połączenie internetowe.',
+    'create.uploadWarningDesc':
+      'Zdjęcie zostało zrobione, ale przesłanie do chmury nie powiodło się. Zdjęcie zostanie nadal włączone lokalnie. Proszę sprawdzić swoje połączenie internetowe.',
     'create.error': 'Błąd',
-    'create.failedTakePicture': 'Nie udało się zrobić zdjęcia. Spróbuj ponownie.',
+    'create.failedTakePicture':
+      'Nie udało się zrobić zdjęcia. Spróbuj ponownie.',
     'create.fillRequiredFields': 'Proszę wypełnić wszystkie wymagane pola',
     'create.photosUploading': 'Przesyłanie zdjęć',
-    'create.photosUploadingDesc': 'Proszę czekać, aż zdjęcia zakończą przesyłanie przed wysłaniem swojej prośby.',
+    'create.photosUploadingDesc':
+      'Proszę czekać, aż zdjęcia zakończą przesyłanie przed wysłaniem swojej prośby.',
     'create.requestCreated': 'Prośba utworzona! 🚛💳',
-    'create.requestCreatedDesc': 'Twoja prośba o usługę została opublikowana, a opłata za prośbę w wysokości 5 $ zostanie pobrana, gdy dowolny dostawca usług zaakceptuje Twoją prośbę. Dostawcy usług w Twojej okolicy zostaną powiadomieni i mogą zaakceptować Twoją prośbę.',
+    'create.requestCreatedDesc':
+      'Twoja prośba o usługę została opublikowana, a opłata za prośbę w wysokości 5 $ zostanie pobrana, gdy dowolny dostawca usług zaakceptuje Twoją prośbę. Dostawcy usług w Twojej okolicy zostaną powiadomieni i mogą zaakceptować Twoją prośbę.',
     'create.viewRequest': 'Zobacz prośbę',
     'create.requestFailed': 'Prośba nie powiodła się',
-    'create.requestFailedDesc': 'Nie udało się utworzyć prośby. Proszę sprawdzić swoją metodę płatności i spróbować ponownie.',
+    'create.requestFailedDesc':
+      'Nie udało się utworzyć prośby. Proszę sprawdzić swoją metodę płatności i spróbować ponownie.',
     'create.urgencyLow': 'Niski',
     'create.urgencyMedium': 'Średni',
     'create.urgencyHigh': 'Wysoki',
     'create.urgencyLowDesc': 'Może poczekać kilka godzin',
     'create.urgencyMediumDesc': 'Potrzebuję pomocy w ciągu 1-2 godzin',
-    'create.urgencyHighDesc': 'Nagły wypadek - potrzebuję natychmiastowej pomocy',
+    'create.urgencyHighDesc':
+      'Nagły wypadek - potrzebuję natychmiastowej pomocy',
     'create.serviceTowing': 'Usługa holowania',
     'create.serviceRepair': 'Usługa drogowa',
     'create.serviceMechanic': 'Usługa mechanika',
@@ -2951,12 +3240,14 @@ const translations: Record<string, Record<string, string>> = {
     'create.serviceMechanicDesc': 'Profesjonalna diagnoza i naprawa',
     'create.serviceTireRepairDesc': 'Wymiana opon i usługi opon na drodze',
     'create.serviceTruckWashDesc': 'Profesjonalne mobilne mycie ciężarówek',
-    'create.serviceHoseRepairDesc': 'Naprawa węży hydraulicznych i powietrznych',
-    'create.photoTip': ' zdjęcia dodane. Jasne zdjęcia pomagają dostawcom podać dokładne szacunki.',
+    'create.serviceHoseRepairDesc':
+      'Naprawa węży hydraulicznych i powietrznych',
+    'create.photoTip':
+      ' zdjęcia dodane. Jasne zdjęcia pomagają dostawcom podać dokładne szacunki.',
     'create.uploadingPhoto': 'Przesyłanie zdjęcia do pamięci w chmurze...',
-    'create.locationTip': '💡 Wskazówka: Dokładna lokalizacja pomaga dostawcom usług znaleźć Cię szybko. Dołącz znaczniki mil, numery wyjazdów lub pobliskie punkty orientacyjne.'
+    'create.locationTip':
+      '💡 Wskazówka: Dokładna lokalizacja pomaga dostawcom usług znaleźć Cię szybko. Dołącz znaczniki mil, numery wyjazdów lub pobliskie punkty orientacyjne.',
   },
-
 };
 
 interface LanguageContextType {
@@ -2988,7 +3279,7 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   const setLanguage = async (languageCode: string) => {
     try {
       setCurrentLanguage(languageCode);
-      
+
       // Save to local storage
       await AsyncStorage.setItem(LANGUAGE_STORAGE_KEY, languageCode);
 
@@ -3002,22 +3293,30 @@ export function LanguageProvider({ children }: { children: ReactNode }) {
   };
 
   const t = (key: string, fallback?: string): string => {
-    const translation = translations[currentLanguage]?.[key] || translations['en']?.[key] || fallback || key;
+    const translation =
+      translations[currentLanguage]?.[key] ||
+      translations['en']?.[key] ||
+      fallback ||
+      key;
     return translation;
   };
 
   const getCurrentLanguage = (): Language => {
-    return languages.find(lang => lang.code === currentLanguage) || languages[0];
+    return (
+      languages.find((lang) => lang.code === currentLanguage) || languages[0]
+    );
   };
 
   return (
-    <LanguageContext.Provider value={{
-      currentLanguage,
-      setLanguage,
-      t,
-      languages,
-      getCurrentLanguage
-    }}>
+    <LanguageContext.Provider
+      value={{
+        currentLanguage,
+        setLanguage,
+        t,
+        languages,
+        getCurrentLanguage,
+      }}
+    >
       {children}
     </LanguageContext.Provider>
   );

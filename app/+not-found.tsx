@@ -25,7 +25,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 20,
-    fontWeight: 600,
+    fontFamily: 'Poppins_500Medium',
   },
   link: {
     marginTop: 15,

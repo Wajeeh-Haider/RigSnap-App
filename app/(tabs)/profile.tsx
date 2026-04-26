@@ -41,6 +41,7 @@ import {
 } from 'lucide-react-native';
 import { useIsFocused } from '@react-navigation/native';
 import { locationService } from '@/utils/location';
+import { useToast } from '@/hooks/useToast';
 
 const serviceTypes = [
   {
@@ -91,6 +92,7 @@ export default function ProfileScreen() {
   const { user, logout, updateProfile } = useAuth();
   const { colors } = useTheme();
   const { t } = useLanguage();
+  const { showError, showSuccess } = useToast();
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const isFocused = useIsFocused();
@@ -111,7 +113,9 @@ export default function ProfileScreen() {
   useEffect(() => {
     const reverseGeocodeLocation = async () => {
       if (user?.location) {
-        const coordMatch = user.location.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+        const coordMatch = user.location.match(
+          /^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/,
+        );
         if (coordMatch) {
           try {
             const lat = parseFloat(coordMatch[1]);
@@ -139,12 +143,12 @@ export default function ProfileScreen() {
     setIsLoadingPaymentMethods(true);
     try {
       const methods = await paymentMethodService.fetchUserPaymentMethods(
-        user.id
+        user.id,
       );
       setPaymentMethods(methods);
     } catch (error) {
       console.error('Error fetching payment methods:', error);
-      Alert.alert('Error', 'Failed to load payment methods');
+      showError('Failed to load payment methods');
     } finally {
       setIsLoadingPaymentMethods(false);
     }
@@ -165,7 +169,7 @@ export default function ProfileScreen() {
 
     // Validate required fields
     if (!editedUser.firstName || !editedUser.location) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      showError('Please fill in all required fields');
       return;
     }
 
@@ -174,23 +178,34 @@ export default function ProfileScreen() {
       let locationToSave = editedUser.location;
 
       // Check if location is already in coordinates format (lat,lng)
-      const coordMatch = editedUser.location.match(/^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/);
+      const coordMatch = editedUser.location.match(
+        /^(-?\d+\.?\d*),\s*(-?\d+\.?\d*)$/,
+      );
       if (!coordMatch) {
         // Location is a text address, geocode it to coordinates
         try {
-          const geocodedResults = await locationService.geocode(editedUser.location);
+          const geocodedResults = await locationService.geocode(
+            editedUser.location,
+          );
           if (geocodedResults.length > 0) {
             const coords = geocodedResults[0].coords;
             locationToSave = `${coords.latitude},${coords.longitude}`;
-            console.log('Geocoded location:', editedUser.location, 'to coordinates:', locationToSave);
+            console.log(
+              'Geocoded location:',
+              editedUser.location,
+              'to coordinates:',
+              locationToSave,
+            );
           } else {
-            Alert.alert('Error', 'Could not find coordinates for the entered location. Please try a different address.');
+            showError(
+              'Could not find coordinates for the entered location. Please try a different address.',
+            );
             setIsLoading(false);
             return;
           }
         } catch (geocodeError) {
           console.error('Geocoding failed:', geocodeError);
-          Alert.alert('Error', 'Failed to process location. Please try again.');
+          showError('Failed to process location. Please try again.');
           setIsLoading(false);
           return;
         }
@@ -210,12 +225,12 @@ export default function ProfileScreen() {
 
       if (result.success) {
         setIsEditing(false);
-        Alert.alert('Success', 'Profile updated successfully!');
+        showSuccess('Profile updated successfully!');
       } else {
-        Alert.alert('Error', result.error || 'Failed to update profile');
+        showError(result.error || 'Failed to update profile');
       }
     } catch (error) {
-      Alert.alert('Error', 'An unexpected error occurred');
+      showError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -254,27 +269,24 @@ export default function ProfileScreen() {
             try {
               const result = await paymentMethodService.removePaymentMethod(
                 card.id,
-                card.stripe_payment_method_id
+                card.stripe_payment_method_id,
               );
 
               if (result.success) {
                 await fetchPaymentMethods(); // Refresh the list
-                Alert.alert('Success', 'Payment method deleted successfully!');
+                showSuccess('Payment method deleted successfully!');
               } else {
-                Alert.alert(
-                  'Error',
-                  result.error || 'Failed to delete payment method'
-                );
+                showError(result.error || 'Failed to delete payment method');
               }
             } catch (error) {
               console.error('Error deleting payment method:', error);
-              Alert.alert('Error', 'An unexpected error occurred');
+              showError('An unexpected error occurred');
             } finally {
               setIsLoading(false);
             }
           },
         },
-      ]
+      ],
     );
   };
 
@@ -285,16 +297,13 @@ export default function ProfileScreen() {
 
       if (result.success) {
         await fetchPaymentMethods(); // Refresh the list
-        Alert.alert('Success', 'Default payment method updated!');
+        showSuccess('Default payment method updated!');
       } else {
-        Alert.alert(
-          'Error',
-          result.error || 'Failed to update default payment method'
-        );
+        showError(result.error || 'Failed to update default payment method');
       }
     } catch (error) {
       console.error('Error setting default payment method:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showError('An unexpected error occurred');
     } finally {
       setIsLoading(false);
     }
@@ -328,11 +337,20 @@ export default function ProfileScreen() {
               ? prev.services.filter((s) => s !== serviceId)
               : [...(prev.services || []), serviceId],
           }
-        : null
+        : null,
     );
   };
 
   const isTrucker = user.role === 'trucker';
+  const dividerColor = user.role && colors.text
+    ? (colors.background === '#111827'
+      ? 'rgba(255, 255, 255, 0.08)'
+      : 'rgba(15, 23, 42, 0.08)')
+    : 'rgba(107, 114, 128, 0.2)';
+  const cardBorderColor =
+    colors.background === '#111827'
+      ? 'rgba(255, 255, 255, 0.12)'
+      : 'rgba(15, 23, 42, 0.1)';
 
   return (
     <ScrollView
@@ -438,8 +456,8 @@ export default function ProfileScreen() {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {t('profile.personalInformation')}
           </Text>
-          <View style={[styles.card, { backgroundColor: colors.surface }]}>
-            <View style={styles.infoRow}>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: cardBorderColor }]}>
+            <View style={[styles.infoRow, { borderBottomColor: dividerColor }]}>
               <User size={20} color={colors.textSecondary} />
               <View style={styles.infoContent}>
                 <Text
@@ -462,7 +480,7 @@ export default function ProfileScreen() {
                       value={editedUser?.firstName || ''}
                       onChangeText={(text) =>
                         setEditedUser((prev) =>
-                          prev ? { ...prev, firstName: text } : null
+                          prev ? { ...prev, firstName: text } : null,
                         )
                       }
                       placeholder="First name"
@@ -481,7 +499,7 @@ export default function ProfileScreen() {
                       value={editedUser?.lastName || ''}
                       onChangeText={(text) =>
                         setEditedUser((prev) =>
-                          prev ? { ...prev, lastName: text } : null
+                          prev ? { ...prev, lastName: text } : null,
                         )
                       }
                       placeholder="Last name"
@@ -496,7 +514,7 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            <View style={styles.infoRow}>
+            <View style={[styles.infoRow, { borderBottomColor: dividerColor }]}>
               <Mail size={20} color={colors.textSecondary} />
               <View style={styles.infoContent}>
                 <Text
@@ -510,7 +528,7 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            <View style={styles.infoRow}>
+            <View style={[styles.infoRow, { borderBottomColor: dividerColor }]}>
               <Phone size={20} color={colors.textSecondary} />
               <View style={styles.infoContent}>
                 <Text
@@ -531,7 +549,7 @@ export default function ProfileScreen() {
                     value={editedUser?.phone || ''}
                     onChangeText={(text) =>
                       setEditedUser((prev) =>
-                        prev ? { ...prev, phone: text } : null
+                        prev ? { ...prev, phone: text } : null,
                       )
                     }
                     placeholder="Phone number"
@@ -546,7 +564,7 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            <View style={styles.infoRow}>
+            <View style={[styles.infoRow, { borderBottomColor: dividerColor }]}>
               <MapPin size={20} color={colors.textSecondary} />
               <View style={styles.infoContent}>
                 <Text
@@ -567,7 +585,7 @@ export default function ProfileScreen() {
                     value={editedUser?.location || ''}
                     onChangeText={(text) =>
                       setEditedUser((prev) =>
-                        prev ? { ...prev, location: text } : null
+                        prev ? { ...prev, location: text } : null,
                       )
                     }
                     placeholder="Location"
@@ -581,7 +599,7 @@ export default function ProfileScreen() {
               </View>
             </View>
 
-            <View style={styles.infoRow}>
+            <View style={styles.infoRowLast}>
               <Calendar size={20} color={colors.textSecondary} />
               <View style={styles.infoContent}>
                 <Text
@@ -606,8 +624,8 @@ export default function ProfileScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {t('profile.truckerInformation')}
             </Text>
-            <View style={[styles.card, { backgroundColor: colors.surface }]}>
-              <View style={styles.infoRow}>
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: cardBorderColor }]}>
+              <View style={[styles.infoRow, { borderBottomColor: dividerColor }]}>
                 <Truck size={20} color="#2563eb" />
                 <View style={styles.infoContent}>
                   <Text
@@ -628,7 +646,7 @@ export default function ProfileScreen() {
                       value={editedUser?.truckType || ''}
                       onChangeText={(text) =>
                         setEditedUser((prev) =>
-                          prev ? { ...prev, truckType: text } : null
+                          prev ? { ...prev, truckType: text } : null,
                         )
                       }
                       placeholder="Truck type"
@@ -642,7 +660,7 @@ export default function ProfileScreen() {
                 </View>
               </View>
 
-              <View style={styles.infoRow}>
+              <View style={styles.infoRowLast}>
                 <User size={20} color="#2563eb" />
                 <View style={styles.infoContent}>
                   <Text
@@ -663,7 +681,7 @@ export default function ProfileScreen() {
                       value={editedUser?.licenseNumber || ''}
                       onChangeText={(text) =>
                         setEditedUser((prev) =>
-                          prev ? { ...prev, licenseNumber: text } : null
+                          prev ? { ...prev, licenseNumber: text } : null,
                         )
                       }
                       placeholder="License number"
@@ -684,8 +702,8 @@ export default function ProfileScreen() {
             <Text style={[styles.sectionTitle, { color: colors.text }]}>
               {t('profile.serviceProviderInformation')}
             </Text>
-            <View style={[styles.card, { backgroundColor: colors.surface }]}>
-              <View style={styles.infoRow}>
+            <View style={[styles.card, { backgroundColor: colors.surface, borderColor: cardBorderColor }]}>
+              <View style={[styles.infoRow, { borderBottomColor: dividerColor }]}>
                 <Shield size={20} color="#ea580c" />
                 <View style={styles.infoContent}>
                   <Text
@@ -760,7 +778,7 @@ export default function ProfileScreen() {
                         ? user.services
                             .map((s) => {
                               const service = serviceTypes.find(
-                                (st) => st.id === s
+                                (st) => st.id === s,
                               );
                               return service
                                 ? service.name
@@ -773,7 +791,16 @@ export default function ProfileScreen() {
                 </View>
               </View>
 
-              <View style={styles.infoRow}>
+              <View
+                style={[
+                  user.certifications && user.certifications.length > 0
+                    ? styles.infoRow
+                    : styles.infoRowLast,
+                  user.certifications && user.certifications.length > 0
+                    ? { borderBottomColor: dividerColor }
+                    : null,
+                ]}
+              >
                 <MapPin size={20} color="#ea580c" />
                 <View style={styles.infoContent}>
                   <Text
@@ -805,7 +832,7 @@ export default function ProfileScreen() {
                                   ? parseInt(text) || undefined
                                   : undefined,
                               }
-                            : null
+                            : null,
                         )
                       }
                       placeholder="e.g. 50"
@@ -823,7 +850,7 @@ export default function ProfileScreen() {
               </View>
 
               {user.certifications && user.certifications.length > 0 && (
-                <View style={styles.infoRow}>
+                <View style={styles.infoRowLast}>
                   <Star size={20} color="#ea580c" />
                   <View style={styles.infoContent}>
                     <Text
@@ -863,7 +890,7 @@ export default function ProfileScreen() {
               </Text>
             </TouchableOpacity>
           </View>
-          <View style={[styles.card, { backgroundColor: colors.surface }]}>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: cardBorderColor }]}>
             {paymentMethods.length === 0 ? (
               <View style={styles.emptyPayment}>
                 <CreditCard size={48} color={colors.textSecondary} />
@@ -891,12 +918,13 @@ export default function ProfileScreen() {
             ) : (
               paymentMethods.map((method) => {
                 const CardIcon = getCardIcon(method.card_brand);
+                const isLastCard = paymentMethods[paymentMethods.length - 1]?.id === method.id;
                 return (
                   <View
                     key={method.id}
                     style={[
-                      styles.paymentMethod,
-                      { borderBottomColor: colors.border },
+                      isLastCard ? styles.paymentMethodLast : styles.paymentMethod,
+                      { borderBottomColor: dividerColor },
                     ]}
                   >
                     <View style={styles.paymentMethodContent}>
@@ -915,8 +943,8 @@ export default function ProfileScreen() {
                             method.card_brand === 'visa'
                               ? '#1a1f71'
                               : method.card_brand === 'mastercard'
-                              ? '#eb001b'
-                              : '#6b7280'
+                                ? '#eb001b'
+                                : '#6b7280'
                           }
                         />
                       </View>
@@ -992,9 +1020,9 @@ export default function ProfileScreen() {
           <Text style={[styles.sectionTitle, { color: colors.text }]}>
             {t('profile.settings')}
           </Text>
-          <View style={[styles.card, { backgroundColor: colors.surface }]}>
+          <View style={[styles.card, { backgroundColor: colors.surface, borderColor: cardBorderColor }]}>
             <TouchableOpacity
-              style={[styles.settingRow, { borderBottomColor: colors.border }]}
+              style={[styles.settingRow, { borderBottomColor: dividerColor }]}
               onPress={() => router.push('/account-settings')}
             >
               <View style={styles.settingContent}>
@@ -1007,7 +1035,7 @@ export default function ProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.settingRow, { borderBottomColor: colors.border }]}
+              style={styles.settingRowLast}
               onPress={() => router.push('/account-settings')}
             >
               <View style={styles.settingContent}>
@@ -1040,9 +1068,8 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 10,
+    paddingVertical: 10,
     paddingHorizontal: 24,
-    paddingBottom: 24,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
@@ -1074,7 +1101,7 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 4,
   },
   roleContainer: {
@@ -1082,7 +1109,7 @@ const styles = StyleSheet.create({
   },
   userRole: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   ratingContainer: {
     flexDirection: 'row',
@@ -1091,7 +1118,7 @@ const styles = StyleSheet.create({
   },
   rating: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   ratingText: {
     fontSize: 14,
@@ -1135,7 +1162,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 12,
   },
   card: {
@@ -1153,7 +1180,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: 'rgba(107, 114, 128, 0.2)',
+  },
+  infoRowLast: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingVertical: 12,
   },
   infoContent: {
     flex: 1,
@@ -1162,16 +1193,18 @@ const styles = StyleSheet.create({
   infoLabel: {
     fontSize: 14,
     marginBottom: 4,
+    fontFamily: 'Poppins_500Medium',
   },
   infoValue: {
     fontSize: 16,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   input: {
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
   },
   nameInputs: {
     flexDirection: 'row',
@@ -1187,6 +1220,12 @@ const styles = StyleSheet.create({
     paddingVertical: 16,
     borderBottomWidth: 1,
   },
+  settingRowLast: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 16,
+  },
   settingContent: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1194,7 +1233,7 @@ const styles = StyleSheet.create({
   settingText: {
     fontSize: 16,
     marginLeft: 12,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   logoutButton: {
     borderRadius: 12,
@@ -1210,7 +1249,7 @@ const styles = StyleSheet.create({
   logoutText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   sectionHeader: {
     flexDirection: 'row',
@@ -1228,7 +1267,7 @@ const styles = StyleSheet.create({
   },
   addButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   emptyPayment: {
     alignItems: 'center',
@@ -1236,7 +1275,7 @@ const styles = StyleSheet.create({
   },
   emptyPaymentText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     marginTop: 16,
     marginBottom: 4,
   },
@@ -1250,6 +1289,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingVertical: 16,
     borderBottomWidth: 1,
+  },
+  paymentMethodLast: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 16,
   },
   paymentMethodContent: {
     flexDirection: 'row',
@@ -1270,7 +1315,7 @@ const styles = StyleSheet.create({
   },
   paymentMethodTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     marginBottom: 2,
   },
   paymentMethodExpiry: {
@@ -1279,7 +1324,7 @@ const styles = StyleSheet.create({
   },
   defaultBadge: {
     fontSize: 12,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   paymentMethodActions: {
     flexDirection: 'row',
@@ -1293,7 +1338,7 @@ const styles = StyleSheet.create({
   },
   setDefaultText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   deleteButton: {
     padding: 8,
@@ -1313,7 +1358,7 @@ const styles = StyleSheet.create({
   },
   modalTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   closeButton: {
     padding: 8,
@@ -1334,12 +1379,13 @@ const styles = StyleSheet.create({
   cardPreviewText: {
     fontSize: 18,
     color: 'white',
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     marginTop: 16,
     letterSpacing: 2,
   },
   cardPreviewExpiry: {
     fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 8,
   },
@@ -1348,7 +1394,7 @@ const styles = StyleSheet.create({
   },
   formLabel: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     marginTop: 8,
     marginBottom: 8,
   },
@@ -1357,6 +1403,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
   },
   formRow: {
     flexDirection: 'row',
@@ -1389,7 +1436,7 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   addCardButton: {
     flex: 1,
@@ -1405,7 +1452,7 @@ const styles = StyleSheet.create({
   },
   addCardButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     color: 'white',
   },
   loadingContainer: {
@@ -1420,7 +1467,7 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   cardInputContainer: {
     borderWidth: 1,
@@ -1434,7 +1481,7 @@ const styles = StyleSheet.create({
   },
   cardFormTitle: {
     fontSize: 24,
-    fontWeight: '700',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 8,
   },
   cardFormSubtitle: {
@@ -1464,7 +1511,7 @@ const styles = StyleSheet.create({
   },
   serviceOptionTitle: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     marginBottom: 2,
   },
   serviceOptionDescription: {

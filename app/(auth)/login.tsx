@@ -10,11 +10,12 @@ import {
   Platform,
   ScrollView,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { Link, router } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
-import { Truck } from 'lucide-react-native';
+import { useToast } from '@/hooks/useToast';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -22,10 +23,11 @@ export default function LoginScreen() {
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const { colors } = useTheme();
+  const { showError } = useToast();
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showError('Please fill in all fields');
       return;
     }
 
@@ -42,34 +44,21 @@ export default function LoginScreen() {
         }, 100);
       } else if (result.requiresVerification) {
         console.log('Login requires email verification, redirecting to OTP screen');
+        // Keep alert for required user confirmation/action.
         Alert.alert(
           'Email Verification Required',
-          'Please verify your email address to continue. A verification code will be sent to your email.',
-          [
-            {
-              text: 'Cancel',
-              style: 'cancel',
-            },
-            {
-              text: 'Verify Email',
-              onPress: () => {
-                router.push(
-                  `/(auth)/verify-otp?email=${encodeURIComponent(email)}&autoSend=true`
-                );
-              },
-            },
-          ]
+          'Please verify your email address to continue. Use Verify Email on the next screen.'
+        );
+        router.push(
+          `/(auth)/verify-otp?email=${encodeURIComponent(email)}&autoSend=true`
         );
       } else {
         console.log('Login failed:', result.error);
-        Alert.alert(
-          'Login Failed',
-          result.error || 'Invalid email or password'
-        );
+        showError(result.error || 'Invalid email or password');
       }
     } catch (error) {
       console.error('Login error:', error);
-      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+      showError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +72,11 @@ export default function LoginScreen() {
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
           <View style={styles.logoContainer}>
-            <Truck size={48} color="#2563eb" strokeWidth={2} />
+            <Image
+              source={require('../../assets/images/icon.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
             <Text style={[styles.title, { color: colors.text }]}>RigSnap</Text>
           </View>
           <Text style={[styles.subtitle, { color: colors.textSecondary }]}>
@@ -161,13 +154,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  logoImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 10,
+  },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginLeft: 12,
   },
   subtitle: {
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
     textAlign: 'center',
     maxWidth: 280,
   },
@@ -181,7 +180,7 @@ const styles = StyleSheet.create({
   },
   formTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     textAlign: 'center',
     marginBottom: 24,
   },
@@ -190,7 +189,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     marginBottom: 8,
   },
   input: {
@@ -198,6 +197,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
   },
   loginButton: {
     borderRadius: 12,
@@ -212,7 +212,7 @@ const styles = StyleSheet.create({
   loginButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   demoSection: {
     borderTopWidth: 1,
@@ -222,7 +222,7 @@ const styles = StyleSheet.create({
   },
   demoTitle: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     color: '#6b7280',
     textAlign: 'center',
     marginBottom: 16,
@@ -244,7 +244,7 @@ const styles = StyleSheet.create({
   },
   demoButtonText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
     color: '#475569',
   },
   footer: {
@@ -254,12 +254,13 @@ const styles = StyleSheet.create({
   },
   footerText: {
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
   },
   link: {
     marginLeft: 4,
   },
   linkText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
 });

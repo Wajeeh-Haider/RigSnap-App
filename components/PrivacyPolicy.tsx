@@ -342,8 +342,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    padding: 24,
-    paddingTop: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
     borderBottomWidth: 1,
   },
   backButton: {
@@ -352,7 +352,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   placeholder: {
     width: 40,
@@ -366,7 +366,7 @@ const styles = StyleSheet.create({
   },
   introTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 12,
   },
   introText: {
@@ -405,7 +405,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   sectionContent: {
     paddingHorizontal: 20,
@@ -413,7 +413,7 @@ const styles = StyleSheet.create({
   },
   subheading: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginTop: 16,
     marginBottom: 8,
   },
@@ -432,7 +432,7 @@ const styles = StyleSheet.create({
   },
   bullet: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginRight: 8,
     marginTop: 2,
   },
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
   },
   footerActionTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 4,
   },
   footerActionDescription: {

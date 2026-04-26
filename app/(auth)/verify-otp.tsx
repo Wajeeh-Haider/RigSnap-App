@@ -384,7 +384,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   content: {
     flex: 1,
@@ -407,7 +407,7 @@ const styles = StyleSheet.create({
   },
   heading: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 8,
     textAlign: 'center',
   },
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
   },
   emailText: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     textAlign: 'center',
     marginBottom: 12,
   },
@@ -439,7 +439,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     fontSize: 24,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   verifyButton: {
     flexDirection: 'row',
@@ -457,7 +457,7 @@ const styles = StyleSheet.create({
   verifyButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   resendContainer: {
     alignItems: 'center',
@@ -476,7 +476,7 @@ const styles = StyleSheet.create({
   },
   resendText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   helpText: {
     fontSize: 12,

@@ -15,7 +15,7 @@ import {
 
 import { useAuth } from '@/context/AuthContext';
 import { useApp } from '@/context/AppContext';
-import { router,useLocalSearchParams } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useTheme } from '@/context/ThemeContext';
 import { useLanguage } from '@/context/LanguageContext';
 import {
@@ -132,7 +132,7 @@ export default function CreateRequestScreen() {
   const { confirmPayment } = useStripe();
 
   const [selectedService, setSelectedService] = useState(
-    (params.type as string) || ''
+    (params.type as string) || '',
   );
   const [description, setDescription] = useState('');
   const [location, setLocation] = useState('');
@@ -166,7 +166,7 @@ export default function CreateRequestScreen() {
         Alert.alert(
           t('create.locationNotAvailable'),
           t('create.locationNotAvailableDesc'),
-          [{ text: 'OK' }]
+          [{ text: 'OK' }],
         );
         return;
       }
@@ -187,14 +187,14 @@ export default function CreateRequestScreen() {
       try {
         const address = await locationService.reverseGeocode(
           latitude,
-          longitude
+          longitude,
         );
         setLocation(address);
 
         Alert.alert(
           t('create.locationFound'),
           `${t('create.locationSet')}\n\n${address}`,
-          [{ text: 'OK' }]
+          [{ text: 'OK' }],
         );
       } catch (geocodeError) {
         // If reverse geocoding fails, still use coordinates
@@ -204,7 +204,7 @@ export default function CreateRequestScreen() {
         Alert.alert(
           t('create.locationFound'),
           `Your GPS coordinates have been set. You can edit the location description if needed.\n\nCoordinates: ${coordString}`,
-          [{ text: 'OK' }]
+          [{ text: 'OK' }],
         );
       }
     } catch (error: any) {
@@ -226,11 +226,11 @@ export default function CreateRequestScreen() {
               Alert.alert(
                 t('create.demoLocationSet'),
                 `${t('create.demoLocationDesc')} ${demoLocation.name}`,
-                [{ text: 'OK' }]
+                [{ text: 'OK' }],
               );
             },
           },
-        ]
+        ],
       );
     } finally {
       setIsGettingLocation(false);
@@ -242,7 +242,7 @@ export default function CreateRequestScreen() {
       Alert.alert(
         t('create.cameraNotAvailable'),
         t('create.cameraNotAvailableDesc'),
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
       return;
     }
@@ -257,7 +257,7 @@ export default function CreateRequestScreen() {
         Alert.alert(
           t('create.cameraPermissionRequired'),
           t('create.cameraPermissionDesc'),
-          [{ text: 'OK' }]
+          [{ text: 'OK' }],
         );
         return;
       }
@@ -279,7 +279,7 @@ export default function CreateRequestScreen() {
       // Add local photo to state immediately for preview
       setPhotos((prev) => [...prev, photo.uri]);
       setShowCameraModal(false);
-      
+
       // Upload to Cloudinary in background
       setIsUploadingPhoto(true);
       try {
@@ -288,22 +288,18 @@ export default function CreateRequestScreen() {
           timeout: 60000, // 60 seconds timeout
           retries: 2, // Retry up to 2 times
         });
-        
+
         // Add Cloudinary URL to state
         setCloudinaryUrls((prev) => [...prev, cloudinaryResponse.secure_url]);
-        
-        Alert.alert(
-          t('create.photoUploaded'),
-          t('create.photoUploadedDesc'),
-          [{ text: 'OK' }]
-        );
+
+        Alert.alert(t('create.photoUploaded'), t('create.photoUploadedDesc'), [
+          { text: 'OK' },
+        ]);
       } catch (uploadError) {
         console.error('Cloudinary upload error:', uploadError);
-        Alert.alert(
-          t('create.uploadWarning'),
-          t('create.uploadWarningDesc'),
-          [{ text: 'OK' }]
-        );
+        Alert.alert(t('create.uploadWarning'), t('create.uploadWarningDesc'), [
+          { text: 'OK' },
+        ]);
       } finally {
         setIsUploadingPhoto(false);
       }
@@ -343,7 +339,7 @@ export default function CreateRequestScreen() {
       Alert.alert(
         t('create.photosUploading'),
         t('create.photosUploadingDesc'),
-        [{ text: 'OK' }]
+        [{ text: 'OK' }],
       );
       return;
     }
@@ -358,11 +354,11 @@ export default function CreateRequestScreen() {
           'Please add a payment method before creating a request. Your card will be authorized now and charged only when a provider accepts.',
           [
             { text: 'Later', style: 'cancel' },
-            { 
-              text: 'Add Payment Method', 
-              onPress: () => router.push('/add-payment-method') 
-            }
-          ]
+            {
+              text: 'Add Payment Method',
+              onPress: () => router.push('/add-payment-method'),
+            },
+          ],
         );
         setIsLoading(false);
         return;
@@ -371,10 +367,15 @@ export default function CreateRequestScreen() {
       console.log('User:', user);
       console.log('Local photos:', photos);
       console.log('Cloudinary URLs:', cloudinaryUrls);
-      
-      const finalPhotos = cloudinaryUrls.length > 0 ? cloudinaryUrls : (photos.length > 0 ? photos : undefined);
+
+      const finalPhotos =
+        cloudinaryUrls.length > 0
+          ? cloudinaryUrls
+          : photos.length > 0
+            ? photos
+            : undefined;
       console.log('Final photos for request:', finalPhotos);
-      
+
       const requestData = {
         truckerId: user.id,
         truckerName: `${user.firstName} ${user.lastName}`,
@@ -420,14 +421,13 @@ export default function CreateRequestScreen() {
             text: t('create.viewRequest'),
             onPress: () => router.push('/(tabs)'),
           },
-        ]
+        ],
       );
     } catch (error: any) {
       console.error('Error creating request:', error);
       Alert.alert(
         t('create.requestFailed'),
-        error.message ||
-          t('create.requestFailedDesc')
+        error.message || t('create.requestFailedDesc'),
       );
     } finally {
       setIsLoading(false);
@@ -572,7 +572,9 @@ export default function CreateRequestScreen() {
                         { color: colors.textSecondary },
                       ]}
                     >
-                      {Platform.OS === 'web' ? t('create.addSample') : t('create.takePhoto')}
+                      {Platform.OS === 'web'
+                        ? t('create.addSample')
+                        : t('create.takePhoto')}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -590,11 +592,14 @@ export default function CreateRequestScreen() {
                 ]}
               >
                 <Text style={[styles.photoTipText, { color: colors.primary }]}>
-                  📸 {photos.length}/3{t('create.photoTip')} {cloudinaryUrls.length > 0 ? `${cloudinaryUrls.length} uploaded to cloud.` : ''}
+                  📸 {photos.length}/3{t('create.photoTip')}{' '}
+                  {cloudinaryUrls.length > 0
+                    ? `${cloudinaryUrls.length} uploaded to cloud.`
+                    : ''}
                 </Text>
               </View>
             )}
-            
+
             {isUploadingPhoto && (
               <View
                 style={[
@@ -828,7 +833,9 @@ export default function CreateRequestScreen() {
           ) : (
             <>
               <Plus size={20} color="white" />
-              <Text style={styles.submitButtonText}>{t('create.postRequest')}</Text>
+              <Text style={styles.submitButtonText}>
+                {t('create.postRequest')}
+              </Text>
             </>
           )}
         </TouchableOpacity>
@@ -863,7 +870,7 @@ export default function CreateRequestScreen() {
                       style={styles.cameraFlipButton}
                       onPress={() =>
                         setCameraFacing((current) =>
-                          current === 'back' ? 'front' : 'back'
+                          current === 'back' ? 'front' : 'back',
                         )
                       }
                     >
@@ -928,7 +935,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 8,
   },
   subtitle: {
@@ -939,7 +946,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 16,
   },
   serviceGrid: {
@@ -962,7 +969,7 @@ const styles = StyleSheet.create({
   },
   serviceTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginTop: 8,
     marginBottom: 4,
     textAlign: 'center',
@@ -1000,7 +1007,7 @@ const styles = StyleSheet.create({
   },
   photoTitle: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 4,
   },
   photoSubtitle: {
@@ -1053,7 +1060,7 @@ const styles = StyleSheet.create({
   },
   addPhotoText: {
     fontSize: 10,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
     textAlign: 'center',
   },
   photoTip: {
@@ -1077,7 +1084,7 @@ const styles = StyleSheet.create({
   },
   uploadingText: {
     fontSize: 12,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   locationContainer: {
     gap: 12,
@@ -1128,7 +1135,7 @@ const styles = StyleSheet.create({
   },
   locationButtonText: {
     fontSize: 14,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   coordinatesInfo: {
     flexDirection: 'row',
@@ -1140,8 +1147,7 @@ const styles = StyleSheet.create({
   },
   coordinatesText: {
     fontSize: 12,
-    fontFamily: 'monospace',
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
   },
   locationTip: {
     borderRadius: 8,
@@ -1158,6 +1164,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
@@ -1195,7 +1202,7 @@ const styles = StyleSheet.create({
   },
   urgencyLabel: {
     fontSize: 16,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
   },
   urgencyDescription: {
     fontSize: 14,
@@ -1214,7 +1221,7 @@ const styles = StyleSheet.create({
   },
   feeTitle: {
     fontSize: 14,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     marginBottom: 4,
   },
   feeDescription: {
@@ -1241,7 +1248,7 @@ const styles = StyleSheet.create({
   submitButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
   // Camera Modal Styles
   cameraContainer: {
@@ -1278,7 +1285,7 @@ const styles = StyleSheet.create({
   },
   cameraTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: 'white',
   },
   cameraFlipButton: {
@@ -1324,7 +1331,7 @@ const styles = StyleSheet.create({
   },
   permissionTitle: {
     fontSize: 24,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#1e293b',
     marginTop: 24,
     marginBottom: 12,
@@ -1332,6 +1339,7 @@ const styles = StyleSheet.create({
   },
   permissionText: {
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
     color: '#6b7280',
     textAlign: 'center',
     lineHeight: 24,
@@ -1346,6 +1354,6 @@ const styles = StyleSheet.create({
   permissionButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
 });

@@ -5,7 +5,6 @@ import {
   Text,
   TouchableOpacity,
   StyleSheet,
-  Alert,
   ScrollView,
   ActivityIndicator,
   TextInput,
@@ -13,6 +12,7 @@ import {
 import { router, useLocalSearchParams } from 'expo-router';
 import { useAuth } from '@/context/AuthContext';
 import { Truck, Shield, Check } from 'lucide-react-native';
+import { useToast } from '@/hooks/useToast';
 
 export default function RoleSelectionScreen() {
   const params = useLocalSearchParams();
@@ -21,6 +21,7 @@ export default function RoleSelectionScreen() {
   >(null);
   const [isLoading, setIsLoading] = useState(false);
   const { signup } = useAuth();
+  const { showError } = useToast();
 
   // Trucker specific fields
   const [truckType, setTruckType] = useState('');
@@ -43,17 +44,17 @@ export default function RoleSelectionScreen() {
 
   const handleComplete = async () => {
     if (!selectedRole) {
-      Alert.alert('Error', 'Please select your role');
+      showError('Please select your role');
       return;
     }
 
     if (selectedRole === 'trucker' && (!truckType || !licenseNumber)) {
-      Alert.alert('Error', 'Please fill in all trucker details');
+      showError('Please fill in all trucker details');
       return;
     }
 
     if (selectedRole === 'provider' && services.length === 0) {
-      Alert.alert('Error', 'Please select at least one service');
+      showError('Please select at least one service');
       return;
     }
 
@@ -81,10 +82,10 @@ export default function RoleSelectionScreen() {
       if (success) {
         router.replace('/(tabs)');
       } else {
-        Alert.alert('Error', 'Account creation failed. Please try again.');
+        showError('Account creation failed. Please try again.');
       }
     } catch (error) {
-      Alert.alert('Error', 'Something went wrong. Please try again.');
+      showError('Something went wrong. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -289,12 +290,13 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 28,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#1e293b',
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
     color: '#64748b',
     textAlign: 'center',
   },
@@ -329,7 +331,7 @@ const styles = StyleSheet.create({
   },
   roleTitle: {
     fontSize: 20,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#1e293b',
     marginBottom: 4,
   },
@@ -338,6 +340,7 @@ const styles = StyleSheet.create({
   },
   roleDescription: {
     fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
     color: '#6b7280',
     lineHeight: 20,
   },
@@ -354,7 +357,7 @@ const styles = StyleSheet.create({
   },
   fieldsTitle: {
     fontSize: 18,
-    fontWeight: 'bold',
+    fontFamily: 'Poppins_700Bold',
     color: '#1e293b',
     marginBottom: 16,
   },
@@ -363,7 +366,7 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     color: '#374151',
     marginBottom: 8,
   },
@@ -373,6 +376,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontSize: 16,
+    fontFamily: 'Poppins_500Medium',
     backgroundColor: '#f9fafb',
   },
   serviceOptions: {
@@ -395,7 +399,7 @@ const styles = StyleSheet.create({
   },
   serviceText: {
     fontSize: 14,
-    fontWeight: '500',
+    fontFamily: 'Poppins_500Medium',
     color: '#475569',
     marginRight: 8,
   },
@@ -404,6 +408,7 @@ const styles = StyleSheet.create({
   },
   helperText: {
     fontSize: 12,
+    fontFamily: 'Poppins_500Medium',
     color: '#6b7280',
     marginTop: 4,
   },
@@ -419,6 +424,6 @@ const styles = StyleSheet.create({
   completeButtonText: {
     color: 'white',
     fontSize: 16,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
   },
 });

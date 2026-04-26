@@ -29,7 +29,6 @@ yarn-error.*
 
 # local env files
 .env*.local
-.env
 
 # typescript
 *.tsbuildinfo
@@ -39,3 +38,4 @@ ios/
 /ios
 ios
 android
+config.bat

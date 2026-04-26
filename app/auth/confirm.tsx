@@ -31,7 +31,7 @@ const styles = StyleSheet.create({
   },
   text: {
     fontSize: 18,
-    fontWeight: '600',
+    fontFamily: 'Poppins_500Medium',
     marginTop: 20,
     textAlign: 'center',
   },
@@ -43,6 +43,7 @@ const styles = StyleSheet.create({
   },
   subText: {
     fontSize: 14,
+    fontFamily: 'Poppins_500Medium',
     color: '#666',
     marginTop: 10,
     textAlign: 'center',
