@@ -39,3 +39,4 @@ ios/
 ios
 android
 config.bat
+.env
